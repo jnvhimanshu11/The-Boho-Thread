@@ -162,9 +162,14 @@ app.get('/v/:id', (req, res) => {
 
     
          <!--- <p> Tap the video to play audio 🔊 </p> --->
+         
+
 
 <p>
-    <a href="/web.html" style="color: #f1c40f; text-decoration: none; font-weight: bold; border: 1px solid #f1c40f; padding: 10px 20px; border-radius: 50px; display: inline-block; margin-top: 20px; transition: 0.3s;">
+    <a href="/WebPage/web.html" style="color:
+     #f1c40f; text-decoration: none; font-weight: bold; border: 1px solid
+      #f1c40f; padding: 10px 20px; border-radius: 50px; 
+      display: inline-block; margin-top: 20px; transition: 0.3s;">
         Created By The Boho Thread 🏠
     </a>
 </p>
@@ -322,7 +327,7 @@ app.get('/v/:id', (req, res) => {
 const path = require('path');
 
 // This tells the server what to do when someone clicks your footer link
-app.get('/web.html', (req, res) => {
+app.get('/WebPage/web.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'WebPage', 'web.html'));
 });
 
