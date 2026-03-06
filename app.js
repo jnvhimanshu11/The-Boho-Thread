@@ -319,6 +319,14 @@ app.get('/v/:id', (req, res) => {
 
 
 
+const path = require('path');
+
+// This tells the server what to do when someone clicks your footer link
+app.get('/web.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'WebPage', 'web.html'));
+});
+
+
 // Testing on local host
 
 app.listen(PORT, () => {
