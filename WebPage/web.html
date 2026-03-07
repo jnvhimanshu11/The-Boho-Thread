@@ -693,13 +693,13 @@
         }
 
         .contact-item {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
             color: rgba(255, 255, 255, 0.8);
-            padding: 15px 25px;
-            border-radius: 15px;
+            padding: 8px 15px;
+            border-radius: 10px;
             transition: all 0.3s ease;
             cursor: pointer;
             text-decoration: none;
@@ -721,14 +721,15 @@
         }
 
         .contact-icon {
-            width: 40px;
-            height: 40px;
+            width: 28px;
+            height: 28px;
             background: linear-gradient(135deg, rgba(241, 196, 15, 0.2), rgba(230, 126, 34, 0.2));
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.3s ease;
+            font-size: 0.8rem;
         }
 
         /* Floating WhatsApp Button */
@@ -1076,6 +1077,201 @@
             .floating-whatsapp svg {
                 width: 24px;
                 height: 24px;
+            }
+        }
+
+        /* ============================================
+           SCROLL GRADIENT EFFECTS
+           ============================================ */
+        
+        /* Scroll Gradient Trail */
+        .scroll-gradient-trail {
+            position: fixed;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9998;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.5);
+            transition: opacity 0.3s ease;
+        }
+
+        .scroll-gradient-trail.active {
+            opacity: 1;
+            animation: scrollTrailPulse 1.5s ease-out forwards;
+        }
+
+        @keyframes scrollTrailPulse {
+            0% {
+                transform: translate(-50%, -50%) scale(0.3);
+                opacity: 0.6;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(2);
+                opacity: 0;
+            }
+        }
+
+        /* Floating Gradient Orbs */
+        .scroll-orb {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9997;
+            opacity: 0;
+            filter: blur(5px);
+        }
+
+        .scroll-orb.active {
+            animation: orbFloat 3s ease-out forwards;
+        }
+
+        @keyframes orbFloat {
+            0% {
+                opacity: 0.8;
+                transform: translateY(0) scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: translateY(-50px) scale(1.2);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100px) scale(0.5);
+            }
+        }
+
+        /* Gradient Wave Line */
+        .scroll-wave {
+            position: fixed;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            pointer-events: none;
+            z-index: 9996;
+            opacity: 0;
+            transform: scaleX(0);
+        }
+
+        .scroll-wave.active {
+            animation: waveScroll 1s ease-out forwards;
+        }
+
+        @keyframes waveScroll {
+            0% {
+                opacity: 0.8;
+                transform: scaleX(0);
+                transform-origin: left;
+            }
+            50% {
+                opacity: 0.5;
+                transform: scaleX(1);
+                transform-origin: left;
+            }
+            100% {
+                opacity: 0;
+                transform: scaleX(1);
+                transform-origin: right;
+            }
+        }
+
+        /* Ambient Gradient Background on Scroll */
+        .scroll-ambient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .scroll-ambient.active {
+            opacity: 1;
+        }
+
+        /* Gradient Particles */
+        .scroll-particle {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .scroll-particle.active {
+            animation: particleRise 2s ease-out forwards;
+        }
+
+        @keyframes particleRise {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-200px) scale(0);
+            }
+        }
+
+        /* Scroll Direction Indicator */
+        .scroll-indicator {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9995;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .scroll-indicator.active {
+            opacity: 0.6;
+            animation: indicatorPulse 0.8s ease-out;
+        }
+
+        @keyframes indicatorPulse {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        /* Clickable Gradient Burst on Scroll */
+        .scroll-burst {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .scroll-burst.active {
+            animation: burstExpand 1.2s ease-out forwards;
+        }
+
+        @keyframes burstExpand {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.9;
+                box-shadow: 0 0 20px currentColor;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(15);
+                opacity: 0;
+                box-shadow: 0 0 60px currentColor;
             }
         }
 
@@ -1618,6 +1814,269 @@
                     const x = Math.min(parseInt(currentLeft) || 0, maxX);
                     waBtn.style.left = x + 'px';
                 }
+            }
+        });
+
+        // ============================================
+        // SCROLL GRADIENT EFFECTS
+        // ============================================
+        
+        // Configuration for scroll effects
+        const scrollConfig = {
+            trailThrottle: 150,       // ms between trail effects
+            orbThrottle: 300,          // ms between orb effects
+            particleThrottle: 100,    // ms between particle effects
+            burstThrottle: 200,        // ms between burst effects
+            waveThrottle: 400          // ms between wave effects
+        };
+
+        // Gradient color palettes
+        const gradientPalettes = [
+            { colors: ['#f1c40f', '#e67e22', '#e74c3c'], name: 'gold' },
+            { colors: ['#9b59b6', '#3498db', '#1abc9c'], name: 'cool' },
+            { colors: ['#e74c3c', '#f39c12', '#e67e22'], name: 'warm' },
+            { colors: ['#1abc9c', '#2ecc71', '#f1c40f'], name: 'nature' },
+            { colors: ['#3498db', '#9b59b6', '#e91e63'], name: 'ocean' },
+            { colors: ['#f1c40f', '#00ff88', '#00d4ff'], name: 'neon' }
+        ];
+
+        // Track last scroll event times
+        let lastTrailTime = 0;
+        let lastOrbTime = 0;
+        let lastParticleTime = 0;
+        let lastBurstTime = 0;
+        let lastWaveTime = 0;
+
+        // Get random gradient from palette
+        function getRandomGradient() {
+            const palette = gradientPalettes[Math.floor(Math.random() * gradientPalettes.length)];
+            return `radial-gradient(circle, ${palette.colors[0]} 0%, ${palette.colors[1]} 50%, ${palette.colors[2]} 100%)`;
+        }
+
+        // Get linear gradient
+        function getLinearGradient(angle = 45) {
+            const palette = gradientPalettes[Math.floor(Math.random() * gradientPalettes.length)];
+            return `linear-gradient(${angle}deg, ${palette.colors[0]}, ${palette.colors[1]}, ${palette.colors[2]})`;
+        }
+
+        // Create scroll gradient trail
+        function createScrollTrail(x, y) {
+            const now = Date.now();
+            if (now - lastTrailTime < scrollConfig.trailThrottle) return;
+            lastTrailTime = now;
+
+            const trail = document.createElement('div');
+            trail.className = 'scroll-gradient-trail';
+            
+            const palette = gradientPalettes[Math.floor(Math.random() * gradientPalettes.length)];
+            trail.style.background = `radial-gradient(circle, ${palette.colors[0]}88 0%, ${palette.colors[1]}44 30%, transparent 70%)`;
+            trail.style.left = x + 'px';
+            trail.style.top = y + 'px';
+            
+            document.body.appendChild(trail);
+            
+            // Trigger animation
+            requestAnimationFrame(() => {
+                trail.classList.add('active');
+            });
+
+            // Remove after animation
+            setTimeout(() => {
+                trail.remove();
+            }, 1500);
+        }
+
+        // Create floating gradient orb
+        function createScrollOrb(x, y) {
+            const now = Date.now();
+            if (now - lastOrbTime < scrollConfig.orbThrottle) return;
+            lastOrbTime = now;
+
+            const orb = document.createElement('div');
+            orb.className = 'scroll-orb';
+            
+            const palette = gradientPalettes[Math.floor(Math.random() * gradientPalettes.length)];
+            orb.style.background = `radial-gradient(circle, ${palette.colors[0]} 0%, ${palette.colors[1]} 100%)`;
+            orb.style.left = (x + (Math.random() - 0.5) * 200) + 'px';
+            orb.style.top = (y + (Math.random() - 0.5) * 100) + 'px';
+            orb.style.width = (30 + Math.random() * 50) + 'px';
+            orb.style.height = orb.style.width;
+            
+            document.body.appendChild(orb);
+            
+            requestAnimationFrame(() => {
+                orb.classList.add('active');
+            });
+
+            setTimeout(() => {
+                orb.remove();
+            }, 3000);
+        }
+
+        // Create gradient wave
+        function createScrollWave(y) {
+            const now = Date.now();
+            if (now - lastWaveTime < scrollConfig.waveThrottle) return;
+            lastWaveTime = now;
+
+            const wave = document.createElement('div');
+            wave.className = 'scroll-wave';
+            
+            const palette = gradientPalettes[Math.floor(Math.random() * gradientPalettes.length)];
+            wave.style.background = `linear-gradient(90deg, transparent, ${palette.colors[0]}, ${palette.colors[1]}, transparent)`;
+            wave.style.top = y + 'px';
+            
+            document.body.appendChild(wave);
+            
+            requestAnimationFrame(() => {
+                wave.classList.add('active');
+            });
+
+            setTimeout(() => {
+                wave.remove();
+            }, 1000);
+        }
+
+        // Create gradient particles
+        function createScrollParticle(x, y) {
+            const now = Date.now();
+            if (now - lastParticleTime < scrollConfig.particleThrottle) return;
+            lastParticleTime = now;
+
+            // Create multiple particles
+            for (let i = 0; i < 3; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'scroll-particle';
+                
+                const palette = gradientPalettes[Math.floor(Math.random() * gradientPalettes.length)];
+                particle.style.background = palette.colors[Math.floor(Math.random() * palette.colors.length)];
+                particle.style.left = (x + (Math.random() - 0.5) * 150) + 'px';
+                particle.style.top = y + 'px';
+                particle.style.boxShadow = `0 0 10px ${particle.style.background}`;
+                
+                document.body.appendChild(particle);
+                
+                requestAnimationFrame(() => {
+                    particle.classList.add('active');
+                });
+
+                setTimeout(() => {
+                    particle.remove();
+                }, 2000);
+            }
+        }
+
+        // Create gradient burst
+        function createScrollBurst(x, y) {
+            const now = Date.now();
+            if (now - lastBurstTime < scrollConfig.burstThrottle) return;
+            lastBurstTime = now;
+
+            const burst = document.createElement('div');
+            burst.className = 'scroll-burst';
+            
+            const palette = gradientPalettes[Math.floor(Math.random() * gradientPalettes.length)];
+            burst.style.background = palette.colors[0];
+            burst.style.color = palette.colors[0]; // For box-shadow using currentColor
+            burst.style.left = x + 'px';
+            burst.style.top = y + 'px';
+            burst.style.boxShadow = `0 0 20px ${palette.colors[0]}`;
+            
+            document.body.appendChild(burst);
+            
+            requestAnimationFrame(() => {
+                burst.classList.add('active');
+            });
+
+            setTimeout(() => {
+                burst.remove();
+            }, 1200);
+        }
+
+        // Main scroll handler
+        let lastScrollY = window.scrollY;
+        let scrollDirection = 0; // 1 = down, -1 = up
+
+        window.addEventListener('scroll', function(e) {
+            const currentScrollY = window.scrollY;
+            const scrollDelta = currentScrollY - lastScrollY;
+            
+            // Determine scroll direction
+            if (scrollDelta > 0) {
+                scrollDirection = 1;
+            } else if (scrollDelta < 0) {
+                scrollDirection = -1;
+            }
+
+            // Only trigger effects if scrolled enough
+            if (Math.abs(scrollDelta) < 5) {
+                lastScrollY = currentScrollY;
+                return;
+            }
+
+            // Get viewport center and edges
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const randomX = Math.random() * window.innerWidth;
+            const randomY = centerY + (Math.random() - 0.5) * 200;
+
+            // Create different effects based on scroll
+            const effectType = Math.floor(Math.random() * 5);
+            
+            switch(effectType) {
+                case 0:
+                    // Gradient trail at random position
+                    createScrollTrail(randomX, randomY);
+                    break;
+                case 1:
+                    // Floating orbs
+                    createScrollOrb(centerX, centerY);
+                    break;
+                case 2:
+                    // Wave line
+                    createScrollWave(centerY);
+                    break;
+                case 3:
+                    // Particles
+                    createScrollParticle(randomX, centerY);
+                    break;
+                case 4:
+                    // Burst effect
+                    createScrollBurst(randomX, centerY);
+                    break;
+            }
+
+            // Occasionally create multiple effects
+            if (Math.random() > 0.7) {
+                setTimeout(() => {
+                    createScrollParticle(Math.random() * window.innerWidth, window.innerHeight / 2);
+                }, 50);
+            }
+
+            lastScrollY = currentScrollY;
+        });
+
+        // Add subtle ambient gradient on page load
+        window.addEventListener('load', function() {
+            // Initial welcome effect
+            setTimeout(() => {
+                createScrollTrail(window.innerWidth / 2, window.innerHeight / 2);
+            }, 500);
+            
+            setTimeout(() => {
+                createScrollOrb(window.innerWidth / 2, window.innerHeight / 2);
+            }, 1000);
+        });
+
+        // Performance optimization: Don't create effects when page is not visible
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Clear any pending timeouts or effects
+                lastTrailTime = Date.now();
+                lastOrbTime = Date.now();
+                lastParticleTime = Date.now();
+                lastBurstTime = Date.now();
+                lastWaveTime = Date.now();
             }
         });
     </script>
