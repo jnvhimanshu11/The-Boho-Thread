@@ -731,6 +731,16 @@
             50% { transform: translateY(-10px); }
         }
 
+        /* Draggable WhatsApp - disable animation when dragging */
+        .floating-whatsapp.dragging {
+            animation: none;
+            cursor: grabbing;
+        }
+
+        .floating-whatsapp.dragging svg {
+            pointer-events: none;
+        }
+
         /* Footer */
         footer {
             padding: 30px 50px;
@@ -1056,6 +1066,116 @@
             el.style.transition = 'all 0.6s ease';
             observer.observe(el);
         });
+
+        // Draggable Floating WhatsApp Button
+        const floatingWhatsApp = document.querySelector('.floating-whatsapp');
+        let isDragging = false;
+        let startX, startY;
+        let hasMoved = false;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        // Get initial position from CSS
+        function initPosition() {
+            const rect = floatingWhatsApp.getBoundingClientRect();
+            xOffset = rect.left;
+            yOffset = rect.top;
+        }
+        initPosition();
+
+        function dragStart(e) {
+            // Get event position
+            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+            
+            startX = clientX;
+            startY = clientY;
+            hasMoved = false;
+            
+            // Add listeners for move and end
+            document.addEventListener('mousemove', dragMove);
+            document.addEventListener('touchmove', dragMove, { passive: false });
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('touchend', dragEnd);
+        }
+
+        function dragMove(e) {
+            if (hasMoved) return;
+            
+            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+            
+            const deltaX = Math.abs(clientX - startX);
+            const deltaY = Math.abs(clientY - startY);
+            
+            // Only start dragging after moving 5+ pixels
+            if (deltaX > 5 || deltaY > 5) {
+                hasMoved = true;
+                isDragging = true;
+                floatingWhatsApp.classList.add('dragging');
+                
+                // Calculate new offset
+                xOffset = clientX - startX + xOffset;
+                yOffset = clientY - startY + yOffset;
+            }
+            
+            if (isDragging) {
+                e.preventDefault();
+                
+                const currentX = clientX - startX + xOffset;
+                const currentY = clientY - startY + yOffset;
+                
+                setTranslate(currentX, currentY);
+            }
+        }
+
+        function dragEnd(e) {
+            // Clean up listeners
+            document.removeEventListener('mousemove', dragMove);
+            document.removeEventListener('touchmove', dragMove);
+            document.removeEventListener('mouseup', dragEnd);
+            document.removeEventListener('touchend', dragEnd);
+            
+            if (isDragging) {
+                isDragging = false;
+                floatingWhatsApp.classList.remove('dragging');
+                
+                // Update offsets
+                if (e.type.includes('touch')) {
+                    // For touchend, we need to use changedTouches
+                    const clientX = e.changedTouches[0].clientX;
+                    const clientY = e.changedTouches[0].clientY;
+                    xOffset = clientX - startX + xOffset;
+                    yOffset = clientY - startY + yOffset;
+                }
+            }
+            
+            // If didn't move much, treat as click
+            if (!hasMoved) {
+                // Let the default click happen (navigate to WhatsApp)
+                return;
+            }
+        }
+
+        function setTranslate(xPos, yPos) {
+            const rect = floatingWhatsApp.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            // Calculate max allowed positions
+            const maxX = viewportWidth - rect.width - 10;
+            const maxY = viewportHeight - rect.height - 10;
+
+            // Clamp the position
+            xPos = Math.max(-maxX, Math.min(xPos, maxX));
+            yPos = Math.max(-maxY, Math.min(yPos, maxY));
+
+            floatingWhatsApp.style.transform = `translate(${xPos}px, ${yPos}px)`;
+        }
+
+        // Attach event listeners
+        floatingWhatsApp.addEventListener('mousedown', dragStart);
+        floatingWhatsApp.addEventListener('touchstart', dragStart, { passive: true });
     </script>
 </body>
 </html>
