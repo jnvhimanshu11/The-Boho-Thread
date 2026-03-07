@@ -546,6 +546,37 @@
             margin: 0 auto;
         }
 
+        /* Mobile Gallery - Horizontal Scroll View */
+        @media (max-width: 768px) {
+            .gallery-grid {
+                display: flex;
+                overflow-x: auto;
+                scroll-snap-type: x mandatory;
+                gap: 15px;
+                padding: 15px;
+                margin: 0 -15px;
+                width: calc(100% + 30px);
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+
+            .gallery-grid::-webkit-scrollbar {
+                display: none;
+            }
+
+            .gallery-item {
+                flex: 0 0 75%;
+                max-width: 280px;
+                scroll-snap-align: center;
+                aspect-ratio: 9/16;
+            }
+
+            .gallery-content {
+                padding: 20px;
+            }
+        }
+
         .gallery-item {
             position: relative;
             border-radius: 20px;
@@ -652,10 +683,13 @@
 
         .contact-info {
             display: flex;
-            flex-direction: row;
+            flex-direction: column;
             justify-content: center;
+            align-items: stretch;
             gap: 15px;
-            flex-wrap: wrap;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
         }
 
         .contact-item {
@@ -1112,7 +1146,7 @@
             <!-- Video Preview -->
             <div class="video-preview">
                 <div class="preview-label">★ Sample Invitation ★</div>
-                <video autoplay muted loop playsinline>
+                <video autoplay muted loop playsinline preload="auto" controlsList="nodownload noplaybackrate nofullscreen">
                     <source src="https://res.cloudinary.com/dwdfpcck1/video/upload/v1771873038/WhatsApp_Video_2026-02-24_at_12.26.42_AM_ghto3p.mp4" type="video/mp4">
                 </video>
             </div>
@@ -1265,6 +1299,85 @@
     </a>
 
     <script>
+        // Video Protection - Prevent pausing and right-click
+        document.querySelectorAll('video').forEach(video => {
+            // Prevent pause
+            video.addEventListener('pause', function(e) {
+                e.preventDefault();
+                video.play();
+            });
+            
+            // Prevent right-click context menu
+            video.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Ensure video keeps playing
+            video.addEventListener('ended', function(e) {
+                video.play();
+            });
+        });
+
+        // Click Glow Effect on entire page
+        document.addEventListener('click', function(e) {
+            // Create glow element
+            const glow = document.createElement('div');
+            glow.className = 'click-glow';
+            
+            // Position at click point
+            const x = e.clientX;
+            const y = e.clientY;
+            
+            // Random gradient colors for variety
+            const gradients = [
+                'radial-gradient(circle, rgba(241, 196, 15, 0.6) 0%, rgba(241, 196, 15, 0) 70%)',
+                'radial-gradient(circle, rgba(230, 126, 34, 0.6) 0%, rgba(230, 126, 34, 0) 70%)',
+                'radial-gradient(circle, rgba(241, 196, 15, 0.4) 0%, rgba(230, 126, 34, 0.2) 50%, transparent 70%)',
+                'radial-gradient(circle, rgba(15, 241, 196, 0.5) 0%, rgba(15, 241, 196, 0) 70%)'
+            ];
+            const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
+            
+            glow.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: 10px;
+                height: 10px;
+                background: ${randomGradient};
+                border-radius: 50%;
+                pointer-events: none;
+                z-index: 10000;
+                transform: translate(-50%, -50%);
+                animation: glowExpand 0.8s ease-out forwards;
+            `;
+            
+            document.body.appendChild(glow);
+            
+            // Remove after animation
+            setTimeout(() => {
+                glow.remove();
+            }, 800);
+        });
+
+        // Add glow animation keyframes dynamically
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes glowExpand {
+                0% {
+                    width: 10px;
+                    height: 10px;
+                    opacity: 1;
+                }
+                100% {
+                    width: 400px;
+                    height: 400px;
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
         // Mobile Menu Toggle
         const menuToggle = document.getElementById('menuToggle');
         const mainNav = document.getElementById('mainNav');
