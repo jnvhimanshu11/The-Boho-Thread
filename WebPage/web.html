@@ -1012,7 +1012,7 @@
             }
 
             .contact-item {
-                padding: 12px 20px;
+                padding: 6px 12px;
                 font-size: 0.9rem;
             }
 
@@ -1144,41 +1144,7 @@
             }
         }
 
-        /* Gradient Wave Line */
-        .scroll-wave {
-            position: fixed;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            pointer-events: none;
-            z-index: 9996;
-            opacity: 0;
-            transform: scaleX(0);
-        }
 
-        .scroll-wave.active {
-            animation: waveScroll 1s ease-out forwards;
-        }
-
-        @keyframes waveScroll {
-            0% {
-                opacity: 0.8;
-                transform: scaleX(0);
-                transform-origin: left;
-            }
-            50% {
-                opacity: 0.5;
-                transform: scaleX(1);
-                transform-origin: left;
-            }
-            100% {
-                opacity: 0;
-                transform: scaleX(1);
-                transform-origin: right;
-            }
-        }
-
-        /* Ambient Gradient Background on Scroll */
         .scroll-ambient {
             position: fixed;
             top: 0;
@@ -1826,8 +1792,7 @@
             trailThrottle: 150,       // ms between trail effects
             orbThrottle: 300,          // ms between orb effects
             particleThrottle: 100,    // ms between particle effects
-            burstThrottle: 200,        // ms between burst effects
-            waveThrottle: 400          // ms between wave effects
+            burstThrottle: 200        // ms between burst effects
         };
 
         // Gradient color palettes
@@ -1845,7 +1810,6 @@
         let lastOrbTime = 0;
         let lastParticleTime = 0;
         let lastBurstTime = 0;
-        let lastWaveTime = 0;
 
         // Get random gradient from palette
         function getRandomGradient() {
@@ -2021,7 +1985,7 @@
             const randomY = centerY + (Math.random() - 0.5) * 200;
 
             // Create different effects based on scroll
-            const effectType = Math.floor(Math.random() * 5);
+            const effectType = Math.floor(Math.random() * 4);
             
             switch(effectType) {
                 case 0:
@@ -2033,14 +1997,10 @@
                     createScrollOrb(centerX, centerY);
                     break;
                 case 2:
-                    // Wave line
-                    createScrollWave(centerY);
-                    break;
-                case 3:
                     // Particles
                     createScrollParticle(randomX, centerY);
                     break;
-                case 4:
+                case 3:
                     // Burst effect
                     createScrollBurst(randomX, centerY);
                     break;
