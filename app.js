@@ -1,31 +1,27 @@
+// config.js - Load environment variables
+const config = require('./config');
+
 const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = config.SERVER.PORT;
 
 // ADD THIS LINE HERE:
 app.use(express.static('WebPage'));
 
-const inviteData = [
-    { 
-        id: "invitefamily.tech", 
-        videoUrl: "https://res.cloudinary.com/dwdfpcck1/video/upload/v1771873038/WhatsApp_Video_2026-02-24_at_12.26.42_AM_ghto3p.mp4", 
-        title: "Let's Invite Family" 
-    },
-    { 
-        id: "himanshu", 
-        videoUrl: "https://res.cloudinary.com/dwdfpcck1/video/upload/v1771881234/WhatsApp_Video_2026-02-24_at_2.26.08_AM_1_foz3da.mp4", 
-        title: "Chopta Tour Vedio" 
-    },
-    { 
-        id: "prachi", 
-        // Note :- Client Vedio //
-        videoUrl: "https://res.cloudinary.com/dwdfpcck1/video/upload/v1771913995/WhatsApp_Video_2026-02-24_at_11.46.02_AM_qy5bl4.mp4", 
-        title: "Prachi & Gaurav" 
-    }
-];
+const inviteData = config.INVITE_DATA;
 
 app.get('/ping', (req, res) => {
   res.status(200).send('Server is alive ✅');
+});
+
+// API endpoint to serve configuration to client-side
+app.get('/api/config', (req, res) => {
+  res.json({
+    VIDEO_URLS: config.VIDEO_URLS,
+    THUMBNAIL_URLS: config.THUMBNAIL_URLS,
+    CONTACT: config.CONTACT,
+    URLs: config.URLs
+  });
 });
 
 app.get('/v/:id', (req, res) => {
@@ -34,7 +30,6 @@ app.get('/v/:id', (req, res) => {
 
     if (invite) {
         res.send(`
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -67,20 +62,18 @@ app.get('/v/:id', (req, res) => {
             filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.5));
         }
 
-        /* THE ANIMATED GRADIENT BOX */
         .video-card {
             position: relative;
             width: 100%;
             max-width: 400px;
-            padding: 8px; /* Space for the gradient border */
+            padding: 8px;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 30px;
-            overflow: hidden; /* Clips the spinning gradient to the edges */
+            overflow: hidden;
             z-index: 1;
             box-shadow: 0px 20px 50px rgba(0,0,0,0.8);
         }
 
-        /* The Moving Gradient Layer */
         .video-card::before {
             content: '';
             position: absolute;
@@ -91,10 +84,10 @@ app.get('/v/:id', (req, res) => {
             background: conic-gradient(
                 transparent, 
                 #f1c40f,
-                 #0be92cff,
-                 #06efc8ff,
-                 #4c00fcff,
-                 #f1c40f,
+                #0be92cff,
+                #06efc8ff,
+                #4c00fcff,
+                #f1c40f,
                 #e67e22, 
                 transparent 30%
             );
@@ -102,11 +95,10 @@ app.get('/v/:id', (req, res) => {
             z-index: -2;
         }
 
-        /* Inner black cover to make it look like a border */
         .video-card::after {
             content: '';
             position: absolute;
-            inset: 8px; /* Thickness of the border */
+            inset: 8px;
             background: #111;
             border-radius: 26px;
             z-index: -1;
@@ -157,37 +149,15 @@ app.get('/v/:id', (req, res) => {
         </video>
     </div>
 
-
-
-
-    
-         <!--- <p> Tap the video to play audio 🔊 </p> --->
-         
-
-
-<p>
-    <a href="/WebPage/web.html" style="color:
-     #f1c40f; text-decoration: none; font-weight: bold; border: 1px solid
-      #f1c40f; padding: 10px 20px; border-radius: 50px; 
-      display: inline-block; margin-top: 20px; transition: 0.3s;">
-        Created By The Boho Thread 🏠
-    </a>
-</p>
-    
-
-
-
-   
+    <p>
+        <a href="/WebPage/web.html" style="color: #f1c40f; text-decoration: none; font-weight: bold; border: 1px solid #f1c40f; padding: 10px 20px; border-radius: 50px; display: inline-block; margin-top: 20px; transition: 0.3s;">
+            Created By The Boho Thread 🏠
+        </a>
+    </p>
 
 </body>
 
 </html>
-
-
-
-
-
-
 
         `);
 
@@ -208,85 +178,41 @@ app.get('/v/:id', (req, res) => {
         <style>
 
             body {
-
                 margin: 0;
-
                 padding: 0;
-
-                /* Matches your main theme's dynamic background */
-
                 background: radial-gradient(circle at top, #2c3e50 0%, #000000 100%);
-
                 color: white;
-
                 font-family: "Kristen ITC", "Fredoka", sans-serif;
-
-               
-
-                /* Centering Logic */
-
                 display: flex;
-
                 justify-content: center;
-
                 align-items: center;
-
                 height: 100vh;
-
                 text-align: center;
-
             }
-
-
 
             .error-container {
-
                 padding: 20px;
-
                 border-radius: 25px;
-
                 background: rgba(255, 255, 255, 0.03);
-
                 border: 1px solid rgba(255, 255, 255, 0.1);
-
                 backdrop-filter: blur(10px);
-
                 box-shadow: 0px 20px 40px rgba(0,0,0,0.5);
-
                 max-width: 80%;
-
             }
-
-
 
             h1 {
-
-                /* Matching the gold gradient from your invite title */
-
                 background: linear-gradient(180deg, #f1c40f 0%, #e67e22 100%);
-
                 -webkit-background-clip: text;
-
                 -webkit-text-fill-color: transparent;
-
                 font-size: 2.2rem;
-
                 margin: 0;
-
                 filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.5));
-
             }
 
-
-
             p {
-
                 color: #bdc3c7;
-
                 margin-top: 15px;
-
                 font-size: 1rem;
-
             }
 
         </style>
@@ -301,13 +227,7 @@ app.get('/v/:id', (req, res) => {
 
             <p>This exclusive content is for invited guests only.</p>
 
-            
-
             <span class="emoji">😔</span>
-
-
-
-       
 
         </div>
 
@@ -320,9 +240,6 @@ app.get('/v/:id', (req, res) => {
     }
 
 });
-
-
-
 
 const path = require('path');
 
@@ -357,6 +274,4 @@ function keepAlive() {
         }
     }, 840000); // 14 minutes
 }
-
-
 
