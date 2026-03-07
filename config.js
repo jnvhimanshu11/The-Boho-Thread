@@ -63,4 +63,3 @@ module.exports = {
     SERVER,
     INVITE_DATA
 };
-

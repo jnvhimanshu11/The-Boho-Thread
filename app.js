@@ -274,4 +274,3 @@ function keepAlive() {
         }
     }, 840000); // 14 minutes
 }
-
