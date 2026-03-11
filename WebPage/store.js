@@ -376,3 +376,147 @@ window.addToCart = addToCart;
 window.removeFromCart = removeFromCart;
 window.updateCartQuantity = updateCartQuantity;
 
+// ============================================
+// ADMIN LOGIN FUNCTIONALITY
+// ============================================
+
+// DOM Elements for Admin Login
+var loginModal = document.getElementById('loginModal');
+var adminBtn = document.getElementById('adminBtn');
+var closeLoginModal = document.getElementById('closeLoginModal');
+var loginForm = document.getElementById('loginForm');
+var loginError = document.getElementById('loginError');
+var loginUsername = document.getElementById('loginUsername');
+var loginPassword = document.getElementById('loginPassword');
+
+// Check if already logged in
+function checkAdminLogin() {
+    var adminToken = localStorage.getItem('adminToken');
+    return adminToken !== null;
+}
+
+// Open login modal
+function openLoginModal() {
+    if (loginModal) {
+        loginModal.classList.add('active');
+        loginError.textContent = '';
+        loginUsername.value = '';
+        loginPassword.value = '';
+        loginUsername.focus();
+    }
+}
+
+// Close login modal
+function closeLoginModalFunc() {
+    if (loginModal) {
+        loginModal.classList.remove('active');
+    }
+}
+
+// Handle login form submission
+async function handleLogin(e) {
+    e.preventDefault();
+    
+    var username = loginUsername.value.trim();
+    var password = loginPassword.value;
+    
+    if (!username || !password) {
+        loginError.textContent = 'Please enter both username and password';
+        return;
+    }
+    
+    // Disable button during request
+    var submitBtn = loginForm.querySelector('.login-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+    
+    try {
+        var response = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username: username, password: password })
+        });
+        
+        var data = await response.json();
+        
+        if (response.ok && data.success) {
+            // Store token
+            localStorage.setItem('adminToken', data.token);
+            localStorage.setItem('adminUsername', data.username);
+            
+            // Close modal and redirect to admin
+            closeLoginModalFunc();
+            window.location.href = 'admin.html';
+        } else {
+            loginError.textContent = data.error || 'Invalid credentials';
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        loginError.textContent = 'Connection error. Please try again.';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+    }
+}
+
+// Setup admin login event listeners
+function setupAdminLogin() {
+    if (adminBtn) {
+        adminBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Check if already logged in
+            if (checkAdminLogin()) {
+                window.location.href = 'admin.html';
+            } else {
+                openLoginModal();
+            }
+        });
+    }
+    
+    if (closeLoginModal) {
+        closeLoginModal.addEventListener('click', closeLoginModalFunc);
+    }
+    
+    if (loginModal) {
+        loginModal.addEventListener('click', function(e) {
+            if (e.target === loginModal) {
+                closeLoginModalFunc();
+            }
+        });
+    }
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+    
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && loginModal && loginModal.classList.contains('active')) {
+            closeLoginModalFunc();
+        }
+    });
+}
+
+// Initialize admin login
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupAdminLogin);
+} else {
+    setupAdminLogin();
+}
+
+// Handle admin button click (for onclick attribute)
+function handleAdminClick() {
+    // Check if already logged in
+    if (checkAdminLogin()) {
+        window.location.href = 'admin.html';
+    } else {
+        openLoginModal();
+    }
+}
+
+// Make handleAdminClick available globally
+window.handleAdminClick = handleAdminClick;
+

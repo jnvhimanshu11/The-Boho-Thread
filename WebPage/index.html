@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Header -->
     <header>
         <div class="header-container">
             <div class="logo">The Boho Thread</div>
@@ -25,21 +24,19 @@
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count" id="cartCount">0</span>
                 </button>
-                <a href="admin.html" class="admin-link"><i class="fas fa-cog"></i></a>
+                <a href="javascript:void(0)" class="admin-link" id="adminBtn" title="Admin Panel" onclick="document.getElementById('loginModal').classList.add('active');"><i class="fas fa-cog"></i></a>
             </div>
             <button class="menu-toggle" id="menuToggle">
                 <span></span><span></span><span></span>
             </button>
         </div>
         
-        <!-- Search Bar -->
         <div class="search-bar" id="searchBar">
             <input type="text" id="searchInput" placeholder="Search products...">
             <button class="close-search" id="closeSearch"><i class="fas fa-times"></i></button>
         </div>
     </header>
 
-    <!-- Hero Section -->
     <section class="hero" id="home">
         <div class="hero-content">
             <h1>Handmade with Love</h1>
@@ -48,14 +45,12 @@
         </div>
     </section>
 
-    <!-- Shop Section -->
     <section class="shop-section" id="shop">
         <div class="section-header">
             <h2>Our Products</h2>
             <p>Browse our collection of handmade treasures</p>
         </div>
         
-        <!-- Category Filter -->
         <div class="category-filter">
             <button class="category-btn active" data-category="all">All</button>
             <button class="category-btn" data-category="jewelry">Jewelry</button>
@@ -64,13 +59,10 @@
             <button class="category-btn" data-category="accessories">Accessories</button>
         </div>
         
-        <!-- Products Grid -->
         <div class="products-grid" id="productsGrid">
-            <!-- Products will be loaded dynamically -->
         </div>
     </section>
 
-    <!-- About Section -->
     <section class="about-section" id="about">
         <div class="section-header">
             <h2>About Us</h2>
@@ -89,7 +81,6 @@
         </div>
     </section>
 
-    <!-- Contact Section -->
     <section class="contact-section" id="contact">
         <div class="section-header">
             <h2>Contact Us</h2>
@@ -113,14 +104,12 @@
         </div>
     </section>
 
-    <!-- Cart Sidebar -->
     <div class="cart-sidebar" id="cartSidebar">
         <div class="cart-header">
             <h3>Shopping Cart</h3>
             <button class="close-cart" id="closeCart"><i class="fas fa-times"></i></button>
         </div>
         <div class="cart-items" id="cartItems">
-            <!-- Cart items will be loaded here -->
             <p class="empty-cart">Your cart is empty</p>
         </div>
         <div class="cart-footer">
@@ -132,10 +121,8 @@
         </div>
     </div>
 
-    <!-- Cart Overlay -->
     <div class="cart-overlay" id="cartOverlay"></div>
 
-    <!-- Product Modal -->
     <div class="product-modal" id="productModal">
         <div class="modal-content">
             <button class="close-modal" id="closeModal"><i class="fas fa-times"></i></button>
@@ -162,7 +149,6 @@
         </div>
     </div>
 
-    <!-- Footer -->
     <footer>
         <div class="footer-content">
             <div class="footer-logo">The Boho Thread</div>
@@ -176,12 +162,35 @@
         </div>
     </footer>
 
-    <!-- Floating WhatsApp Button -->
     <a href="https://wa.me/919548190094" target="_blank" class="floating-whatsapp">
         <i class="fab fa-whatsapp"></i>
     </a>
 
     <script src="store.js"></script>
+    
+    <div class="login-modal" id="loginModal" onclick="if(event.target === this) this.classList.remove('active');">
+        <div class="login-modal-content">
+            <button class="close-login-modal" id="closeLoginModal" onclick="document.getElementById('loginModal').classList.remove('active');"><i class="fas fa-times"></i></button>
+            <div class="login-modal-header">
+                <h2><i class="fas fa-user-shield"></i> Admin Login</h2>
+            </div>
+            <div class="login-modal-body">
+                <form id="loginForm">
+                    <div class="login-form-group">
+                        <label><i class="fas fa-user"></i> Username</label>
+                        <input type="text" id="loginUsername" placeholder="Enter username" required>
+                    </div>
+                    <div class="login-form-group">
+                        <label><i class="fas fa-lock"></i> Password</label>
+                        <input type="password" id="loginPassword" placeholder="Enter password" required>
+                    </div>
+                    <div class="login-error" id="loginError"></div>
+                    <button type="button" class="btn btn-primary login-btn" onclick="var u=document.getElementById('loginUsername').value;var p=document.getElementById('loginPassword').value;fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})}).then(function(r){return r.json();}).then(function(d){if(d.success){localStorage.setItem('adminToken',d.token);localStorage.setItem('adminUsername',d.username);window.location.href='admin.html';}else{alert(d.error||'Invalid credentials');}}).catch(function(){alert('Connection error');});">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
-

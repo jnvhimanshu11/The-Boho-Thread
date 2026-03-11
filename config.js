@@ -35,6 +35,12 @@ const SERVER = {
     PORT: process.env.PORT || 3000
 };
 
+// Admin Credentials
+const ADMIN = {
+    username: process.env.ADMIN_USERNAME || '9548190094',
+    password: process.env.ADMIN_PASSWORD || '9548@sonI'
+};
+
 // Invite Data - Using environment variables
 const INVITE_DATA = [
     { 
@@ -269,6 +275,7 @@ module.exports = {
     CONTACT,
     URLs,
     SERVER,
+    ADMIN,
     INVITE_DATA,
     PRODUCTS,
     CATEGORIES,

@@ -1,3 +1,3 @@
 @echo off
-cd /d c:\Users\acer\Desktop\p\thebohothread.in
+cd thebohothread.in
 node app.js

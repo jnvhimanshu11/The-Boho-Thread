@@ -61,6 +61,57 @@ app.get('/api/config', (req, res) => {
 });
 
 // ============================================
+// ADMIN LOGIN API ENDPOINT
+// ============================================
+
+// Admin login
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+  
+  // Check credentials
+  if (username === config.ADMIN.username && password === config.ADMIN.password) {
+    // Generate a simple token (in production, use JWT or similar)
+    const token = Buffer.from(`${username}:${Date.now()}`).toString('base64');
+    res.json({ 
+      success: true, 
+      token: token,
+      username: username
+    });
+  } else {
+    res.status(401).json({ error: 'Invalid credentials' });
+  }
+});
+
+// Verify admin token
+app.get('/api/admin/verify', (req, res) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  
+  // In production, verify token properly
+  // For now, just check if token exists and is valid format
+  try {
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = Buffer.from(token, 'base64').toString('utf-8');
+    const parts = decoded.split(':');
+    
+    if (parts.length >= 1 && parts[0] === config.ADMIN.username) {
+      res.json({ valid: true, username: parts[0] });
+    } else {
+      res.status(401).json({ error: 'Invalid token' });
+    }
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+// ============================================
 // PRODUCTS API ENDPOINTS
 // ============================================
 
@@ -476,6 +527,10 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'WebPage', 'index.html'));
 });
 
+// Serve admin.html
+app.get('/admin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'WebPage', 'admin.html'));
+});
 
 // Testing on local host
 

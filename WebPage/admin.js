@@ -8,7 +8,51 @@ let categories = [];
 let editingProductId = null;
 let badges = [];
 
-// DOM Elements
+// Check authentication on page load
+document.addEventListener('DOMContentLoaded', async function() {
+    const adminToken = localStorage.getItem('adminToken');
+    
+    if (!adminToken) {
+        // Not logged in, redirect to home
+        alert('Please login to access the admin panel');
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    // Verify token with server
+    try {
+        const response = await fetch('/api/admin/verify', {
+            headers: {
+                'Authorization': 'Bearer ' + adminToken
+            }
+        });
+        
+        if (!response.ok) {
+            // Token invalid, redirect to home
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUsername');
+            alert('Session expired. Please login again.');
+            window.location.href = 'index.html';
+            return;
+        }
+    } catch (error) {
+        console.error('Auth verification error:', error);
+        // Allow access if server is unreachable (for offline development)
+    }
+    
+    // Token valid, load admin panel
+    loadBadges(); // Load badges from badges-config.js
+    loadCategories();
+    loadProducts();
+    setupEventListeners();
+});
+
+// Logout function
+function logoutAdmin() {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUsername');
+    window.location.href = 'index.html';
+}
 const addProductBtn = document.getElementById('addProductBtn');
 const productModal = document.getElementById('productModal');
 const closeModal = document.getElementById('closeModal');
@@ -514,4 +558,5 @@ function setupEventListeners() {
 window.editProduct = editProduct;
 window.deleteProduct = deleteProduct;
 window.deleteCategory = deleteCategory;
+window.logoutAdmin = logoutAdmin;
 
