@@ -53,6 +53,29 @@ function logoutAdmin() {
     localStorage.removeItem('adminUsername');
     window.location.href = 'index.html';
 }
+
+// Session timeout - logout after 10 minutes of inactivity
+var sessionTimeout = 10 * 60 * 1000; // 10 minutes
+var sessionTimer;
+
+function resetSessionTimer() {
+    clearTimeout(sessionTimer);
+    if (localStorage.getItem('adminToken')) {
+        sessionTimer = setTimeout(function() {
+            logoutAdmin();
+            alert('Session expired. Please login again.');
+        }, sessionTimeout);
+    }
+}
+
+// Reset timer on user activity
+document.addEventListener('click', resetSessionTimer);
+document.addEventListener('keypress', resetSessionTimer);
+document.addEventListener('scroll', resetSessionTimer);
+document.addEventListener('mousemove', resetSessionTimer);
+
+// Start timer
+resetSessionTimer();
 const addProductBtn = document.getElementById('addProductBtn');
 const productModal = document.getElementById('productModal');
 const closeModal = document.getElementById('closeModal');

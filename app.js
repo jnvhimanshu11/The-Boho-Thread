@@ -72,9 +72,11 @@ app.post('/api/admin/login', (req, res) => {
     return res.status(400).json({ error: 'Username and password are required' });
   }
   
-  // Check credentials
-  if (username === config.ADMIN.username && password === config.ADMIN.password) {
-    // Generate a simple token (in production, use JWT or similar)
+  // Check credentials using the config helper function
+  const validUser = config.checkAdminCredentials(username, password);
+  
+  if (validUser) {
+    // Generate a simple token
     const token = Buffer.from(`${username}:${Date.now()}`).toString('base64');
     res.json({ 
       success: true, 

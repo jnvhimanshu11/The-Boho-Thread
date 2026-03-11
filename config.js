@@ -35,10 +35,22 @@ const SERVER = {
     PORT: process.env.PORT || 3000
 };
 
-// Admin Credentials
+// Admin Credentials (supports multiple users)
+const ADMIN_USERS = [
+    { username: process.env.ADMIN_USERNAME || '9548190094', password: process.env.ADMIN_PASSWORD || '9548@sonI' },
+    { username: 'vampire', password: 'vampire' },
+     { username: 'massist', password: 'massist' }
+];
+
+// Helper function to check credentials
+function checkAdminCredentials(username, password) {
+    return ADMIN_USERS.find(user => user.username === username && user.password === password);
+}
+
+// For backward compatibility
 const ADMIN = {
-    username: process.env.ADMIN_USERNAME || '9548190094',
-    password: process.env.ADMIN_PASSWORD || '9548@sonI'
+    username: ADMIN_USERS[0].username,
+    password: ADMIN_USERS[0].password
 };
 
 // Invite Data - Using environment variables
@@ -276,6 +288,8 @@ module.exports = {
     URLs,
     SERVER,
     ADMIN,
+    ADMIN_USERS,
+    checkAdminCredentials,
     INVITE_DATA,
     PRODUCTS,
     CATEGORIES,

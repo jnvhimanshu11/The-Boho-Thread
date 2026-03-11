@@ -166,7 +166,21 @@
         <i class="fab fa-whatsapp"></i>
     </a>
 
-    <script src="store.js"></script>
+<script src="store.js"></script>
+    
+    <script>
+    // Auto-logout when returning to index page (back button)
+    if (localStorage.getItem('adminToken')) {
+        // User is logged in, check if they came from admin page
+        var referer = document.referrer;
+        if (referer && referer.indexOf('admin.html') !== -1) {
+            // Came from admin page, logout
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUsername');
+            console.log('Auto-logout: returned from admin page');
+        }
+    }
+    </script>
     
     <div class="login-modal" id="loginModal" onclick="if(event.target === this) this.classList.remove('active');">
         <div class="login-modal-content">
