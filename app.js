@@ -1,12 +1,48 @@
 // config.js - Load environment variables
 const config = require('./config');
+const multer = require('multer');
+const path = require('path');
 
 const express = require('express');
 const app = express();
 const PORT = config.SERVER.PORT;
 
-// ADD THIS LINE HERE:
-app.use(express.static('WebPage'));
+// Configure multer for image uploads
+const fs = require('fs');
+
+// Ensure product-images directory exists
+const productImagesDir = path.join(__dirname, 'WebPage', 'product-images');
+if (!fs.existsSync(productImagesDir)){
+    fs.mkdirSync(productImagesDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'WebPage/product-images/')
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: function (req, file, cb) {
+        const filetypes = /jpeg|jpg|png|gif|webp/;
+        const mimetype = filetypes.test(file.mimetype);
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+        
+        if (mimetype && extname) {
+            return cb(null, true);
+        }
+        cb(new Error('Only image files are allowed!'));
+    }
+});
+
+// Middleware - JSON parsing
+app.use(express.json());
 
 const inviteData = config.INVITE_DATA;
 
@@ -23,6 +59,195 @@ app.get('/api/config', (req, res) => {
     URLs: config.URLs
   });
 });
+
+// ============================================
+// PRODUCTS API ENDPOINTS
+// ============================================
+
+// Get all products
+app.get('/api/products', (req, res) => {
+  res.json(config.getProducts());
+});
+
+// Get single product
+app.get('/api/products/:id', (req, res) => {
+  const product = config.getProductById(req.params.id);
+  if (product) {
+    res.json(product);
+  } else {
+    res.status(404).json({ error: 'Product not found' });
+  }
+});
+
+// Add new product
+app.post('/api/products', (req, res) => {
+  const { name, category, actualMRP, priceAfterDiscount, stock, description, image, isNew, isSale, isNewLaunch } = req.body;
+  
+  if (!name || !category || !actualMRP) {
+    return res.status(400).json({ error: 'Name, category, and Actual Product MRP are required' });
+  }
+  
+  const newProduct = config.addProduct({
+    name,
+    category,
+    actualMRP: parseFloat(actualMRP),
+    priceAfterDiscount: priceAfterDiscount ? parseFloat(priceAfterDiscount) : null,
+    stock: parseInt(stock) || 0,
+    description: description || '',
+    image: image || 'https://via.placeholder.com/300x250?text=Product+Image',
+    isNew: isNew || false,
+    isSale: isSale || false,
+    isNewLaunch: isNewLaunch || false
+  });
+  
+  res.status(201).json(newProduct);
+});
+
+// Update product
+app.put('/api/products/:id', (req, res) => {
+  const { name, category, actualMRP, priceAfterDiscount, stock, description, image, isNew, isSale, isNewLaunch } = req.body;
+  
+  const updatedProduct = config.updateProduct(req.params.id, {
+    ...(name && { name }),
+    ...(category && { category }),
+    ...(actualMRP && { actualMRP: parseFloat(actualMRP) }),
+    ...(priceAfterDiscount !== undefined && { priceAfterDiscount: priceAfterDiscount ? parseFloat(priceAfterDiscount) : null }),
+    ...(stock !== undefined && { stock: parseInt(stock) }),
+    ...(description !== undefined && { description }),
+    ...(image && { image }),
+    ...(isNew !== undefined && { isNew }),
+    ...(isSale !== undefined && { isSale }),
+    ...(isNewLaunch !== undefined && { isNewLaunch })
+  });
+  
+  if (updatedProduct) {
+    res.json(updatedProduct);
+  } else {
+    res.status(404).json({ error: 'Product not found' });
+  }
+});
+
+// Delete product
+app.delete('/api/products/:id', (req, res) => {
+  const success = config.deleteProduct(req.params.id);
+  if (success) {
+    res.json({ message: 'Product deleted successfully' });
+  } else {
+    res.status(404).json({ error: 'Product not found' });
+  }
+});
+
+// Upload image endpoint
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  
+  const imageUrl = '/product-images/' + req.file.filename;
+  res.json({ 
+    success: true, 
+    imageUrl: imageUrl 
+  });
+}, (error, req, res, next) => {
+  res.status(400).json({ error: error.message });
+});
+
+// ============================================
+// CATEGORIES API ENDPOINTS
+// ============================================
+
+// Get all categories
+app.get('/api/categories', (req, res) => {
+  res.json(config.getCategories());
+});
+
+// Add new category
+app.post('/api/categories', (req, res) => {
+  const { name } = req.body;
+  
+  if (!name) {
+    return res.status(400).json({ error: 'Category name is required' });
+  }
+  
+  const newCategory = config.addCategory(name);
+  
+  if (newCategory) {
+    res.status(201).json(newCategory);
+  } else {
+    res.status(400).json({ error: 'Category already exists' });
+  }
+});
+
+// Delete category
+app.delete('/api/categories/:name', (req, res) => {
+  const success = config.deleteCategory(req.params.name);
+  if (success) {
+    res.json({ message: 'Category deleted successfully' });
+  } else {
+    res.status(404).json({ error: 'Category not found' });
+  }
+});
+
+// ============================================
+// BADGES API ENDPOINTS
+// ============================================
+
+// Get all badges
+app.get('/api/badges', (req, res) => {
+  res.json(config.getBadges());
+});
+
+// Add new badge
+app.post('/api/badges', (req, res) => {
+  const { id, name, label, color, backgroundColor, textColor, icon, priority } = req.body;
+  
+  if (!name || !label) {
+    return res.status(400).json({ error: 'Badge name and label are required' });
+  }
+  
+  const newBadge = config.addBadge({
+    id,
+    name,
+    label,
+    color,
+    backgroundColor,
+    textColor,
+    icon,
+    priority
+  });
+  
+  if (newBadge) {
+    res.status(201).json(newBadge);
+  } else {
+    res.status(400).json({ error: 'Badge already exists' });
+  }
+});
+
+// Update badge
+app.put('/api/badges/:id', (req, res) => {
+  const updatedBadge = config.updateBadge(req.params.id, req.body);
+  
+  if (updatedBadge) {
+    res.json(updatedBadge);
+  } else {
+    res.status(404).json({ error: 'Badge not found' });
+  }
+});
+
+// Delete badge
+app.delete('/api/badges/:id', (req, res) => {
+  const success = config.deleteBadge(req.params.id);
+  if (success) {
+    res.json({ message: 'Badge deleted successfully' });
+  } else {
+    res.status(404).json({ error: 'Badge not found' });
+  }
+});
+
+// ============================================
+// STATIC FILES - Must be AFTER API routes
+// ============================================
+app.use(express.static('WebPage'));
 
 app.get('/v/:id', (req, res) => {
     const uniqueId = req.params.id;
@@ -150,7 +375,7 @@ app.get('/v/:id', (req, res) => {
     </div>
 
     <p>
-        <a href="/WebPage/web.html" style="color: #f1c40f; text-decoration: none; font-weight: bold; border: 1px solid #f1c40f; padding: 10px 20px; border-radius: 50px; display: inline-block; margin-top: 20px; transition: 0.3s;">
+        <a href="/" style="color: #f1c40f; text-decoration: none; font-weight: bold; border: 1px solid #f1c40f; padding: 10px 20px; border-radius: 50px; display: inline-block; margin-top: 20px; transition: 0.3s;">
             Created By The Boho Thread 🏠
         </a>
     </p>
@@ -241,11 +466,14 @@ app.get('/v/:id', (req, res) => {
 
 });
 
-const path = require('path');
-
 // This tells the server what to do when someone clicks your footer link
-app.get('/WebPage/web.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'WebPage', 'web.html'));
+app.get('/WebPage/index.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'WebPage', 'index.html'));
+});
+
+// Serve index.html as the main page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'WebPage', 'index.html'));
 });
 
 
@@ -274,3 +502,4 @@ function keepAlive() {
         }
     }, 840000); // 14 minutes
 }
+

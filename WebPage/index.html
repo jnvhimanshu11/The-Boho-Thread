@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Boho Thread - Handmade Products</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <div class="logo">The Boho Thread</div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-link active" data-page="home">Home</a>
+                <a href="#" class="nav-link" data-page="shop">Shop</a>
+                <a href="#" class="nav-link" data-page="about">About</a>
+                <a href="#" class="nav-link" data-page="contact">Contact</a>
+            </nav>
+            <div class="header-actions">
+                <button class="search-btn" id="searchBtn"><i class="fas fa-search"></i></button>
+                <button class="cart-btn" id="cartBtn">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count" id="cartCount">0</span>
+                </button>
+                <a href="admin.html" class="admin-link"><i class="fas fa-cog"></i></a>
+            </div>
+            <button class="menu-toggle" id="menuToggle">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+        
+        <!-- Search Bar -->
+        <div class="search-bar" id="searchBar">
+            <input type="text" id="searchInput" placeholder="Search products...">
+            <button class="close-search" id="closeSearch"><i class="fas fa-times"></i></button>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <h1>Handmade with Love</h1>
+            <p>Discover unique handcrafted products made with passion and creativity</p>
+            <a href="#shop" class="btn btn-primary">Shop Now</a>
+        </div>
+    </section>
+
+    <!-- Shop Section -->
+    <section class="shop-section" id="shop">
+        <div class="section-header">
+            <h2>Our Products</h2>
+            <p>Browse our collection of handmade treasures</p>
+        </div>
+        
+        <!-- Category Filter -->
+        <div class="category-filter">
+            <button class="category-btn active" data-category="all">All</button>
+            <button class="category-btn" data-category="jewelry">Jewelry</button>
+            <button class="category-btn" data-category="clothing">Clothing</button>
+            <button class="category-btn" data-category="home">Home Decor</button>
+            <button class="category-btn" data-category="accessories">Accessories</button>
+        </div>
+        
+        <!-- Products Grid -->
+        <div class="products-grid" id="productsGrid">
+            <!-- Products will be loaded dynamically -->
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about-section" id="about">
+        <div class="section-header">
+            <h2>About Us</h2>
+            <p>The story behind The Boho Thread</p>
+        </div>
+        <div class="about-content">
+            <div class="about-text">
+                <p>Welcome to The Boho Thread! We are a passionate team of artisans creating unique, handmade products that bring bohemian charm to your life.</p>
+                <p>Every piece is carefully crafted with love, using sustainable materials and traditional techniques passed down through generations.</p>
+            </div>
+            <div class="about-image">
+                <div class="image-placeholder">
+                    <i class="fas fa-store"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact-section" id="contact">
+        <div class="section-header">
+            <h2>Contact Us</h2>
+            <p>We'd love to hear from you</p>
+        </div>
+        <div class="contact-container">
+            <div class="contact-info">
+                <div class="contact-item">
+                    <i class="fas fa-envelope"></i>
+                    <span>jnvhimanshu11@gmail.com</span>
+                </div>
+                <div class="contact-item">
+                    <i class="fas fa-phone"></i>
+                    <span>+91 9548190094</span>
+                </div>
+                <div class="contact-item">
+                    <i class="fab fa-whatsapp"></i>
+                    <span>+91 9548190094</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Cart Sidebar -->
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h3>Shopping Cart</h3>
+            <button class="close-cart" id="closeCart"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="cart-items" id="cartItems">
+            <!-- Cart items will be loaded here -->
+            <p class="empty-cart">Your cart is empty</p>
+        </div>
+        <div class="cart-footer">
+            <div class="cart-total">
+                <span>Total:</span>
+                <span id="cartTotal">₹0</span>
+            </div>
+            <button class="btn btn-primary checkout-btn" id="checkoutBtn">Checkout</button>
+        </div>
+    </div>
+
+    <!-- Cart Overlay -->
+    <div class="cart-overlay" id="cartOverlay"></div>
+
+    <!-- Product Modal -->
+    <div class="product-modal" id="productModal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeModal"><i class="fas fa-times"></i></button>
+            <div class="modal-body">
+                <div class="modal-image">
+                    <img id="modalProductImage" src="" alt="">
+                </div>
+                <div class="modal-details">
+                    <h3 id="modalProductName"></h3>
+                    <p class="modal-price" id="modalProductPrice"></p>
+                    <p class="modal-description" id="modalProductDescription"></p>
+                    <div class="modal-stock">
+                        <span>Availability:</span>
+                        <span id="modalProductStock"></span>
+                    </div>
+                    <div class="quantity-selector">
+                        <button class="qty-btn" id="decreaseQty"><i class="fas fa-minus"></i></button>
+                        <input type="number" id="productQty" value="1" min="1">
+                        <button class="qty-btn" id="increaseQty"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <button class="btn btn-primary add-to-cart-btn" id="addToCartBtn">Add to Cart</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo">The Boho Thread</div>
+            <p>Handmade products with bohemian charm</p>
+            <div class="social-links">
+                <a href="#"><i class="fab fa-instagram"></i></a>
+                <a href="#"><i class="fab fa-facebook"></i></a>
+                <a href="#"><i class="fab fa-whatsapp"></i></a>
+            </div>
+            <p class="copyright">&copy; 2024 The Boho Thread. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Floating WhatsApp Button -->
+    <a href="https://wa.me/919548190094" target="_blank" class="floating-whatsapp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <script src="store.js"></script>
+</body>
+</html>
+
