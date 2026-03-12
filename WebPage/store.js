@@ -82,7 +82,7 @@ function renderProducts(productsToRender) {
         
         return '<div class="product-card" style="animation-delay: ' + (index * 0.1) + 's">' +
             '<div class="product-image">' +
-            '<img src="' + product.image + '" alt="' + product.name + '" onerror="this.src=\'https://via.placeholder.com/300x250?text=No+Image\'">' +
+this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzUiIGhlaWdodD0iNzUiIHZpZXdCb3g9IjAgMCA3NSA3NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijc1IiBoZWlnaHQ9Ijc1IiBmaWxsPSIjNDE0MTQxIi8+Cjx0ZXh0IHg9IjM3LjUiIHk9IjQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTk5OTkiPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4K';this.style.objectFit='cover'
             badges +
             '<div class="product-actions">' +
             '<button class="product-action-btn" onclick="openProductModal(\'' + product.id + '\')" title="Quick View">' +
@@ -225,7 +225,7 @@ function updateCartUI() {
     } else {
         cartItems.innerHTML = cart.map(function(item) {
             return '<div class="cart-item">' +
-                '<img src="' + item.image + '" alt="' + item.name + '" class="cart-item-image" onerror="this.src=\'https://via.placeholder.com/70x70?text=No+Image\'">' +
+this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzUiIGhlaWdodD0iNzUiIHZpZXdCb3g9IjAgMCA3NSA3NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijc1IiBoZWlnaHQ9Ijc1IiBmaWxsPSIjNDE0MTQxIi8+Cjx0ZXh0IHg9IjM3LjUiIHk9IjQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTk5OTkiPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4K';this.style.objectFit='cover'
                 '<div class="cart-item-details">' +
                 '<h4 class="cart-item-title">' + item.name + '</h4>' +
                 '<p class="cart-item-price">₹' + item.price + '</p>' +
