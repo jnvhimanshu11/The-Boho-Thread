@@ -103,8 +103,16 @@ app.get('/api/admin/verify', (req, res) => {
     const decoded = Buffer.from(token, 'base64').toString('utf-8');
     const parts = decoded.split(':');
     
-    if (parts.length >= 1 && parts[0] === config.ADMIN.username) {
-      res.json({ valid: true, username: parts[0] });
+    if (parts.length >= 1) {
+      // Check against all admin users, not just the first one
+      const username = parts[0];
+      const isValidUser = config.ADMIN_USERS.some(user => user.username === username);
+      
+      if (isValidUser) {
+        res.json({ valid: true, username: username });
+      } else {
+        res.status(401).json({ error: 'Invalid token' });
+      }
     } else {
       res.status(401).json({ error: 'Invalid token' });
     }
