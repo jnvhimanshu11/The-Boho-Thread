@@ -54,6 +54,7 @@ function logoutAdmin() {
     window.location.href = 'index.html';
 }
 
+
 // Session timeout - logout after 10 minutes of inactivity
 var sessionTimeout = 10 * 60 * 1000; // 10 minutes
 var sessionTimer;
