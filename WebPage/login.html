@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - The Boho Thread</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&amp;family=Poppins:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" type="image/png" sizes="32x32" href="./product-images/TheBohoThreadFevicon Image.png">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="logo"><a href="index.html">The Boho Thread</a></div>
+            <div class="header-actions">
+                <button class="back-btn" onclick="window.location.href='index.html'">
+                    <i class="fas fa-arrow-left"></i> Back to Store
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-branding">
+                <h1><i class="fas fa-user-circle"></i> Welcome Back</h1>
+                <p>Sign in to your account to continue shopping</p>
+            </div>
+
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label><i class="fas fa-envelope"></i> Email</label>
+                    <input type="email" id="loginEmail" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> Password</label>
+                    <input type="password" id="loginPassword" required placeholder="Enter your password">
+                </div>
+                <div class="form-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="rememberMe">
+                        <span class="checkmark"></span>
+                        Remember me
+                    </label>
+                    <a href="#" id="forgotPassword" class="forgot-link">Forgot Password?</a>
+                </div>
+                <button type="submit" class="btn btn-primary login-btn">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+            </form>
+
+            <div class="divider">
+                <span>or</span>
+            </div>
+
+            <div class="register-prompt">
+                <p>Don't have an account? <a href="#" id="showRegister" class="register-link">Sign up here</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Form (Toggle) -->
+    <div class="register-container">
+        <div class="login-box">
+            <div class="login-branding">
+                <h1><i class="fas fa-user-plus"></i> Create Account</h1>
+                <p>Join us and discover amazing handmade products</p>
+            </div>
+
+            <form id="registerForm" class="login-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><i class="fas fa-user"></i> First Name</label>
+                        <input type="text" id="regFirstName" required>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-user"></i> Last Name</label>
+                        <input type="text" id="regLastName" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-envelope"></i> Email</label>
+                    <input type="email" id="regEmail" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> Password</label>
+                    <input type="password" id="regPassword" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary login-btn">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </button>
+            </form>
+
+            <p class="register-prompt">
+                Already have an account? <a href="#" id="showLogin" class="register-link">Sign in</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="login.js"></script>
+</body>
+</html>

@@ -7,6 +7,7 @@ let products = [];
 let categories = [];
 let editingProductId = null;
 let badges = [];
+let isSubmitting = false; // 🔒 Prevent double submits
 
 // Check authentication on page load
 document.addEventListener('DOMContentLoaded', async function() {
@@ -55,8 +56,8 @@ function logoutAdmin() {
 }
 
 
-// Session timeout - logout after 10 minutes of inactivity
-var sessionTimeout = 10 * 60 * 1000; // 10 minutes
+// Session timeout - logout after 5 minutes of inactivity
+var sessionTimeout = 5 * 60 * 1000; // 10 minutes
 var sessionTimer;
 
 function resetSessionTimer() {
@@ -139,6 +140,7 @@ function renderBadgeCheckboxes(product = null) {
 // Get badge values from form
 function getBadgeValues() {
     const badgeValues = {};
+    // Initialize all badges to preserve existing values
     badges.forEach(badge => {
         const checkbox = document.getElementById(`product_${badge.name}`);
         if (checkbox) {
@@ -284,12 +286,26 @@ async function deleteCategory(categoryName) {
 async function loadProducts() {
     try {
         const response = await fetch('/api/products');
-        products = await response.json();
+        if (response.ok) {
+            products = await response.json();
+        } else {
+            console.error('Failed to fetch products:', response.status);
+            products = [];
+        }
         renderProductsTable();
         updateStats();
+        console.log(`📦 Loaded ${products.length} products`);
     } catch (error) {
         console.error('Error loading products:', error);
     }
+}
+
+// Render badges for table
+function renderProductBadges(product) {
+    if (!window.renderProductBadges && typeof renderProductBadges === 'function') {
+        return window.renderProductBadges(product);
+    }
+    return Object.keys(product).filter(key => key.startsWith('is')).filter(b => product[b]).map(b => b.replace('is', '').replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())).join(', ') || '-';
 }
 
 // Render products table
@@ -308,15 +324,17 @@ function renderProductsTable() {
     productsTableBody.innerHTML = products.map(product => `
         <tr>
             <td>
-onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzUiIGhlaWdodD0iNzUiIHZpZXdCb3g9IjAgMCA3NSA3NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijc1IiBoZWlnaHQ9Ijc1IiBmaWxsPSIjNDE0MTQxIi8+Cjx0ZXh0IHg9IjM3LjUiIHk9IjQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTk5OTkiPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4K';this.style.objectFit='cover'"
+                <img src="${product.image || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNDE0MTQxIi8+Cjx0ZXh0IHg9IjM1IiB5PSIzNSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjkiIGZpbGw9IiM5OTk5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+'}" class="product-thumb" alt="${product.name}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjNDE0MTQxIi8+Cjx0ZXh0IHg9IjM1IiB5PSIzNSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjkiIGZpbGw9IiM5OTk5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+'">
             </td>
-            <td>${product.name}</td>
-            <td>${capitalizeFirst(product.category)}</td>
-            <td>₹${product.actualMRP}</td>
-            <td>${product.stock}</td>
+            <td>${product.name || 'N/A'}</td>
+            <td>${capitalizeFirst(product.category || 'Uncategorized')}</td>
+            <td>₹${product.actualMRP || 0}</td>
+            <td>${product.priceAfterDiscount ? '₹' + product.priceAfterDiscount + ' (Disc.)' : '-'}</td>
+            <td>${renderProductBadges(product)}</td>
+            <td>${product.stock || 0}</td>
             <td>
-                <span class="stock-badge ${getStockClass(product.stock)}">
-                    ${getStockStatus(product.stock)}
+                <span class="stock-badge ${getStockClass(product.stock || 0)}">
+                    ${getStockStatus(product.stock || 0)}
                 </span>
             </td>
             <td>
@@ -375,6 +393,7 @@ function editProduct(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
 
+
     editingProductId = productId;
     document.getElementById('modalTitle').textContent = 'Edit Product';
     
@@ -421,6 +440,14 @@ async function deleteProduct(productId) {
 
 // Save product (add or update)
 async function saveProduct(productData) {
+    if (isSubmitting) {
+        console.log('⏳ Already submitting, ignoring...');
+        return;
+    }
+    
+    isSubmitting = true;
+    console.log('🔄 Starting save process...');
+    
     try {
         let url = '/api/products';
         let method = 'POST';
@@ -428,6 +455,16 @@ async function saveProduct(productData) {
         if (editingProductId) {
             url = '/api/products/' + editingProductId;
             method = 'PUT';
+        }
+
+        // Disable form
+        const submitBtn = document.querySelector('#productForm button[type="submit"]') || 
+                         document.querySelector('.submit-btn') ||
+                         productForm.querySelector('button');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+            submitBtn.style.opacity = '0.6';
         }
 
         const response = await fetch(url, {
@@ -438,28 +475,32 @@ async function saveProduct(productData) {
             body: JSON.stringify(productData)
         });
 
+        const savedProduct = await response.json();
+
         if (response.ok) {
-            const savedProduct = await response.json();
-            
-            if (editingProductId) {
-                const index = products.findIndex(p => p.id === editingProductId);
-                if (index !== -1) {
-                    products[index] = savedProduct;
-                }
-            } else {
-                products.push(savedProduct);
-            }
-            
+            console.log('✅ Save success:', savedProduct);
+            await loadProducts(); // 🔄 RELOAD from server to ensure sync
             renderProductsTable();
             updateStats();
             closeProductModal();
-            alert(editingProductId ? 'Product updated successfully!' : 'Product added successfully!');
+            alert(editingProductId ? 'Product updated successfully! 🔄 Table refreshed' : 'Product added successfully! 🔄 Table refreshed');
         } else {
-            alert('Failed to save product');
+            const errorData = savedProduct;
+            console.error('❌ Save failed:', errorData);
+            alert('Failed to save: ' + (errorData.error || 'Server error'));
         }
     } catch (error) {
         console.error('Error saving product:', error);
-        alert('Error saving product');
+        alert('Error saving product: ' + error.message);
+    } finally {
+        // Always re-enable
+        isSubmitting = false;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save Product';
+            submitBtn.style.opacity = '1';
+        }
+        console.log('🔓 Submit unlocked');
     }
 }
 
@@ -485,51 +526,64 @@ function setupEventListeners() {
     
     productForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+        e.stopPropagation();
         
-        var imageUrl = document.getElementById('productImage').value;
-        var imageFile = document.getElementById('productImageFile').files[0];
-        
-        // If file is selected, upload it first
-        if (imageFile) {
-            try {
-                var formData = new FormData();
-                formData.append('image', imageFile);
-                
-                var uploadResponse = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (!uploadResponse.ok) {
-                    var uploadError = await uploadResponse.json();
-                    alert('Error uploading image: ' + uploadError.error);
-                    return;
-                }
-                
-                var uploadData = await uploadResponse.json();
-                imageUrl = uploadData.imageUrl;
-            } catch (uploadErr) {
-                console.error('Upload error:', uploadErr);
-                alert('Error uploading image. Please try again or use a URL.');
-                return;
-            }
+        if (isSubmitting) {
+            console.log('🚫 Duplicate submit blocked');
+            return;
         }
         
-        // Get badge values dynamically from the form
-        var badgeValues = getBadgeValues();
+        console.log('📝 Single form submit');
         
-        var productData = {
-            name: document.getElementById('productName').value,
-            category: document.getElementById('productCategory').value,
-            actualMRP: parseFloat(document.getElementById('productPrice').value),
+        // Validate
+        const name = document.getElementById('productName').value.trim();
+        const category = document.getElementById('productCategory').value;
+        const price = document.getElementById('productPrice').value;
+        
+        if (!name || !category || !price) {
+            alert('Please fill name, category, and price');
+            return;
+        }
+        
+        const imageUrl = document.getElementById('productImage').value;
+        const imageFile = document.getElementById('productImageFile').files[0];
+        console.log('🖼️ Image:', imageFile ? 'File selected' : imageUrl || 'None');
+        
+        // Upload file first if selected
+        if (imageFile) {
+            const formData = new FormData();
+            formData.append('image', imageFile);
+            
+            const uploadResponse = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!uploadResponse.ok) {
+                const uploadError = await uploadResponse.json().catch(() => ({}));
+                alert('Image upload failed: ' + uploadError.error);
+                return;
+            }
+            
+            const uploadData = await uploadResponse.json();
+            imageUrl = uploadData.imageUrl;
+            console.log('✅ Image uploaded:', imageUrl);
+        }
+        
+        // Prepare product data
+        const productData = {
+            name,
+            category,
+            actualMRP: parseFloat(price),
             priceAfterDiscount: document.getElementById('productOriginalPrice').value ? parseFloat(document.getElementById('productOriginalPrice').value) : null,
-            stock: parseInt(document.getElementById('productStock').value),
-            description: document.getElementById('productDescription').value,
-            image: imageUrl || 'https://via.placeholder.com/300x250?text=Product+Image',
-            ...badgeValues
+            stock: parseInt(document.getElementById('productStock').value) || 0,
+            description: document.getElementById('productDescription').value || '',
+            image: imageUrl || 'https://via.placeholder.com/300x250?text=No+Image',
+            ...getBadgeValues()
         };
         
-        saveProduct(productData);
+        console.log('📦 Saving:', productData);
+        await saveProduct(productData);
     });
     
     productImageInput.addEventListener('input', function(e) {

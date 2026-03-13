@@ -9,9 +9,9 @@ const BADGES = [
     {
         id: "badge_new",
         name: "isNew",
-        label: "NEW",
+        label: "Limited Edition",
         color: "#f1c40f",
-        backgroundColor: "rgba(241, 196, 15, 0.2)",
+        backgroundColor: "#ffffff",
         textColor: "#f1c40f",
         icon: "fas fa-star",
         priority: 1
@@ -19,9 +19,9 @@ const BADGES = [
     {
         id: "badge_sale",
         name: "isSale",
-        label: "SALE",
+        label: "Sale",
         color: "#e74c3c",
-        backgroundColor: "rgba(231, 76, 60, 0.2)",
+        backgroundColor: "#ffffff",
         textColor: "#e74c3c",
         icon: "fas fa-tag",
         priority: 2
@@ -29,33 +29,14 @@ const BADGES = [
     {
         id: "badge_new_launch",
         name: "isNewLaunch",
-        label: "NEW LAUNCH",
+        label: "New Launch",
         color: "#9b59b6",
-        backgroundColor: "rgba(155, 89, 182, 0.2)",
+        backgroundColor: "#ffffff",
         textColor: "#9b59b6",
         icon: "fas fa-rocket",
         priority: 3
     },
-    {
-        id: "badge_best_seller",
-        name: "isBestSeller",
-        label: "BEST SELLER",
-        color: "#2ecc71",
-        backgroundColor: "rgba(46, 204, 113, 0.2)",
-        textColor: "#2ecc71",
-        icon: "fas fa-fire",
-        priority: 4
-    },
-    {
-        id: "badge_limited",
-        name: "isLimited",
-        label: "LIMITED EDITION",
-        color: "#e67e22",
-        backgroundColor: "rgba(230, 126, 34, 0.2)",
-        textColor: "#e67e22",
-        icon: "fas fa-gem",
-        priority: 5
-    }
+    
 ];
 
 // ============================================
@@ -105,7 +86,7 @@ function addBadge(badge) {
         name: badge.name,
         label: badge.label,
         color: badge.color || "#888",
-        backgroundColor: badge.backgroundColor || "rgba(136, 136, 136, 0.2)",
+        backgroundColor: "#ffffff",
         textColor: badge.textColor || "#888",
         icon: badge.icon || "fas fa-tag",
         priority: badge.priority || (BADGES.length + 1)
@@ -226,4 +207,3 @@ window.updateBadge = updateBadge;
 window.deleteBadge = deleteBadge;
 window.renderBadgeCheckboxes = renderBadgeCheckboxes;
 window.renderProductBadges = renderProductBadges;
-

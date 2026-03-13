@@ -6,9 +6,9 @@
     <title>The Boho Thread - Handmade Products</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="icon" type="image/png" sizes="32x32" href="./product-images/TheBohoThreadFevicon Image.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="./product-images/TheBohoThreadFevicon Image.png">
-    <link rel="apple-touch-icon" href="./product-images/TheBohoThreadFevicon Image.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/product-images/TheBohoThreadFevicon Image.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/product-images/TheBohoThreadFevicon Image.png">
+    <link rel="apple-touch-icon" href="/product-images/TheBohoThreadFevicon Image.png">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,15 +20,13 @@
                 <a href="#" class="nav-link" data-page="shop">Shop</a>
                 <a href="#" class="nav-link" data-page="about">About</a>
                 <a href="#" class="nav-link" data-page="contact">Contact</a>
+                <a href="#" class="nav-link admin-nav" id="adminBtn" onclick="handleAdminClick(event)"><i class="fas fa-cog"></i> Admin Login</a>
             </nav>
             <div class="header-actions">
                 <button class="search-btn" id="searchBtn"><i class="fas fa-search"></i></button>
                 <button class="cart-btn" id="cartBtn">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count" id="cartCount">0</span>
-                </button>
-                <button class="settings-btn" id="settingsBtn" title="Account Settings">
-                    <i class="fas fa-cog"></i>
                 </button>
             </div>
             <button class="menu-toggle" id="menuToggle">
@@ -57,11 +55,11 @@
         </div>
         
         <div class="category-filter">
-            <button class="category-btn active" data-category="all">All</button>
-            <button class="category-btn" data-category="jewelry">Jewelry</button>
-            <button class="category-btn" data-category="clothing">Clothing</button>
-            <button class="category-btn" data-category="home">Home Decor</button>
-            <button class="category-btn" data-category="accessories">Accessories</button>
+            <button class="category-btn active" data-category="all" onclick="filterByCategory(event)">All</button>
+            <button class="category-btn" data-category="jewelry" onclick="filterByCategory(event)">Jewelry</button>
+            <button class="category-btn" data-category="clothing" onclick="filterByCategory(event)">Clothing</button>
+            <button class="category-btn" data-category="home" onclick="filterByCategory(event)">Home Decor</button>
+            <button class="category-btn" data-category="accessories" onclick="filterByCategory(event)">Accessories</button>
         </div>
         
         <div class="products-grid" id="productsGrid">
@@ -163,9 +161,8 @@
         </div>
     </footer>
 
-<script src="badges-config.js"></script>
 <script src="store.js"></script>
-    
+
     <script>
     // Auto-logout when returning to index page (back button)
     if (localStorage.getItem('adminToken')) {
@@ -179,10 +176,10 @@
         }
     }
     </script>
-    
-    <div class="login-modal" id="loginModal">
+
+    <div class="login-modal" id="loginModal" onclick="if(event.target === this) this.classList.remove('active');">
         <div class="login-modal-content">
-            <button class="close-login-modal" id="closeLoginModal"><i class="fas fa-times"></i></button>
+            <button class="close-login-modal" id="closeLoginModal" onclick="document.getElementById('loginModal').classList.remove('active');"><i class="fas fa-times"></i></button>
             <div class="login-modal-header">
                 <h2><i class="fas fa-user-shield"></i> Admin Login</h2>
             </div>
@@ -197,7 +194,7 @@
                         <input type="password" id="loginPassword" placeholder="Enter password" required>
                     </div>
                     <div class="login-error" id="loginError"></div>
-                    <button type="button" class="btn btn-primary login-btn" id="loginBtn">
+                    <button type="button" class="btn btn-primary login-btn" onclick="var u=document.getElementById('loginUsername').value;var p=document.getElementById('loginPassword').value;fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})}).then(function(r){return r.json();}).then(function(d){if(d.success){localStorage.setItem('adminToken',d.token);localStorage.setItem('adminUsername',d.username);window.location.href='admin.html';}else{alert(d.error||'Invalid credentials');}}).catch(function(){alert('Connection error');});">
                         <i class="fas fa-sign-in-alt"></i> Login
                     </button>
                 </form>

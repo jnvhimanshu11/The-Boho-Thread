@@ -1,4 +1,3 @@
-// config.js - Load environment variables
 const config = require('./config');
 const multer = require('multer');
 const path = require('path');
@@ -140,12 +139,27 @@ app.get('/api/products/:id', (req, res) => {
   }
 });
 
-// Add new product
+// Add new product - with duplicate prevention
 app.post('/api/products', (req, res) => {
   const { name, category, actualMRP, priceAfterDiscount, stock, description, image, isNew, isSale, isNewLaunch } = req.body;
   
   if (!name || !category || !actualMRP) {
     return res.status(400).json({ error: 'Name, category, and Actual Product MRP are required' });
+  }
+  
+  // 🔒 Check for duplicate (case-insensitive name+category)
+  const productKey = (name || '').toLowerCase().trim() + '_' + (category || '').toLowerCase().trim();
+  const existing = config.getProducts().find(p => 
+    (p.name || '').toLowerCase().trim() + '_' + (p.category || '').toLowerCase().trim() === productKey
+  );
+  
+  if (existing) {
+    console.log(`🚫 Duplicate product blocked: ${name} (${category}) already exists (ID: ${existing.id})`);
+    return res.status(409).json({ 
+      error: 'Duplicate product detected',
+      message: `Product "${name}" in category "${category}" already exists (ID: ${existing.id}). Edit it instead?`,
+      existingId: existing.id 
+    });
   }
   
   const newProduct = config.addProduct({
@@ -161,6 +175,7 @@ app.post('/api/products', (req, res) => {
     isNewLaunch: isNewLaunch || false
   });
   
+  console.log(`✅ New product added: ${name} (ID: ${newProduct.id})`);
   res.status(201).json(newProduct);
 });
 
@@ -178,7 +193,10 @@ app.put('/api/products/:id', (req, res) => {
     ...(image && { image }),
     ...(isNew !== undefined && { isNew }),
     ...(isSale !== undefined && { isSale }),
-    ...(isNewLaunch !== undefined && { isNewLaunch })
+    ...(isNewLaunch !== undefined && { isNewLaunch }),
+
+
+    ...(isLimited !== undefined && { isLimited })
   });
   
   if (updatedProduct) {
