@@ -376,7 +376,7 @@
                         <th>Product Name</th>
                         <th>Category</th>
                         <th>Sale Price (₹)</th>
-                        <th>Produc MRP (₹)</th>
+                        <th>Product MRP (₹)</th>
                         <th>Badges</th>
                         <th>Stock</th>
                         <th>Status</th>
@@ -432,14 +432,14 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Actual Product Sale Price (₹)</label>
-                        <input type="number" id="productPrice" required min="0" placeholder="Enter price">
+                        <label>Sale Price (₹) <small>(Displayed price)</small></label>
+                        <input type="number" id="productPrice" required min="0" step="1" placeholder="Please Enter Final Selling Price">
                     </div>
 
                     <div class="form-group">
-                        <label>Price Before Discount (₹) - Optional</label>
-                        <input type="number" id="productOriginalPrice" min="0" placeholder="Enter original price for showing discount">
-                        <small style="color: rgba(255,255,255,0.5); font-size: 0.8rem;">Set this higher than price to show discount</small>
+                        <label>MRP (₹) <small>(Strikethrough, optional)</small></label>
+                        <input type="number" id="productOriginalPrice" min="0" step="1" placeholder="Please Enter Product MRP">
+                        <small style="color: rgba(255,255,255,0.5); font-size: 0.8rem;">Set higher than sale price to show discount badge</small>
                     </div>
 
                     <div class="form-group">

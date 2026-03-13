@@ -328,8 +328,8 @@ function renderProductsTable() {
             </td>
             <td>${product.name || 'N/A'}</td>
             <td>${capitalizeFirst(product.category || 'Uncategorized')}</td>
+            <td>${product.priceAfterDiscount ? '₹' + product.priceAfterDiscount : '₹' + (product.actualMRP || 0)}</td>
             <td>₹${product.actualMRP || 0}</td>
-            <td>${product.priceAfterDiscount ? '₹' + product.priceAfterDiscount + ' (Disc.)' : '-'}</td>
             <td>${renderProductBadges(product)}</td>
             <td>${product.stock || 0}</td>
             <td>
@@ -417,24 +417,36 @@ function editProduct(productId) {
 
 // Delete product
 async function deleteProduct(productId) {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+    console.log('🗑️ Delete attempt for productId:', productId, 'Current products count:', products.length);
+    
+    if (!confirm('Are you sure you want to delete this product?')) {
+        console.log('❌ Delete cancelled by user');
+        return;
+    }
 
     try {
+        console.log('📡 Sending DELETE to /api/products/' + productId);
         const response = await fetch('/api/products/' + productId, {
             method: 'DELETE'
         });
+        
+        console.log('📡 DELETE response status:', response.status);
 
         if (response.ok) {
-            products = products.filter(p => p.id !== productId);
-            renderProductsTable();
-            updateStats();
-            alert('Product deleted successfully!');
+            console.log('✅ DELETE successful, re-fetching products...');
+            await loadProducts();  // Always re-fetch for sync
+            console.log('🔄 Products reloaded, new count:', products.length);
+            alert('Product deleted successfully! ✅ Table refreshed');
         } else {
-            alert('Failed to delete product');
+            const errorText = await response.text();
+            console.error('❌ DELETE failed (status ' + response.status + '):', errorText);
+            await loadProducts();  // Re-fetch even on fail for consistency
+            alert('Failed to delete (status ' + response.status + '): ' + errorText.slice(0, 100));
         }
     } catch (error) {
-        console.error('Error deleting product:', error);
-        alert('Error deleting product');
+        console.error('💥 Network error deleting product:', error);
+        await loadProducts();  // Re-fetch on error too
+        alert('Network error deleting product. Table refreshed from server.');
     }
 }
 
@@ -510,6 +522,7 @@ function closeProductModal() {
     editingProductId = null;
     productForm.reset();
     imagePreview.classList.remove('active');
+    isSubmitting = false;  // 🔓 Reset submit lock
 }
 
 // Setup event listeners
@@ -528,12 +541,14 @@ function setupEventListeners() {
         e.preventDefault();
         e.stopPropagation();
         
+        console.error('🚀 FORM SUBMIT TRIGGERED!');  // 🔍 CONFIRM CLICK WORKS
+        
         if (isSubmitting) {
             console.log('🚫 Duplicate submit blocked');
             return;
         }
         
-        console.log('📝 Single form submit');
+        console.log('📝 Single form submit ✅');
         
         // Validate
         const name = document.getElementById('productName').value.trim();
@@ -549,8 +564,15 @@ function setupEventListeners() {
         const imageFile = document.getElementById('productImageFile').files[0];
         console.log('🖼️ Image:', imageFile ? 'File selected' : imageUrl || 'None');
         
+// 🔍 DEBUG: Form data
+        console.log('📝 Form submit - Name:', name, 'Category:', category, 'Price:', price, 'ImageFile:', !!imageFile, 'ImageUrl:', imageUrl);
+        console.log('isSubmitting:', isSubmitting);
+
+        // Reset if stuck
+        isSubmitting = false;
+
         // Upload file first if selected
-        if (imageFile) {
+if (imageFile) {
             const formData = new FormData();
             formData.append('image', imageFile);
             
@@ -574,9 +596,9 @@ function setupEventListeners() {
         const productData = {
             name,
             category,
-            actualMRP: parseFloat(price),
-            priceAfterDiscount: document.getElementById('productOriginalPrice').value ? parseFloat(document.getElementById('productOriginalPrice').value) : null,
-            stock: parseInt(document.getElementById('productStock').value) || 0,
+            actualMRP: parseFloat(price),  // Sale price (displayed)
+            priceAfterDiscount: document.getElementById('productOriginalPrice').value ? parseFloat(document.getElementById('productOriginalPrice').value) : null,  // MRP (strikethrough)
+stock: parseInt(document.getElementById('productStock').value) || 0,
             description: document.getElementById('productDescription').value || '',
             image: imageUrl || 'https://via.placeholder.com/300x250?text=No+Image',
             ...getBadgeValues()

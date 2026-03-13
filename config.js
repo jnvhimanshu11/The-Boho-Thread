@@ -116,9 +116,22 @@ module.exports = {
 
   // Add new product
   addProduct: function(productData) {
+    console.log('➕ Adding product:', productData);  // 🔍 DEBUG
+    
+    // Dynamic badges: filter/accept is* booleans only
+    const cleanData = {};
+    Object.keys(productData).forEach(key => {
+      if (['name', 'category', 'actualMRP', 'priceAfterDiscount', 'stock', 'description', 'image'].includes(key)) {
+        cleanData[key] = productData[key];
+      } else if (key.startsWith('is') && typeof productData[key] === 'boolean') {
+        cleanData[key] = productData[key];
+      }
+    });
+    
     const newId = Math.max(...this._products.map(p => p.id), 0) + 1;
-    const newProduct = { id: newId, ...productData };
+    const newProduct = { id: newId, ...cleanData };
     this._products.unshift(newProduct);
+    console.log('✅ Added:', newProduct.id);
     return newProduct;
   },
 

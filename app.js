@@ -181,27 +181,32 @@ app.post('/api/products', (req, res) => {
 
 // Update product
 app.put('/api/products/:id', (req, res) => {
-  const { name, category, actualMRP, priceAfterDiscount, stock, description, image, isNew, isSale, isNewLaunch } = req.body;
+  console.log('🔄 PUT /api/products/' + req.params.id, req.body);  // 🔍 DEBUG
   
-  const updatedProduct = config.updateProduct(req.params.id, {
-    ...(name && { name }),
-    ...(category && { category }),
-    ...(actualMRP && { actualMRP: parseFloat(actualMRP) }),
-    ...(priceAfterDiscount !== undefined && { priceAfterDiscount: priceAfterDiscount ? parseFloat(priceAfterDiscount) : null }),
-    ...(stock !== undefined && { stock: parseInt(stock) }),
-    ...(description !== undefined && { description }),
-    ...(image && { image }),
-    ...(isNew !== undefined && { isNew }),
-    ...(isSale !== undefined && { isSale }),
-    ...(isNewLaunch !== undefined && { isNewLaunch }),
-
-
-    ...(isLimited !== undefined && { isLimited })
+  // Dynamic badges: accept any is* booleans
+  const updates = {};
+  Object.keys(req.body).forEach(key => {
+    if (key.startsWith('is') && typeof req.body[key] === 'boolean') {
+      updates[key] = req.body[key];
+    }
   });
   
+  const { name, category, actualMRP, priceAfterDiscount, stock, description, image } = req.body;
+  if (name !== undefined) updates.name = name;
+  if (category !== undefined) updates.category = category;
+  if (actualMRP !== undefined) updates.actualMRP = parseFloat(actualMRP);
+  if (priceAfterDiscount !== undefined) updates.priceAfterDiscount = priceAfterDiscount ? parseFloat(priceAfterDiscount) : null;
+  if (stock !== undefined) updates.stock = parseInt(stock);
+  if (description !== undefined) updates.description = description;
+  if (image !== undefined) updates.image = image;
+  
+  const updatedProduct = config.updateProduct(req.params.id, updates);
+  
   if (updatedProduct) {
+    console.log('✅ Updated:', updatedProduct.id);
     res.json(updatedProduct);
   } else {
+    console.error('❌ Product not found:', req.params.id);
     res.status(404).json({ error: 'Product not found' });
   }
 });
