@@ -514,6 +514,7 @@ async function saveProduct(productData) {
             method = 'PUT';
         }
 
+
         // Disable form
         if (submitBtn) {
             submitBtn.disabled = true;
