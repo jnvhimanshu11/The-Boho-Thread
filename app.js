@@ -1,4 +1,5 @@
 const config = require('./config');
+config.loadProductsFromFile();
 const multer = require('multer');
 const path = require('path');
 

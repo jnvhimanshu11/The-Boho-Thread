@@ -142,7 +142,7 @@ document.addEventListener('click', (e) => {
 // ====================
 async function loadProducts() {
   try {
-    const response = await fetch('/api/products');
+    const response = await fetch('/api/products?_=' + Date.now());
     products = await response.json();
     filteredProducts = [...products];
     console.log('📦 Loaded', products.length, 'products');
@@ -181,8 +181,8 @@ function renderProducts() {
         <div class="product-category">${product.category?.toUpperCase()}</div>
         <h3 class="product-title">${product.name}</h3>
         <div class="product-price">
-${product.priceAfterDiscount ? `<span class="original-price">₹${product.priceAfterDiscount}</span>` : `₹${product.price || 0}`}
-          ${product.actualMRP ? `<span class="sale-price">₹${product.actualMRP}</span>` : ''}
+${product.priceAfterDiscount ? `<span class="original-price">₹${product.actualMRP}</span>` : `₹${product.price || 0}`}
+          ${product.actualMRP ? `<span class="sale-price">₹${product.priceAfterDiscount}</span>` : ''}
         </div>
         <span class="product-stock ${product.stock <= 5 ? 'stock-low' : 'stock-in'}">
           Stock: ${product.stock || 0}
@@ -240,7 +240,7 @@ function openQuickView(productId) {
 document.getElementById('modalProductImage').src = product.image || './no-image-available.png';
   document.getElementById('modalProductImage').alt = product.name;
   document.getElementById('modalProductName').textContent = product.name;
-  document.getElementById('modalProductPrice').innerHTML = product.priceAfterDiscount ? `<span class="original-price">₹${product.priceAfterDiscount}</span> <span class="sale-price">₹${product.actualMRP || product.price || 0}</span>` : `₹${product.price || 0}`;
+  document.getElementById('modalProductPrice').innerHTML = product.priceAfterDiscount ? `<span class="original-price">₹${product.priceAfterDiscount}</span> <span class="sale-price">₹${product.priceAfterDiscount || product.price || 0}</span>` : `₹${product.price || 0}`;
   document.getElementById('modalProductDescription').textContent = product.description || `${product.name} - Handcrafted with love!`;
   document.getElementById('modalProductStock').textContent = product.stock > 0 ? 'In Stock' : 'Out of Stock';
   document.getElementById('productQty').value = 1;

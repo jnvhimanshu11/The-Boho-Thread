@@ -1,4 +1,7 @@
 // config.js - Complete configuration for The Boho Thread
+const fs = require('fs');
+const path = require('path');
+
 module.exports = {
   // Server config
   SERVER: {
@@ -68,10 +71,80 @@ module.exports = {
     );
   },
 
-  // Product data storage (in-memory - persists across restarts)
-  _products: [
-    {
-      id: 1,
+  // Product data storage (PERSISTENT - loads/saves to products.json)
+  _products: [],
+
+  // Load products from file on startup
+  loadProductsFromFile: function() {
+    try {
+      const filePath = path.join(__dirname, 'products.json');
+      if (fs.existsSync(filePath)) {
+        const data = fs.readFileSync(filePath, 'utf8');
+        const loaded = JSON.parse(data);
+        this._products = loaded.map(p => ({ ...p, id: Number(p.id) }));
+        if (this._products.length === 0) {
+          console.log('⚠️  Empty file, populating defaults');
+          // Populate defaults if empty
+          this._products = [
+            {
+              id: 1,
+              name: 'Boho Necklace',
+              category: 'jewelry',
+              actualMRP: 1299,
+              priceAfterDiscount: 999,
+              stock: 10,
+              description: 'Handcrafted boho necklace with natural stones',
+              image: './product-images/1773305762145-964409636.png',
+              isNew: true
+            },
+            {
+              id: 2,
+              name: 'Maxi Dress',
+              category: 'clothing',
+              actualMRP: 2999,
+              priceAfterDiscount: 2499,
+              stock: 8,
+              description: 'Flowy maxi dress perfect for summer vibes',
+              image: './product-images/1773305762150-71463976.png',
+              isSale: true
+            },
+            {
+              id: 3,
+              name: 'Wall Hanging',
+              category: 'home',
+              actualMRP: 1499,
+              priceAfterDiscount: 1499,
+              stock: 15,
+              description: 'Macrame wall hanging for boho decor',
+              image: './product-images/1773306014188-545467905.jpeg'
+            }
+          ];
+          this.saveProductsToFile();
+        } else {
+          console.log(`✅ Loaded ${this._products.length} products from products.json`);
+        }
+        return true;
+      }
+    } catch (error) {
+      console.error('❌ Failed to load products.json:', error.message);
+    }
+    console.log('📄 No products.json found, using defaults');
+    return false;
+  },
+
+  // Save products to file after changes
+  saveProductsToFile: function() {
+    try {
+      const filePath = path.join(__dirname, 'products.json');
+      fs.writeFileSync(filePath, JSON.stringify(this._products, null, 2), 'utf8');
+      console.log(`💾 Saved ${this._products.length} products to products.json`);
+    } catch (error) {
+      console.error('❌ Failed to save products.json:', error.message);
+    }
+  },
+
+  // Load on startup - called from app.js after require
+  // Auto-populate products.json with defaults if empty
       name: 'Boho Necklace',
       category: 'jewelry',
       actualMRP: 1299,
@@ -132,6 +205,21 @@ module.exports = {
     const newProduct = { id: newId, ...cleanData };
     this._products.unshift(newProduct);
     console.log('✅ Added:', newProduct.id);
+    
+    this.saveProductsToFile(); // 🔄 PERSIST
+    return newProduct;
+  },
+      if (['name', 'category', 'actualMRP', 'priceAfterDiscount', 'stock', 'description', 'image'].includes(key)) {
+        cleanData[key] = productData[key];
+      } else if (key.startsWith('is') && typeof productData[key] === 'boolean') {
+        cleanData[key] = productData[key];
+      }
+    });
+    
+    const newId = Math.max(...this._products.map(p => p.id), 0) + 1;
+    const newProduct = { id: newId, ...cleanData };
+    this._products.unshift(newProduct);
+    console.log('✅ Added:', newProduct.id);
     return newProduct;
   },
 
@@ -141,6 +229,8 @@ module.exports = {
     if (productIndex === -1) return null;
     
     this._products[productIndex] = { ...this._products[productIndex], ...updates };
+    this.saveProductsToFile(); // 🔄 PERSIST
+    
     return this._products[productIndex];
   },
 
@@ -148,6 +238,7 @@ module.exports = {
   deleteProduct: function(id) {
     const initialLength = this._products.length;
     this._products = this._products.filter(p => p.id != id);
+    this.saveProductsToFile(); // 🔄 PERSIST
     return this._products.length < initialLength;
   },
 
