@@ -175,7 +175,7 @@ module.exports = {
       description: 'Macrame wall hanging for boho decor',
       image: './product-images/1773306014188-545467905.jpeg'
     }
-  ],
+  ,
 
   // Get all products
   getProducts: function() {
