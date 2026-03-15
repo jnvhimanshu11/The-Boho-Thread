@@ -39,19 +39,19 @@ module.exports = {
   INVITE_DATA: [
     {
       id: 'himanshu',
-      title: \"Himanshu Special Invite\",
+      title: "Himanshu Special Invite",
       videoUrl: 'https://res.cloudinary.com/dq9wty6km/video/upload/v1727849872/dhruv.mp4',
       thumbnailUrl: 'https://res.cloudinary.com/dq9wty6km/image/upload/v1727849872/dhruv_tn.jpg'
     },
     {
       id: 'kajal',
-      title: \"Kajal Exclusive Access\",
+      title: "Kajal Exclusive Access",
       videoUrl: 'https://res.cloudinary.com/dq9wty6km/video/upload/v1727849871/kajal.mp4',
       thumbnailUrl: 'https://res.cloudinary.com/dq9wty6km/image/upload/v1727849871/kajal_tn.jpg'
     },
     {
       id: 'pushpa',
-      title: \"Pushpa Private Collection\",
+      title: "Pushpa Private Collection",
       videoUrl: 'https://res.cloudinary.com/dq9wty6km/video/upload/v1727849871/pushpa.mp4',
       thumbnailUrl: 'https://res.cloudinary.com/dq9wty6km/image/upload/v1727849871/pushpa_tn.jpg'
     }
@@ -136,7 +136,7 @@ module.exports = {
   getProducts: function() {
     return this._products;
   },
-
+  
   getProductById: function(id) {
     return this._products.find(function(p) {
       return p.id == id;
