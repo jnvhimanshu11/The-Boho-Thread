@@ -145,38 +145,7 @@ module.exports = {
 
   // Load on startup - called from app.js after require
   // Auto-populate products.json with defaults if empty
-      name: 'Boho Necklace',
-      category: 'jewelry',
-      actualMRP: 1299,
-      priceAfterDiscount: 999,
-      stock: 10,
-      description: 'Handcrafted boho necklace with natural stones',
-      image: './product-images/1773305762145-964409636.png',
-      isNew: true
-    },
-    {
-      id: 2,
-      name: 'Maxi Dress',
-      category: 'clothing',
-      actualMRP: 2999,
-      priceAfterDiscount: 2499,
-      stock: 8,
-      description: 'Flowy maxi dress perfect for summer vibes',
-      image: './product-images/1773305762150-71463976.png',
-      isSale: true
-    },
-    {
-      id: 3,
-      name: 'Wall Hanging',
-      category: 'home',
-      actualMRP: 1499,
-      priceAfterDiscount: 1499,
-      stock: 15,
-      description: 'Macrame wall hanging for boho decor',
-      image: './product-images/1773306014188-545467905.jpeg'
-    }
-  ,
-
+  
   // Get all products
   getProducts: function() {
     return this._products;
@@ -220,6 +189,8 @@ module.exports = {
     const newProduct = { id: newId, ...cleanData };
     this._products.unshift(newProduct);
     console.log('✅ Added:', newProduct.id);
+    
+    this.saveProductsToFile(); // 🔄 PERSIST
     return newProduct;
   },
 
