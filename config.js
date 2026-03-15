@@ -1,14 +1,11 @@
-// config.js - Complete configuration for The Boho Thread
 const fs = require('fs');
 const path = require('path');
 
 module.exports = {
-  // Server config
   SERVER: {
     PORT: process.env.PORT || 3000
   },
 
-  // Admin credentials (change these!)
   ADMIN_USERS: [
     {
       username: '9548190094',
@@ -16,20 +13,17 @@ module.exports = {
     }
   ],
 
-  // Contact information
   CONTACT: {
     phone: '9548190094',
     email: 'jnvhimanshu11@gmail.com'
   },
 
-  // URLs configuration
   URLs: {
     instagram: 'https://instagram.com',
     facebook: 'https://facebook.com',
     whatsapp: 'https://wa.me/919548190094'
   },
 
-  // Video URLs and thumbnails for invite pages
   VIDEO_URLS: [
     'https://res.cloudinary.com/dq9wty6km/video/upload/v1727849872/dhruv.mp4',
     'https://res.cloudinary.com/dq9wty6km/video/upload/v1727849871/kajal.mp4',
@@ -42,49 +36,46 @@ module.exports = {
     'https://res.cloudinary.com/dq9wty6km/image/upload/v1727849871/pushpa_tn.jpg'
   ],
 
-  // Invite data for /v/:id pages
   INVITE_DATA: [
     {
       id: 'himanshu',
-      title: 'Himanshu\'s Special Invite 🎉',
+      title: \"Himanshu Special Invite\",
       videoUrl: 'https://res.cloudinary.com/dq9wty6km/video/upload/v1727849872/dhruv.mp4',
       thumbnailUrl: 'https://res.cloudinary.com/dq9wty6km/image/upload/v1727849872/dhruv_tn.jpg'
     },
     {
       id: 'kajal',
-      title: 'Kajal\'s Exclusive Access ✨',
+      title: \"Kajal Exclusive Access\",
       videoUrl: 'https://res.cloudinary.com/dq9wty6km/video/upload/v1727849871/kajal.mp4',
       thumbnailUrl: 'https://res.cloudinary.com/dq9wty6km/image/upload/v1727849871/kajal_tn.jpg'
     },
     {
       id: 'pushpa',
-      title: 'Pushpa\'s Private Collection 🔥',
+      title: \"Pushpa Private Collection\",
       videoUrl: 'https://res.cloudinary.com/dq9wty6km/video/upload/v1727849871/pushpa.mp4',
       thumbnailUrl: 'https://res.cloudinary.com/dq9wty6km/image/upload/v1727849871/pushpa_tn.jpg'
     }
   ],
 
-  // Admin credential checker
   checkAdminCredentials: function(username, password) {
-    return this.ADMIN_USERS.some(user => 
-      user.username === username && user.password === password
-    );
+    return this.ADMIN_USERS.some(function(user) {
+      return user.username === username && user.password === password;
+    });
   },
 
-  // Product data storage (PERSISTENT - loads/saves to products.json)
   _products: [],
 
-  // Load products from file on startup
   loadProductsFromFile: function() {
     try {
       const filePath = path.join(__dirname, 'products.json');
       if (fs.existsSync(filePath)) {
         const data = fs.readFileSync(filePath, 'utf8');
         const loaded = JSON.parse(data);
-        this._products = loaded.map(p => ({ ...p, id: Number(p.id) }));
+        this._products = loaded.map(function(p) {
+          return { ...p, id: Number(p.id) };
+        });
         if (this._products.length === 0) {
-          console.log('⚠️  Empty file, populating defaults');
-          // Populate defaults if empty
+          console.log('Empty file, populating defaults');
           this._products = [
             {
               id: 1,
@@ -121,48 +112,42 @@ module.exports = {
           ];
           this.saveProductsToFile();
         } else {
-          console.log(`✅ Loaded ${this._products.length} products from products.json`);
+          console.log('Loaded ' + this._products.length + ' products from products.json');
         }
         return true;
       }
     } catch (error) {
-      console.error('❌ Failed to load products.json:', error.message);
+      console.error('Failed to load products.json:', error.message);
     }
-    console.log('📄 No products.json found, using defaults');
+    console.log('No products.json found, using defaults');
     return false;
   },
 
-  // Save products to file after changes
   saveProductsToFile: function() {
     try {
       const filePath = path.join(__dirname, 'products.json');
       fs.writeFileSync(filePath, JSON.stringify(this._products, null, 2), 'utf8');
-      console.log(`💾 Saved ${this._products.length} products to products.json`);
+      console.log('Saved ' + this._products.length + ' products to products.json');
     } catch (error) {
-      console.error('❌ Failed to save products.json:', error.message);
+      console.error('Failed to save products.json:', error.message);
     }
   },
 
-  // Load on startup - called from app.js after require
-  // Auto-populate products.json with defaults if empty
-  
-  // Get all products
   getProducts: function() {
     return this._products;
   },
 
-  // Get product by ID
   getProductById: function(id) {
-    return this._products.find(p => p.id == id);
+    return this._products.find(function(p) {
+      return p.id == id;
+    });
   },
 
-  // Add new product
   addProduct: function(productData) {
-    console.log('➕ Adding product:', productData);  // 🔍 DEBUG
+    console.log('Adding product:', productData);
     
-    // Dynamic badges: filter/accept is* booleans only
     const cleanData = {};
-    Object.keys(productData).forEach(key => {
+    Object.keys(productData).forEach(function(key) {
       if (['name', 'category', 'actualMRP', 'priceAfterDiscount', 'stock', 'description', 'image'].includes(key)) {
         cleanData[key] = productData[key];
       } else if (key.startsWith('is') && typeof productData[key] === 'boolean') {
@@ -170,50 +155,38 @@ module.exports = {
       }
     });
     
-    const newId = Math.max(...this._products.map(p => p.id), 0) + 1;
+    const newId = Math.max.apply(Math, this._products.map(function(p) {
+      return p.id;
+    }), 0) + 1;
     const newProduct = { id: newId, ...cleanData };
     this._products.unshift(newProduct);
-    console.log('✅ Added:', newProduct.id);
+    console.log('Added:', newProduct.id);
     
-    this.saveProductsToFile(); // 🔄 PERSIST
-    return newProduct;
-  },
-      if (['name', 'category', 'actualMRP', 'priceAfterDiscount', 'stock', 'description', 'image'].includes(key)) {
-        cleanData[key] = productData[key];
-      } else if (key.startsWith('is') && typeof productData[key] === 'boolean') {
-        cleanData[key] = productData[key];
-      }
-    });
-    
-    const newId = Math.max(...this._products.map(p => p.id), 0) + 1;
-    const newProduct = { id: newId, ...cleanData };
-    this._products.unshift(newProduct);
-    console.log('✅ Added:', newProduct.id);
-    
-    this.saveProductsToFile(); // 🔄 PERSIST
+    this.saveProductsToFile();
     return newProduct;
   },
 
-  // Update product
   updateProduct: function(id, updates) {
-    const productIndex = this._products.findIndex(p => p.id == id);
+    const productIndex = this._products.findIndex(function(p) {
+      return p.id == id;
+    });
     if (productIndex === -1) return null;
     
-    this._products[productIndex] = { ...this._products[productIndex], ...updates };
-    this.saveProductsToFile(); // 🔄 PERSIST
+    this._products[productIndex] = Object.assign({}, this._products[productIndex], updates);
+    this.saveProductsToFile();
     
     return this._products[productIndex];
   },
 
-  // Delete product
   deleteProduct: function(id) {
     const initialLength = this._products.length;
-    this._products = this._products.filter(p => p.id != id);
-    this.saveProductsToFile(); // 🔄 PERSIST
+    this._products = this._products.filter(function(p) {
+      return p.id != id;
+    });
+    this.saveProductsToFile();
     return this._products.length < initialLength;
   },
 
-  // Categories
   _categories: ['jewelry', 'clothing', 'home', 'accessories'],
 
   getCategories: function() {
@@ -235,69 +208,80 @@ module.exports = {
     return false;
   },
 
-  // Badges configuration (3 badges only)
   BADGES: [
     {
-      id: "badge_new",
-      name: "isNew",
-      label: "NEW",
-      color: "#f1c40f",
-      backgroundColor: "rgba(241, 196, 15, 0.2)",
-      textColor: "#f1c40f",
-      icon: "fas fa-star",
+      id: 'badge_new',
+      name: 'isNew',
+      label: 'NEW',
+      color: '#f1c40f',
+      backgroundColor: 'rgba(241, 196, 15, 0.2)',
+      textColor: '#f1c40f',
+      icon: 'fas fa-star',
       priority: 1
     },
     {
-      id: "badge_sale",
-      name: "isSale",
-      label: "SALE",
-      color: "#e74c3c",
-      backgroundColor: "rgba(231, 76, 60, 0.2)",
-      textColor: "#e74c3c",
-      icon: "fas fa-tag",
+      id: 'badge_sale',
+      name: 'isSale',
+      label: 'SALE',
+      color: '#e74c3c',
+      backgroundColor: 'rgba(231, 76, 60, 0.2)',
+      textColor: '#e74c3c',
+      icon: 'fas fa-tag',
       priority: 2
     },
     {
-      id: "badge_new_launch",
-      name: "isNewLaunch",
-      label: "NEW LAUNCH",
-      color: "#9b59b6",
-      backgroundColor: "rgba(155, 89, 182, 0.2)",
-      textColor: "#9b59b6",
-      icon: "fas fa-rocket",
+      id: 'badge_new_launch',
+      name: 'isNewLaunch',
+      label: 'NEW LAUNCH',
+      color: '#9b59b6',
+      backgroundColor: 'rgba(155, 89, 182, 0.2)',
+      textColor: '#9b59b6',
+      icon: 'fas fa-rocket',
       priority: 3
     }
   ],
 
-  // Badge helper functions
   getBadges: function() {
-    return [...this.BADGES];
+    return this.BADGES.slice();
   },
 
   getBadgeByName: function(name) {
-    return this.BADGES.find(badge => badge.name === name) || null;
+    for (let i = 0; i < this.BADGES.length; i++) {
+      if (this.BADGES[i].name === name) {
+        return this.BADGES[i];
+      }
+    }
+    return null;
   },
 
   addBadge: function(badgeData) {
-    if (this.BADGES.find(b => b.name === badgeData.name || b.id === badgeData.id)) {
-      return null;
+    for (let i = 0; i < this.BADGES.length; i++) {
+      if (this.BADGES[i].name === badgeData.name || this.BADGES[i].id === badgeData.id) {
+        return null;
+      }
     }
-    const newBadge = { ...badgeData, priority: this.BADGES.length + 1 };
+    const newBadge = Object.assign({}, badgeData, { priority: this.BADGES.length + 1 });
     this.BADGES.push(newBadge);
     return newBadge;
   },
 
   updateBadge: function(id, updates) {
-    const index = this.BADGES.findIndex(b => b.id === id);
-    if (index === -1) return null;
-    this.BADGES[index] = { ...this.BADGES[index], ...updates };
-    return this.BADGES[index];
+    for (let i = 0; i < this.BADGES.length; i++) {
+      if (this.BADGES[i].id === id) {
+        this.BADGES[i] = Object.assign({}, this.BADGES[i], updates);
+        return this.BADGES[i];
+      }
+    }
+    return null;
   },
 
   deleteBadge: function(id) {
-    const index = this.BADGES.findIndex(b => b.id === id);
-    if (index === -1) return false;
-    this.BADGES.splice(index, 1);
-    return true;
+    for (let i = 0; i < this.BADGES.length; i++) {
+      if (this.BADGES[i].id === id) {
+        this.BADGES.splice(i, 1);
+        return true;
+      }
+    }
+    return false;
   }
 };
