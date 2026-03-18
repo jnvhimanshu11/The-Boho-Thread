@@ -61,7 +61,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-gray-600">© {new Date().getFullYear()} TheBohoThread. All rights reserved.</p>
+          <p className="text-xs text-gray-600">© {new Date().getFullYear()} TheBohoThread by Himanshu $ Ritvik. All rights reserved. </p>
           <div className="flex items-center gap-6">
             {["Privacy Policy", "Terms of Service", "Cookie Policy"].map(t => (
               <Link key={t} to="#" className="text-xs hover:text-gray-300 transition-colors">{t}</Link>
