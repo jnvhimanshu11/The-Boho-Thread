@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Checkout — LUXE</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700;900&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="../css/checkout.css"/>
+</head>
+<body>
+  <div class="ambient"><div class="amb-orb amb-orb-1"></div></div>
+
+  <nav class="navbar">
+    <a href="../index.html" class="nav-logo">LUXE</a>
+    <div class="nav-actions">
+      <a href="../index.html" class="btn-ghost-sm">← Back to Shop</a>
+    </div>
+  </nav>
+
+  <!-- Success Screen (hidden until order placed) -->
+  <div class="checkout-success" id="checkoutSuccess" style="display:none">
+    <div class="success-card">
+      <div class="success-icon">🎉</div>
+      <h2>Order Placed!</h2>
+      <p class="success-msg">Thank you for shopping with LUXE. Your order is being processed.</p>
+      <div class="order-id-tag" id="successOrderId"></div>
+      <div class="success-actions">
+        <a href="orders.html" class="btn-gold">📦 View My Orders</a>
+        <a href="../index.html" class="btn-ghost">Continue Shopping</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Checkout Form -->
+  <div class="checkout-page" id="checkoutPage">
+    <div class="container">
+      <div class="checkout-header">
+        <h1 class="page-title">Checkout</h1>
+        <div class="checkout-steps">
+          <div class="step active"><span>1</span> Details</div>
+          <div class="step-line"></div>
+          <div class="step" id="step2"><span>2</span> Payment</div>
+          <div class="step-line"></div>
+          <div class="step" id="step3"><span>3</span> Confirm</div>
+        </div>
+      </div>
+
+      <div class="checkout-layout">
+        <!-- LEFT: Forms -->
+        <div class="checkout-forms">
+          <!-- Step 1: Shipping -->
+          <div class="form-section" id="formStep1">
+            <h3 class="form-section-title">📍 Shipping Details</h3>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label>First Name *</label>
+                <input type="text" id="firstName" placeholder="Rahul"/>
+              </div>
+              <div class="form-group">
+                <label>Last Name *</label>
+                <input type="text" id="lastName" placeholder="Sharma"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Email Address *</label>
+              <input type="email" id="checkoutEmail" placeholder="rahul@example.com"/>
+            </div>
+            <div class="form-group">
+              <label>Phone Number *</label>
+              <input type="tel" id="checkoutPhone" placeholder="+91 98765 43210"/>
+            </div>
+            <div class="form-group">
+              <label>Address Line 1 *</label>
+              <input type="text" id="address1" placeholder="House No, Street Name"/>
+            </div>
+            <div class="form-group">
+              <label>Address Line 2</label>
+              <input type="text" id="address2" placeholder="Area, Landmark"/>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label>City *</label>
+                <input type="text" id="city" placeholder="Mumbai"/>
+              </div>
+              <div class="form-group">
+                <label>State *</label>
+                <select id="state">
+                  <option value="">Select state</option>
+                  <option>Andhra Pradesh</option><option>Delhi</option><option>Goa</option>
+                  <option>Gujarat</option><option>Haryana</option><option>Karnataka</option>
+                  <option>Kerala</option><option>Maharashtra</option><option>Punjab</option>
+                  <option>Rajasthan</option><option>Tamil Nadu</option><option>Telangana</option>
+                  <option>Uttar Pradesh</option><option>West Bengal</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>PIN Code *</label>
+                <input type="text" id="pinCode" placeholder="400001" maxlength="6"/>
+              </div>
+              <div class="form-group">
+                <label>Country</label>
+                <input type="text" value="India" readonly style="opacity:0.6"/>
+              </div>
+            </div>
+            <button class="btn-gold" style="width:100%;justify-content:center" id="nextToPayment">Continue to Payment →</button>
+          </div>
+
+          <!-- Step 2: Payment (hidden) -->
+          <div class="form-section" id="formStep2" style="display:none">
+            <h3 class="form-section-title">💳 Payment Method</h3>
+            <div class="payment-options">
+              <label class="payment-option active">
+                <input type="radio" name="payment" value="card" checked/>
+                <div class="po-content">
+                  <span class="po-icon">💳</span>
+                  <div><div class="po-label">Credit / Debit Card</div><div class="po-sub">Visa, Mastercard, RuPay</div></div>
+                </div>
+              </label>
+              <label class="payment-option">
+                <input type="radio" name="payment" value="upi"/>
+                <div class="po-content">
+                  <span class="po-icon">📱</span>
+                  <div><div class="po-label">UPI</div><div class="po-sub">Google Pay, PhonePe, Paytm</div></div>
+                </div>
+              </label>
+              <label class="payment-option">
+                <input type="radio" name="payment" value="netbanking"/>
+                <div class="po-content">
+                  <span class="po-icon">🏦</span>
+                  <div><div class="po-label">Net Banking</div><div class="po-sub">All major banks supported</div></div>
+                </div>
+              </label>
+              <label class="payment-option">
+                <input type="radio" name="payment" value="cod"/>
+                <div class="po-content">
+                  <span class="po-icon">💵</span>
+                  <div><div class="po-label">Cash on Delivery</div><div class="po-sub">Pay when you receive</div></div>
+                </div>
+              </label>
+            </div>
+
+            <!-- Card fields (shown when card selected) -->
+            <div class="card-fields" id="cardFields">
+              <div class="form-group">
+                <label>Card Number</label>
+                <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCardNumber(this)"/>
+              </div>
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label>Expiry Date</label>
+                  <input type="text" id="cardExpiry" placeholder="MM / YY" maxlength="7" oninput="formatExpiry(this)"/>
+                </div>
+                <div class="form-group">
+                  <label>CVV</label>
+                  <input type="password" id="cardCvv" placeholder="•••" maxlength="4"/>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Name on Card</label>
+                <input type="text" id="cardName" placeholder="RAHUL SHARMA"/>
+              </div>
+            </div>
+
+            <!-- UPI fields -->
+            <div class="upi-fields" id="upiFields" style="display:none">
+              <div class="form-group">
+                <label>UPI ID</label>
+                <input type="text" id="upiId" placeholder="yourname@upi"/>
+              </div>
+            </div>
+
+            <div class="payment-btn-row">
+              <button class="btn-ghost" id="backToDetails">← Back</button>
+              <button class="btn-gold" id="nextToConfirm" style="flex:1;justify-content:center">Review Order →</button>
+            </div>
+          </div>
+
+          <!-- Step 3: Confirm (hidden) -->
+          <div class="form-section" id="formStep3" style="display:none">
+            <h3 class="form-section-title">✅ Review & Confirm</h3>
+            <div class="confirm-block">
+              <h4>Shipping To</h4>
+              <div id="confirmAddress" class="confirm-detail"></div>
+            </div>
+            <div class="confirm-block">
+              <h4>Payment Method</h4>
+              <div id="confirmPayment" class="confirm-detail"></div>
+            </div>
+            <div class="confirm-items" id="confirmItems"></div>
+            <label class="checkbox-label" style="margin-bottom:20px">
+              <input type="checkbox" id="termsCheck"/>
+              I agree to the <a href="#" style="color:var(--accent)">Terms of Service</a> and <a href="#" style="color:var(--accent)">Privacy Policy</a>
+            </label>
+            <div class="payment-btn-row">
+              <button class="btn-ghost" id="backToPayment">← Back</button>
+              <button class="btn-gold" id="placeOrderBtn" style="flex:1;justify-content:center">🎉 Place Order</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Order Summary -->
+        <div class="order-summary-panel">
+          <h3 class="os-title">Order Summary</h3>
+          <div id="osSummaryItems"></div>
+          <div class="os-divider"></div>
+          <div class="os-row"><span>Subtotal</span><span id="osSubtotal"></span></div>
+          <div class="os-row"><span>Shipping</span><span id="osShipping" style="color:var(--success)">FREE</span></div>
+          <div class="os-row"><span>GST (18%)</span><span id="osGst"></span></div>
+          <div class="os-divider"></div>
+          <div class="os-row os-total"><span>Total</span><span id="osTotal"></span></div>
+          <div class="os-secure">
+            <span>🔒</span> 256-bit SSL Encrypted Payment
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script type="module" src="../js/firebase-config.js"></script>
+  <script type="module" src="../js/store.js"></script>
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module" src="../js/checkout.js"></script>
+</body>
+</html>

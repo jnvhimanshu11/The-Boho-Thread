@@ -1,0 +1,159 @@
+/* ============================================================
+   LUXE STORE — login.css
+   ============================================================ */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  position: relative;
+  z-index: 1;
+}
+
+/* Left panel */
+.login-left {
+  flex: 1;
+  background: linear-gradient(160deg, rgba(201,169,110,0.08) 0%, transparent 60%),
+              linear-gradient(to bottom, #0a0a14, #0d0d1a);
+  border-right: 1px solid var(--border);
+  padding: 48px 52px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+.login-left::before {
+  content: 'LUXE';
+  position: absolute;
+  bottom: -40px; right: -40px;
+  font-family: var(--font-serif);
+  font-size: 14rem; font-weight: 900; line-height: 1;
+  color: rgba(201,169,110,0.04);
+  pointer-events: none; user-select: none;
+}
+
+.back-link {
+  font-size: 0.85rem; color: var(--text-dim); font-weight: 500;
+  transition: color var(--transition);
+  display: inline-flex; align-items: center; gap: 6px;
+  align-self: flex-start;
+}
+.back-link:hover { color: var(--accent); }
+
+.login-brand { margin: auto 0; }
+.brand-logo {
+  font-family: var(--font-serif);
+  font-size: 3.5rem; font-weight: 900;
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 12px;
+}
+.brand-tagline { font-size: 1rem; color: var(--text-dim); line-height: 1.6; }
+
+.login-features { display: flex; flex-direction: column; gap: 14px; }
+.feature-item {
+  display: flex; align-items: center; gap: 14px;
+  font-size: 0.88rem; color: var(--text-dim);
+}
+.fi-icon {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+}
+
+/* Right panel */
+.login-right {
+  width: 480px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 32px;
+  background: var(--bg);
+}
+.login-card { width: 100%; max-width: 400px; animation: fadeUp 0.5s ease; }
+.login-card-header { text-align: center; margin-bottom: 32px; }
+.lc-icon { font-size: 2.4rem; margin-bottom: 14px; }
+.login-card-header h1 { font-family: var(--font-serif); font-size: 2rem; font-weight: 900; margin-bottom: 6px; }
+.login-card-header p { font-size: 0.9rem; color: var(--text-dim); }
+
+/* Google button */
+.google-btn {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  background: #fff; color: #333;
+  font-family: var(--font-sans); font-size: 0.92rem; font-weight: 600;
+  padding: 13px 24px; border-radius: var(--radius-sm); border: none;
+  cursor: pointer; transition: all var(--transition);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  margin-bottom: 22px;
+}
+.google-btn:hover {
+  background: #f5f5f5;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  transform: translateY(-2px);
+}
+.google-btn:active { transform: translateY(0); }
+
+/* Divider */
+.divider-or {
+  text-align: center; position: relative; margin-bottom: 22px;
+}
+.divider-or::before {
+  content: ''; position: absolute; top: 50%; left: 0; right: 0;
+  height: 1px; background: var(--border);
+}
+.divider-or span {
+  position: relative; background: var(--bg);
+  padding: 0 14px; font-size: 0.78rem; color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+/* Password wrap */
+.password-wrap { position: relative; }
+.password-wrap input { padding-right: 44px; }
+.toggle-pass {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; font-size: 1rem;
+  color: var(--text-muted); transition: color var(--transition);
+}
+.toggle-pass:hover { color: var(--accent); }
+
+.form-row-space {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; margin-top: -6px;
+}
+.checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: var(--text-dim); cursor: pointer; }
+.checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+.forgot-link { font-size: 0.84rem; color: var(--accent); }
+.forgot-link:hover { text-decoration: underline; }
+
+.signup-row { text-align: center; margin-top: 18px; font-size: 0.86rem; color: var(--text-dim); }
+.link-btn {
+  background: none; border: none; color: var(--accent);
+  font-family: var(--font-sans); font-size: 0.86rem; font-weight: 600;
+  cursor: pointer; padding: 0 4px;
+  transition: opacity var(--transition);
+}
+.link-btn:hover { opacity: 0.75; }
+
+.terms-note {
+  text-align: center; margin-top: 20px;
+  font-size: 0.75rem; color: var(--text-muted); line-height: 1.6;
+}
+.terms-note a { color: var(--accent); }
+.terms-note a:hover { text-decoration: underline; }
+
+/* Loading state */
+.google-btn.loading { opacity: 0.7; pointer-events: none; }
+.google-btn.loading::after { content: '…'; margin-left: 4px; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ----- Responsive ----- */
+@media (max-width: 900px) {
+  .login-left { display: none; }
+  .login-right { width: 100%; }
+}
+@media (max-width: 480px) {
+  .login-right { padding: 32px 20px; }
+  .login-card-header h1 { font-size: 1.6rem; }
+}
