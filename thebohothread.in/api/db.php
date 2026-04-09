@@ -4,16 +4,20 @@
 // Edit these values to match your MySQL setup
 // ============================================================
 
+// Buffer ALL output so stray PHP notices/warnings never corrupt JSON
+ob_start();
+
 define('DB_HOST', 'localhost');
 define('DB_PORT', 3306);
 define('DB_NAME', 'thebohothread');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 
-// Catch PHP fatal errors — return JSON instead of empty body
+// Catch PHP fatal errors — discard buffered output, return clean JSON
 register_shutdown_function(function () {
     $err = error_get_last();
     if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        ob_end_clean(); // discard any stray output
         if (!headers_sent()) {
             http_response_code(500);
             header('Content-Type: application/json; charset=utf-8');
@@ -52,11 +56,13 @@ function sendHeaders(): void {
 }
 
 function ok($data = []): void {
+    ob_end_clean(); // discard any stray output before sending clean JSON
     echo json_encode(['success' => true, 'data' => $data]);
     exit;
 }
 
 function fail(string $msg, int $code = 400): void {
+    ob_end_clean(); // discard any stray output before sending clean JSON
     http_response_code($code);
     echo json_encode(['success' => false, 'error' => $msg]);
     exit;

@@ -4,17 +4,27 @@
 // ============================================================
 
 const API = {
-  products:   '../api/products.php',
-  categories: '../api/categories.php',
-  badges:     '../api/badges.php',
-  reviews:    '../api/reviews.php',
+  products:   '/api/products.php',
+  categories: '/api/categories.php',
+  badges:     '/api/badges.php',
+  reviews:    '/api/reviews.php',
 };
 
 async function apiFetch(url, opts = {}) {
   try {
     const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
-    return await res.json();
-  } catch (e) { console.error('API error:', e); return { success: false, error: e.message }; }
+    const text = await res.text();
+    if (!text || text.trim() === '') {
+      console.error('API returned empty response for', url);
+      return { success: false, error: 'Server returned an empty response. Check PHP error logs.' };
+    }
+    try {
+      return JSON.parse(text);
+    } catch (parseErr) {
+      console.error('API JSON parse error for', url, '— raw response:', text);
+      return { success: false, error: 'Server response was not valid JSON. Check PHP error logs.' };
+    }
+  } catch (e) { console.error('API fetch error:', e); return { success: false, error: e.message }; }
 }
 
 // ── CREDENTIALS ──────────────────────────────────────────────
