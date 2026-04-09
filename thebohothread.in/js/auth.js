@@ -11,7 +11,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup,
 // ── Firebase config (shared with firebase-config.js) ────────
 const firebaseConfig = {
   apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
-  authDomain: "auth.thebohothread.in",
+  authDomain: "thebohothread.in",
   projectId: "thebohothread-96e2c",
   storageBucket: "thebohothread-96e2c.firebasestorage.app",
   messagingSenderId: "100688387088",
