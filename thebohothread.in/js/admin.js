@@ -28,8 +28,8 @@ async function apiFetch(url, opts = {}) {
 }
 
 // ── CREDENTIALS ──────────────────────────────────────────────
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'bohothread@2025';
+const ADMIN_USER = 'jnvhimanshu11@gmail.com';
+const ADMIN_PASS = '9548@sonI';
 
 // ── STATE ────────────────────────────────────────────────────
 let products   = [];

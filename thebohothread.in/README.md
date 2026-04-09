@@ -51,8 +51,8 @@ Default credentials (change in `js/admin.js`, lines 25–26):
 
 | Field    | Value              |
 |----------|--------------------|
-| Username | `admin`            |
-| Password | `bohothread@2025`  |
+| Username | `jnvhimanshu11@gmail.com`            |
+| Password | `9548@sonI`  |
 
 Access admin panel: `admin/index.html`
 
