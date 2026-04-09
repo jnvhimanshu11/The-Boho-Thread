@@ -63,15 +63,19 @@ const toastContainer  = document.getElementById('toast-container');
 // ── LOAD DATA ────────────────────────────────────────────────
 async function loadData() {
   productsGrid.innerHTML = '<div class="loader-wrap"><div class="spinner"></div></div>';
-  const [pRes, cRes] = await Promise.all([apiFetch(API.products), apiFetch(API.categories)]);
+  const [pRes, cRes, tRes] = await Promise.all([apiFetch(API.products), apiFetch(API.categories), apiFetch(API.trending)]);
   if (pRes.success) { allProducts = pRes.data.map(normaliseProduct); } else { loadDemoData(); return; }
   if (cRes.success) { allCategories = cRes.data; }
-  renderProducts(); renderScroller(); renderCategories();
+  // Use admin-curated trending list if available, otherwise default to newest products
+  const trendingIds = (tRes.success && tRes.data.length > 0) ? tRes.data.map(t => t.id) : null;
+  renderProducts(); renderScroller(trendingIds); renderCategories();
 }
 
 function normaliseProduct(r) {
   return { id:r.id, name:r.name, category:r.category, description:r.description, price:r.price,
     originalPrice:r.original_price, rating:r.rating, badge:r.badge, image:r.image,
+    images: Array.isArray(r.images) ? r.images : (r.image ? [r.image] : []),
+    sizes:  Array.isArray(r.sizes)  ? r.sizes  : [],
     createdAt:{ toMillis: () => new Date(r.created_at).getTime() } };
 }
 
@@ -135,7 +139,7 @@ function productCardHTML(p) {
   const origPrice = p.originalPrice?`<span class="original">₹${p.originalPrice.toLocaleString()}</span>`:'';
   return `<article class="product-card" onclick="openProductModal(${p.id})">
     <div class="product-card-img-wrap">
-      <img src="${p.image||'https://via.placeholder.com/400x300/1a2a3a/c9a84c?text=No+Image'}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x300/1a2a3a/c9a84c?text=No+Image'"/>
+      <img src="${(p.images&&p.images.length>0)?p.images[0]:(p.image||'https://via.placeholder.com/400x300/1a2a3a/c9a84c?text=No+Image')}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x300/1a2a3a/c9a84c?text=No+Image'"/>
       <div class="product-badges">${badge}</div>
       <button class="wish-btn ${wishlisted?'wishlisted':''}" onclick="event.stopPropagation();toggleWishlist(${p.id})" aria-label="Wishlist">
         <i class="ph ph-heart${wishlisted?'-fill':''}"></i>
@@ -157,12 +161,22 @@ function productCardHTML(p) {
 function starsHTML(rating) { return Array.from({length:5},(_,i)=>`<span class="star ${i<Math.round(rating)?'filled':''}">★</span>`).join(''); }
 
 // ── SCROLLER ─────────────────────────────────────────────────
-function renderScroller() {
-  const items = allProducts.slice(0,12); if (!items.length) return;
-  const html = items.map(p=>`<div class="scroll-card" onclick="openProductModal(${p.id})">
-    <img src="${p.image||'https://via.placeholder.com/200x140/1a2a3a/c9a84c?text=No+Image'}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/200x140/1a2a3a/c9a84c?text=N/A'"/>
+function renderScroller(trendingIds) {
+  let items;
+  if (trendingIds && trendingIds.length > 0) {
+    // Use admin-curated order
+    items = trendingIds.map(id => allProducts.find(p => p.id === id)).filter(Boolean);
+  } else {
+    items = allProducts.slice(0,12);
+  }
+  if (!items.length) return;
+  const html = items.map(p=>{
+    const imgSrc = (p.images && p.images.length > 0) ? p.images[0] : (p.image || 'https://via.placeholder.com/200x140/1a2a3a/c9a84c?text=No+Image');
+    return `<div class="scroll-card" onclick="openProductModal(${p.id})">
+    <img src="${imgSrc}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/200x140/1a2a3a/c9a84c?text=N/A'"/>
     <div class="scroll-card-info"><h4>${p.name}</h4><p>₹${p.price.toLocaleString()}</p></div>
-  </div>`).join('');
+  </div>`;
+  }).join('');
   scrollerTrack.innerHTML = html + html;
 }
 
@@ -170,15 +184,27 @@ function renderScroller() {
 window.openProductModal = function(id) {
   const p = allProducts.find(x=>x.id===id); if (!p) return;
   modalProduct=p; modalQty=1; currentReviewProductId=id;
-  document.getElementById('modal-img').src=p.image||'https://via.placeholder.com/400x600/1a2a3a/c9a84c?text=No+Image';
-  document.getElementById('modal-img').alt=p.name;
+  // Image carousel
+  const allImgs = (p.images && p.images.length > 0) ? p.images : (p.image ? [p.image] : ['https://via.placeholder.com/400x600/1a2a3a/c9a84c?text=No+Image']);
+  renderModalImageCarousel(allImgs);
+
   document.getElementById('modal-cat').textContent=p.category||'';
   document.getElementById('modal-name').textContent=p.name;
   document.getElementById('modal-desc').textContent=p.description||'';
   document.getElementById('modal-qty-val').textContent=1;
   document.getElementById('modal-stars').innerHTML=starsHTML(p.rating||0);
-  const origStr=p.originalPrice?` <span style="font-size:0.9rem;text-decoration:line-through;color:var(--text-muted);">₹${p.originalPrice.toLocaleString()}</span>`:'';
-  document.getElementById('modal-price').innerHTML=`₹${p.price.toLocaleString()}${origStr}`;
+
+  // Size-wise pricing or flat price
+  const priceCont = document.getElementById('modal-price');
+  const sizeSelCont = document.getElementById('modal-size-selector');
+  if (p.sizes && p.sizes.length > 0) {
+    renderModalSizes(p.sizes);
+    if (sizeSelCont) sizeSelCont.style.display = 'block';
+  } else {
+    if (sizeSelCont) sizeSelCont.style.display = 'none';
+    const origStr = p.originalPrice ? ` <span style="font-size:0.9rem;text-decoration:line-through;color:var(--text-muted);">₹${p.originalPrice.toLocaleString()}</span>` : '';
+    if (priceCont) priceCont.innerHTML = `₹${p.price.toLocaleString()}${origStr}`;
+  }
   const wishlisted=wishlist.includes(id);
   const wBtn=document.getElementById('modal-wish-btn');
   wBtn.className='modal-wish-btn '+(wishlisted?'wishlisted':'');
@@ -336,3 +362,51 @@ heroTimer=setInterval(()=>goHeroSlide(heroIndex+1),5000);
 updateCartUI(); updateWishlistUI();
 loadData();
 const s=document.createElement('style'); s.textContent='@keyframes spin{to{transform:rotate(360deg)}}'; document.head.appendChild(s);
+
+// ── MODAL IMAGE CAROUSEL ─────────────────────────────────────
+let _carouselIdx = 0;
+function renderModalImageCarousel(imgs) {
+  _carouselIdx = 0;
+  const imgEl    = document.getElementById('modal-img');
+  const dotsEl   = document.getElementById('modal-img-dots');
+  const prevBtn  = document.getElementById('modal-img-prev');
+  const nextBtn  = document.getElementById('modal-img-next');
+
+  function showSlide(i) {
+    _carouselIdx = Math.max(0, Math.min(i, imgs.length-1));
+    if (imgEl) { imgEl.src = imgs[_carouselIdx]; imgEl.onerror = () => imgEl.src='https://via.placeholder.com/400x600/1a2a3a/c9a84c?text=No+Image'; }
+    if (dotsEl) dotsEl.innerHTML = imgs.length > 1
+      ? imgs.map((_,j) => `<span onclick="event.stopPropagation()" style="width:8px;height:8px;border-radius:50%;background:${j===_carouselIdx?'var(--gold)':'rgba(201,168,76,0.3)'};cursor:pointer;display:inline-block;" data-i="${j}"></span>`).join('')
+      : '';
+    if (dotsEl) dotsEl.querySelectorAll('span').forEach(s => s.onclick = e => { e.stopPropagation(); showSlide(+s.dataset.i); });
+    if (prevBtn) prevBtn.style.display = imgs.length > 1 ? 'flex' : 'none';
+    if (nextBtn) nextBtn.style.display = imgs.length > 1 ? 'flex' : 'none';
+  }
+  if (prevBtn) prevBtn.onclick = e => { e.stopPropagation(); showSlide(_carouselIdx - 1); };
+  if (nextBtn) nextBtn.onclick = e => { e.stopPropagation(); showSlide(_carouselIdx + 1); };
+  showSlide(0);
+}
+
+// ── MODAL SIZE SELECTOR ──────────────────────────────────────
+function renderModalSizes(sizes) {
+  const cont    = document.getElementById('modal-size-options');
+  const priceCont = document.getElementById('modal-price');
+  if (!cont) return;
+
+  let selectedIdx = 0;
+  function selectSize(idx) {
+    selectedIdx = idx;
+    const s = sizes[idx];
+    cont.querySelectorAll('.size-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+    if (priceCont) {
+      const origStr = s.original_price ? ` <span style="font-size:0.9rem;text-decoration:line-through;color:var(--text-muted);">₹${(+s.original_price).toLocaleString()}</span>` : '';
+      priceCont.innerHTML = `₹${(+s.price).toLocaleString()}${origStr}`;
+    }
+  }
+
+  cont.innerHTML = sizes.map((s,i) => `<button class="size-btn${i===0?' active':''}" onclick="void(0)" data-idx="${i}" style="padding:6px 14px;border:1px solid rgba(201,168,76,${i===0?'0.9':'0.35'});border-radius:6px;background:${i===0?'rgba(201,168,76,0.15)':'transparent'};color:var(--text);font-size:0.83rem;cursor:pointer;transition:all 0.2s;">${s.size}</button>`).join('');
+  cont.querySelectorAll('.size-btn').forEach((b,i) => {
+    b.addEventListener('click', e => { e.stopPropagation(); selectSize(i); });
+  });
+  selectSize(0);
+}

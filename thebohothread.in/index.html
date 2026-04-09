@@ -287,15 +287,25 @@
 ════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="product-modal" role="dialog" aria-modal="true">
   <div class="modal" id="modal-inner">
-    <div class="modal-img" id="modal-img-wrap">
+    <div class="modal-img" id="modal-img-wrap" style="position:relative;overflow:hidden;">
       <img id="modal-img" src="" alt="" />
       <button class="modal-close" id="modal-close"><i class="ph ph-x"></i></button>
+      <!-- Carousel prev/next -->
+      <button id="modal-img-prev" style="display:none;position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(13,27,42,0.7);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;align-items:center;justify-content:center;z-index:10;">‹</button>
+      <button id="modal-img-next" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(13,27,42,0.7);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;align-items:center;justify-content:center;z-index:10;">›</button>
+      <!-- Carousel dots -->
+      <div id="modal-img-dots" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;"></div>
     </div>
     <div class="modal-content">
       <div class="product-cat-tag" id="modal-cat"></div>
       <h2 id="modal-name"></h2>
       <div class="star-rating" id="modal-stars"></div>
       <p class="desc" id="modal-desc"></p>
+      <!-- Size selector (shown only when product has sizes) -->
+      <div id="modal-size-selector" style="display:none;margin-bottom:12px;">
+        <label style="font-size:0.82rem;color:var(--text-muted);display:block;margin-bottom:8px;">Select Size:</label>
+        <div id="modal-size-options" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
       <div class="modal-price" id="modal-price"></div>
       <div class="qty-picker">
         <label>Qty:</label>
@@ -401,7 +411,7 @@
       <label class="auth-label">Mobile Number</label>
       <div class="auth-phone-row">
         <span class="auth-country-code">🇮🇳 +91</span>
-        <input class="auth-input" id="auth-phone-input" type="tel" placeholder="98XXX XXX10" maxlength="15" inputmode="numeric" />
+        <input class="auth-input" id="auth-phone-input" type="tel" placeholder="98XXX XXX10" maxlength="10" inputmode="numeric" />
       </div>
       <p class="auth-field-error" id="auth-phone-error"></p>
 

@@ -18,6 +18,9 @@ function castProduct(array $r): array {
     $r['price']          = (float)$r['price'];
     $r['original_price'] = ($r['original_price'] !== null && $r['original_price'] !== '') ? (float)$r['original_price'] : null;
     $r['rating']         = ($r['rating'] !== null && $r['rating'] !== '') ? (float)$r['rating'] : null;
+    // Parse JSON fields
+    $r['images'] = ($r['images'] ?? null) ? json_decode($r['images'], true) : [];
+    $r['sizes']  = ($r['sizes']  ?? null) ? json_decode($r['sizes'],  true) : [];
     return $r;
 }
 
@@ -36,17 +39,19 @@ if ($method === 'POST') {
     $price = (float)($b['price']     ?? 0);
     $orig  = (isset($b['original_price']) && $b['original_price'] !== '') ? (float)$b['original_price'] : null;
     $rating= (isset($b['rating'])    && $b['rating'] !== '')              ? (float)$b['rating']         : null;
-    $badge = trim($b['badge']        ?? '');
-    $image = trim($b['image']        ?? '');
+    $badge  = trim($b['badge']        ?? '');
+    $image  = trim($b['image']        ?? '');
+    $images = isset($b['images']) && is_array($b['images']) ? json_encode($b['images']) : null;
+    $sizes  = isset($b['sizes'])  && is_array($b['sizes'])  ? json_encode($b['sizes'])  : null;
 
     if (!$name)      fail('Product name is required.');
     if (!$cat)       fail('Category is required.');
     if ($price <= 0) fail('Valid price is required.');
 
     $db->prepare(
-        "INSERT INTO products (name, category, description, price, original_price, rating, badge, image)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    )->execute([$name, $cat, $desc, $price, $orig, $rating, $badge, $image]);
+        "INSERT INTO products (name, category, description, price, original_price, rating, badge, image, images, sizes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )->execute([$name, $cat, $desc, $price, $orig, $rating, $badge, $image, $images, $sizes]);
 
     $newId = (int)$db->lastInsertId();
     $stmt  = $db->prepare("SELECT * FROM products WHERE id = ?");
@@ -63,6 +68,17 @@ if ($method === 'PUT') {
 
     $fields = [];
     $params = [];
+
+    // Handle images JSON array
+    if (array_key_exists('images', $b)) {
+        $fields[] = "images = ?";
+        $params[]  = (is_array($b['images'])) ? json_encode($b['images']) : null;
+    }
+    // Handle sizes JSON array
+    if (array_key_exists('sizes', $b)) {
+        $fields[] = "sizes = ?";
+        $params[]  = (is_array($b['sizes']) && count($b['sizes']) > 0) ? json_encode($b['sizes']) : null;
+    }
 
     foreach (['name','category','description','badge','image'] as $f) {
         if (array_key_exists($f, $b)) {

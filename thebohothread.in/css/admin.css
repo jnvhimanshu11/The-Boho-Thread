@@ -660,3 +660,26 @@ select.form-control { cursor: pointer; appearance: auto; }
   flex-shrink: 0;
   transition: background 0.2s;
 }
+
+/* ── SIZE-WISE PRICING & MULTI-IMAGE SLOTS ──────────────────── */
+.img-slot { transition: box-shadow 0.2s; }
+.img-slot:hover { box-shadow: 0 0 0 1px rgba(201,168,76,0.4); }
+
+.size-row input:focus { border-color: var(--gold); }
+
+/* ── TRENDING PAGE ──────────────────────────────────────────── */
+#trending-list .list-item-row {
+  border: 1px solid rgba(201,168,76,0.15);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+  transition: background 0.2s;
+}
+#trending-list .list-item-row:hover {
+  background: rgba(201,168,76,0.06);
+}
+
+/* Disable state for move buttons at boundaries */
+#trending-list button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

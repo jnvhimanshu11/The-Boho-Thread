@@ -36,7 +36,9 @@ CREATE TABLE IF NOT EXISTS products (
   original_price DECIMAL(10,2)  DEFAULT NULL,
   rating         DECIMAL(3,1)   DEFAULT NULL,
   badge          VARCHAR(100)   DEFAULT '',
-  image          MEDIUMTEXT     DEFAULT '',   -- MEDIUMTEXT to safely hold base64 images
+  image          MEDIUMTEXT     DEFAULT '',   -- MEDIUMTEXT to safely hold base64 images (primary/thumbnail)
+  images         MEDIUMTEXT     DEFAULT NULL,  -- JSON array of up to 10 image URLs/base64
+  sizes          TEXT           DEFAULT NULL,  -- JSON array: [{size, price, original_price}]
   created_at     TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
   updated_at     TIMESTAMP      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -73,3 +75,17 @@ INSERT IGNORE INTO categories (name, icon) VALUES
   ('Furniture', '🪑'),
   ('Kitchen',   '🍳'),
   ('Lighting',  '💡');
+
+-- ── TRENDING PRODUCTS ────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS trending_products (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  product_id INT NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  added_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_trending_product (product_id),
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── ALTER EXISTING products table (run if table already exists) ──
+-- ALTER TABLE products ADD COLUMN IF NOT EXISTS images MEDIUMTEXT DEFAULT NULL;
+-- ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes  TEXT        DEFAULT NULL;

@@ -10,12 +10,13 @@ import { getAuth, GoogleAuthProvider, signInWithPopup,
 
 // ── Firebase config (shared with firebase-config.js) ────────
 const firebaseConfig = {
-  apiKey:            "AIzaSyAVBiyOmq3EOhpKESXy1lW3rSfNqHh35Mk",
-  authDomain:        "e-commerce-745b7.firebaseapp.com",
-  projectId:         "e-commerce-745b7",
-  storageBucket:     "e-commerce-745b7.firebasestorage.app",
-  messagingSenderId: "787107058065",
-  appId:             "1:787107058065:web:5fd82bbd55850793184a30",
+  apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+  authDomain: "auth.thebohothread.in",
+  projectId: "thebohothread-96e2c",
+  storageBucket: "thebohothread-96e2c.firebasestorage.app",
+  messagingSenderId: "100688387088",
+  appId: "1:100688387088:web:f8a6af7565d3c25952fe95",
+  measurementId: "G-5VTK93354M"
 };
 
 // Avoid double-initialise if firebase-config.js already ran
@@ -116,16 +117,44 @@ window.signInWithGoogle = async function() {
 window.showPhoneStep = function() { showStep('step-phone'); };
 window.backToChoose  = function() { showStep('step-choose'); clearRecaptcha(); };
 
+// Enforce max 10 digits on phone input
+document.addEventListener('DOMContentLoaded', () => {
+  const phoneInput = document.getElementById('auth-phone-input');
+  if (phoneInput) {
+    phoneInput.addEventListener('input', function() {
+      // Strip non-digits
+      let digits = this.value.replace(/\D/g, '');
+      // Cap at 10 digits
+      if (digits.length > 10) digits = digits.slice(0, 10);
+      this.value = digits;
+    });
+    phoneInput.addEventListener('keydown', function(e) {
+      const digits = this.value.replace(/\D/g, '');
+      // Block more digit input after 10 digits (allow control keys)
+      const controlKeys = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab','Enter'];
+      if (digits.length >= 10 && !controlKeys.includes(e.key) && /^\d$/.test(e.key)) {
+        e.preventDefault();
+      }
+    });
+  }
+});
+
 window.sendOTP = async function() {
   const raw   = document.getElementById('auth-phone-input').value.trim();
   const errEl = document.getElementById('auth-phone-error');
   errEl.textContent = '';
 
-  // Basic validation — accept with or without leading +
-  const phone = raw.startsWith('+') ? raw : '+91' + raw.replace(/\D/g,'');
-  if (phone.replace(/\D/g,'').length < 10) {
-    errEl.textContent = 'Enter a valid phone number.'; return;
+  // Basic validation — exactly 10 digits required
+  const digits = raw.replace(/\D/g,'');
+  if (digits.length < 10) {
+    errEl.textContent = 'Enter a valid 10-digit phone number.'; return;
   }
+  if (digits.length > 10) {
+    errEl.textContent = 'Phone number must be exactly 10 digits.'; return;
+  }
+
+  // Build E.164 format
+  const phone = '+91' + digits;
 
   setAuthLoading('phone', true);
   try {
@@ -237,15 +266,18 @@ function setAuthLoading(type, loading) {
 
 function friendlyError(code) {
   const map = {
-    'auth/invalid-phone-number':     'Invalid phone number. Use format: +91XXXXXXXXXX',
-    'auth/too-many-requests':        'Too many attempts. Please try again later.',
-    'auth/invalid-verification-code':'Incorrect OTP. Please check and try again.',
-    'auth/code-expired':             'OTP has expired. Please request a new one.',
-    'auth/popup-blocked':            'Popup was blocked. Allow popups for this site.',
-    'auth/network-request-failed':   'Network error. Check your connection.',
-    'auth/quota-exceeded':           'SMS quota exceeded. Try again later.',
+    'auth/invalid-phone-number':     'Invalid phone number. Enter a valid 10-digit Indian mobile number.',
+    'auth/too-many-requests':        'Too many OTP requests. Please wait a few minutes before trying again.',
+    'auth/invalid-verification-code':'Incorrect OTP. Please check the code and try again.',
+    'auth/code-expired':             'OTP has expired. Please go back and request a new one.',
+    'auth/popup-blocked':            'Popup was blocked. Please allow popups for this site.',
+    'auth/network-request-failed':   'Network error. Please check your internet connection.',
+    'auth/quota-exceeded':           'SMS quota exceeded. Please try again later.',
+    'auth/missing-phone-number':     'Phone number is required.',
+    'auth/captcha-check-failed':     'Captcha failed. Please refresh and try again.',
+    'auth/missing-verification-code':'Please enter the OTP sent to your phone.',
   };
-  return map[code] || 'Something went wrong. Please try again.';
+  return map[code] || `Error: ${code}. Please refresh and try again.`;
 }
 
 function showAuthToast(msg) {
