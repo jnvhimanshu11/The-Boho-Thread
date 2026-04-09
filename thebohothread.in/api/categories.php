@@ -31,7 +31,11 @@ if ($method === 'POST') {
 
     $db->prepare("INSERT INTO categories (name, icon) VALUES (?, ?)")->execute([$name, $icon]);
     $newId = (int)$db->lastInsertId();
-    $row = $db->query("SELECT * FROM categories WHERE id = $newId")->fetch();
+
+    $stmt = $db->prepare("SELECT * FROM categories WHERE id = ?");
+    $stmt->execute([$newId]);
+    $row = $stmt->fetch();
+    if (!$row) fail('Category saved but could not be retrieved.', 500);
     $row['id'] = (int)$row['id'];
     ok($row);
 }

@@ -4,11 +4,23 @@
 // Edit these values to match your MySQL setup
 // ============================================================
 
-define('DB_HOST', 'localhost');   // Usually localhost
-define('DB_PORT', 3306);          // Default MySQL port
+define('DB_HOST', 'localhost');
+define('DB_PORT', 3306);
 define('DB_NAME', 'thebohothread');
-define('DB_USER', 'root');        // Your MySQL username
-define('DB_PASS', '');            // Your MySQL password
+define('DB_USER', 'root');
+define('DB_PASS', '');
+
+// Catch PHP fatal errors — return JSON instead of empty body
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+        }
+        echo json_encode(['success' => false, 'error' => 'Server error: ' . $err['message']]);
+    }
+});
 
 // ── Connect ─────────────────────────────────────────────────
 function getDB(): PDO {
@@ -24,7 +36,7 @@ function getDB(): PDO {
         ]);
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Database connection failed: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'error' => 'Database connection failed: ' . $e->getMessage()]);
         exit;
     }
     return $pdo;
@@ -50,7 +62,13 @@ function fail(string $msg, int $code = 400): void {
     exit;
 }
 
+// Safely parse JSON request body — returns [] on empty, fails on bad JSON
 function body(): array {
     $raw = file_get_contents('php://input');
-    return json_decode($raw, true) ?? [];
+    if (!$raw || trim($raw) === '') return [];
+    $decoded = json_decode($raw, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        fail('Invalid JSON in request body: ' . json_last_error_msg());
+    }
+    return $decoded ?? [];
 }

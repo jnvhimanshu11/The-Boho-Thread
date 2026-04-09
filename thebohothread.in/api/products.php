@@ -1,10 +1,10 @@
 <?php
 // ============================================================
 // TheBohoThread — Products API  (api/products.php)
-// GET /api/products.php         → list all products
-// POST /api/products.php        → create product
-// PUT /api/products.php?id=N    → update product
-// DELETE /api/products.php?id=N → delete product
+// GET    /api/products.php         → list all products
+// POST   /api/products.php         → create product
+// PUT    /api/products.php?id=N    → update product
+// DELETE /api/products.php?id=N    → delete product
 // ============================================================
 require_once __DIR__ . '/db.php';
 sendHeaders();
@@ -13,49 +13,47 @@ $method = $_SERVER['REQUEST_METHOD'];
 $id     = isset($_GET['id']) ? (int)$_GET['id'] : null;
 $db     = getDB();
 
-// ── GET — list all ───────────────────────────────────────────
+function castProduct(array $r): array {
+    $r['id']             = (int)$r['id'];
+    $r['price']          = (float)$r['price'];
+    $r['original_price'] = ($r['original_price'] !== null && $r['original_price'] !== '') ? (float)$r['original_price'] : null;
+    $r['rating']         = ($r['rating'] !== null && $r['rating'] !== '') ? (float)$r['rating'] : null;
+    return $r;
+}
+
+// ── GET ──────────────────────────────────────────────────────
 if ($method === 'GET') {
-    $stmt = $db->query("SELECT * FROM products ORDER BY created_at DESC");
-    $rows = $stmt->fetchAll();
-    // Cast numeric fields
-    foreach ($rows as &$r) {
-        $r['id']             = (int)$r['id'];
-        $r['price']          = (float)$r['price'];
-        $r['original_price'] = $r['original_price'] !== null ? (float)$r['original_price'] : null;
-        $r['rating']         = $r['rating'] !== null ? (float)$r['rating'] : null;
-    }
-    ok($rows);
+    $rows = $db->query("SELECT * FROM products ORDER BY created_at DESC")->fetchAll();
+    ok(array_map('castProduct', $rows));
 }
 
 // ── POST — create ────────────────────────────────────────────
 if ($method === 'POST') {
-    $b = body();
-    $name  = trim($b['name']  ?? '');
-    $cat   = trim($b['category'] ?? '');
-    $desc  = trim($b['description'] ?? '');
-    $price = (float)($b['price'] ?? 0);
-    $orig  = isset($b['original_price']) && $b['original_price'] !== '' ? (float)$b['original_price'] : null;
-    $rating= isset($b['rating']) && $b['rating'] !== ''              ? (float)$b['rating'] : null;
-    $badge = trim($b['badge'] ?? '');
-    $image = trim($b['image'] ?? '');
+    $b     = body();
+    $name  = trim($b['name']         ?? '');
+    $cat   = trim($b['category']     ?? '');
+    $desc  = trim($b['description']  ?? '');
+    $price = (float)($b['price']     ?? 0);
+    $orig  = (isset($b['original_price']) && $b['original_price'] !== '') ? (float)$b['original_price'] : null;
+    $rating= (isset($b['rating'])    && $b['rating'] !== '')              ? (float)$b['rating']         : null;
+    $badge = trim($b['badge']        ?? '');
+    $image = trim($b['image']        ?? '');
 
-    if (!$name)        fail('Product name is required.');
-    if (!$cat)         fail('Category is required.');
-    if ($price <= 0)   fail('Valid price is required.');
+    if (!$name)      fail('Product name is required.');
+    if (!$cat)       fail('Category is required.');
+    if ($price <= 0) fail('Valid price is required.');
 
-    $stmt = $db->prepare(
+    $db->prepare(
         "INSERT INTO products (name, category, description, price, original_price, rating, badge, image)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    );
-    $stmt->execute([$name, $cat, $desc, $price, $orig, $rating, $badge, $image]);
-    $newId = (int)$db->lastInsertId();
+    )->execute([$name, $cat, $desc, $price, $orig, $rating, $badge, $image]);
 
-    $row = $db->query("SELECT * FROM products WHERE id = $newId")->fetch();
-    $row['id']             = (int)$row['id'];
-    $row['price']          = (float)$row['price'];
-    $row['original_price'] = $row['original_price'] !== null ? (float)$row['original_price'] : null;
-    $row['rating']         = $row['rating'] !== null ? (float)$row['rating'] : null;
-    ok($row);
+    $newId = (int)$db->lastInsertId();
+    $stmt  = $db->prepare("SELECT * FROM products WHERE id = ?");
+    $stmt->execute([$newId]);
+    $row = $stmt->fetch();
+    if (!$row) fail('Product saved but could not be retrieved.', 500);
+    ok(castProduct($row));
 }
 
 // ── PUT — update ─────────────────────────────────────────────
@@ -66,8 +64,7 @@ if ($method === 'PUT') {
     $fields = [];
     $params = [];
 
-    $map = ['name','category','description','badge','image'];
-    foreach ($map as $f) {
+    foreach (['name','category','description','badge','image'] as $f) {
         if (array_key_exists($f, $b)) {
             $fields[] = "$f = ?";
             $params[]  = trim((string)$b[$f]);
@@ -89,16 +86,13 @@ if ($method === 'PUT') {
     if (!$fields) fail('No fields to update.');
 
     $params[] = $id;
-    $sql = "UPDATE products SET " . implode(', ', $fields) . " WHERE id = ?";
-    $db->prepare($sql)->execute($params);
+    $db->prepare("UPDATE products SET " . implode(', ', $fields) . " WHERE id = ?")->execute($params);
 
-    $row = $db->query("SELECT * FROM products WHERE id = $id")->fetch();
+    $stmt = $db->prepare("SELECT * FROM products WHERE id = ?");
+    $stmt->execute([$id]);
+    $row = $stmt->fetch();
     if (!$row) fail('Product not found.', 404);
-    $row['id']             = (int)$row['id'];
-    $row['price']          = (float)$row['price'];
-    $row['original_price'] = $row['original_price'] !== null ? (float)$row['original_price'] : null;
-    $row['rating']         = $row['rating'] !== null ? (float)$row['rating'] : null;
-    ok($row);
+    ok(castProduct($row));
 }
 
 // ── DELETE ───────────────────────────────────────────────────

@@ -31,7 +31,11 @@ if ($method === 'POST') {
 
     $db->prepare("INSERT INTO badges (name, color, text_color) VALUES (?, ?, ?)")->execute([$name, $col, $txt]);
     $newId = (int)$db->lastInsertId();
-    $row = $db->query("SELECT * FROM badges WHERE id = $newId")->fetch();
+
+    $stmt = $db->prepare("SELECT * FROM badges WHERE id = ?");
+    $stmt->execute([$newId]);
+    $row = $stmt->fetch();
+    if (!$row) fail('Badge saved but could not be retrieved.', 500);
     $row['id'] = (int)$row['id'];
     ok($row);
 }

@@ -4,7 +4,8 @@
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS thebohothread
-  DEFAULT CHARACTER SET = 'utf8mb4';
+  DEFAULT CHARACTER SET = 'utf8mb4'
+  DEFAULT COLLATE = 'utf8mb4_unicode_ci';
 
 USE thebohothread;
 
@@ -12,9 +13,9 @@ USE thebohothread;
 CREATE TABLE IF NOT EXISTS categories (
   id         INT AUTO_INCREMENT PRIMARY KEY,
   name       VARCHAR(100) NOT NULL UNIQUE,
-  icon       VARCHAR(10)  DEFAULT '🏷️',
+  icon       VARCHAR(20)  DEFAULT '🏷️',   -- VARCHAR(20) to safely hold emojis
   created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── BADGES ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS badges (
@@ -23,22 +24,22 @@ CREATE TABLE IF NOT EXISTS badges (
   color      VARCHAR(20)  DEFAULT '#c9a84c',
   text_color VARCHAR(20)  DEFAULT '#ffffff',
   created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── PRODUCTS ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS products (
   id             INT AUTO_INCREMENT PRIMARY KEY,
-  name           VARCHAR(255) NOT NULL,
+  name           VARCHAR(255)   NOT NULL,
   category       VARCHAR(100),
   description    TEXT,
-  price          DECIMAL(10,2) NOT NULL DEFAULT 0,
-  original_price DECIMAL(10,2) DEFAULT NULL,
-  rating         DECIMAL(3,1)  DEFAULT NULL,
-  badge          VARCHAR(100)  DEFAULT '',
-  image          TEXT          DEFAULT '',
-  created_at     TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-  updated_at     TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+  price          DECIMAL(10,2)  NOT NULL DEFAULT 0,
+  original_price DECIMAL(10,2)  DEFAULT NULL,
+  rating         DECIMAL(3,1)   DEFAULT NULL,
+  badge          VARCHAR(100)   DEFAULT '',
+  image          MEDIUMTEXT     DEFAULT '',   -- MEDIUMTEXT to safely hold base64 images
+  created_at     TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  updated_at     TIMESTAMP      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── REVIEWS ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS reviews (
@@ -52,7 +53,11 @@ CREATE TABLE IF NOT EXISTS reviews (
   created_at   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
   approved_at  TIMESTAMP    NULL DEFAULT NULL,
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── ALTER existing tables if upgrading (run if tables already exist) ──
+-- ALTER TABLE categories MODIFY icon VARCHAR(20) DEFAULT '🏷️';
+-- ALTER TABLE products   MODIFY image MEDIUMTEXT  DEFAULT '';
 
 -- ── SEED DEFAULT BADGES ─────────────────────────────────────
 INSERT IGNORE INTO badges (name, color, text_color) VALUES
