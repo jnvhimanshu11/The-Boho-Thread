@@ -1,302 +1,202 @@
-# ✦ LiquidStore — Complete Setup Guide
+# 🛍️ ShopNova — E-Commerce Website
 
-A full-featured e-commerce website with 3D liquid parallax effects, Firebase backend, and admin dashboard.
+A complete, responsive 3D-styled e-commerce website with admin panel, Firebase backend, wishlist, product scroller, and more.
 
 ---
 
-## 🚀 Quick Start
+## 📁 Project Structure
 
-```bash
-# 1. Open this folder in VS Code
-cd liquidstore
-
-# 2. Install dependencies
-npm install
-
-# 3. Configure Firebase (see below first!)
-# Edit src/firebase.js with your credentials
-
-# 4. Start development server
-npm start
+```
+shopnova/
+├── index.html              ← Main storefront
+├── css/
+│   ├── main.css            ← Storefront styles
+│   └── admin.css           ← Admin panel styles
+├── js/
+│   ├── app.js              ← Storefront logic (Firebase)
+│   └── admin.js            ← Admin logic (Firebase)
+└── admin/
+    └── index.html          ← Admin panel
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
 ---
 
-## 🔥 Firebase Setup (Free Spark Plan)
+## 🔥 Firebase Setup (Free Tier — Spark Plan)
 
-### Step 1 — Create Firebase Project
-1. Go to [https://console.firebase.google.com](https://console.firebase.google.com)
-2. Click **"Add project"** → Give it a name (e.g. `liquidstore`)
-3. Disable Google Analytics (optional) → Click **"Create project"**
+### Step 1 — Create a Firebase Project
 
-### Step 2 — Add Web App
-1. In your project dashboard, click the **`</>`** (Web) icon
-2. Register app name: `LiquidStore`
-3. Copy the `firebaseConfig` object shown
+1. Go to https://console.firebase.google.com
+2. Click **Add Project** → Enter a project name → Continue
+3. Disable Google Analytics (optional) → **Create Project**
 
-### Step 3 — Update `src/firebase.js`
-Replace the placeholder values:
-```js
+### Step 2 — Enable Firestore Database
+
+1. In the left menu → **Build → Firestore Database**
+2. Click **Create database** → Choose **Start in test mode**
+3. Choose your region → Click **Enable**
+
+### Step 3 — Enable Firebase Storage (for image uploads)
+
+1. In the left menu → **Build → Storage**
+2. Click **Get Started** → **Start in test mode** → **Next** → **Done**
+
+### Step 4 — Get your Firebase Config
+
+1. Click the ⚙️ **gear icon** → **Project settings**
+2. Scroll to **Your apps** → Click **</>** (Web)
+3. Register app (any nickname) → Copy the `firebaseConfig` object
+
+### Step 5 — Update Config in Code
+
+Replace the `firebaseConfig` object in **both** files:
+- `js/app.js`
+- `js/admin.js`
+
+```javascript
 const firebaseConfig = {
-  apiKey: "AIza...",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
+  apiKey:            "AIza...",
+  authDomain:        "your-project.firebaseapp.com",
+  projectId:         "your-project",
+  storageBucket:     "your-project.appspot.com",
   messagingSenderId: "123456789",
-  appId: "1:123:web:abc123"
+  appId:             "1:123...:web:abc..."
 };
 ```
 
-### Step 4 — Enable Authentication
-1. Firebase Console → **Authentication** → **Get started**
-2. **Sign-in method** tab:
-   - Enable **Google** → Add your support email → Save
-   - Enable **Phone** → Save
+### Step 6 — Firestore Security Rules (after testing)
 
-### Step 5 — Enable Firestore
-1. Firebase Console → **Firestore Database** → **Create database**
-2. Choose **"Start in test mode"** → Select your region → Done
+Go to **Firestore → Rules** and paste:
 
-### Step 6 — Firestore Security Rules
-Go to **Firestore → Rules** tab and paste:
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Public read for products, categories, badges
     match /products/{doc} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false; // Admin writes via app — lock down properly in production
     }
     match /categories/{doc} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
     match /badges/{doc} {
       allow read: if true;
-      allow write: if request.auth != null;
-    }
-    match /reviews/{doc} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null;
-    }
-    match /coupons/{doc} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    match /campaigns/{doc} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
   }
 }
 ```
-Click **Publish**.
 
-### Step 7 — Authorize Your Domain (for Google Login)
-1. Firebase Console → **Authentication** → **Settings** → **Authorized domains**
-2. Add `localhost` (already there by default)
-3. After deployment, add your production domain too
+> **Note:** For production, implement Firebase Authentication for admin writes.
 
 ---
 
-## 🔐 Admin Access
+## 🔐 Admin Panel
 
-| URL | `/admin` |
-|-----|----------|
-| Username | `admin` |
-| Password | `Admin@2024` |
+**URL:** `http://localhost:PORT/admin/`
 
-**To change credentials**, edit `src/context/AuthContext.js`:
-```js
-const ADMIN_USERNAME = "admin";       // ← change this
-const ADMIN_PASSWORD = "Admin@2024";  // ← change this
+**Default Credentials:**
+- Username: `admin`
+- Password: `shopnova123`
+
+> ⚠️ **Change the password** in `js/admin.js`:
+> ```javascript
+> const ADMIN_PASS = "your_secure_password_here";
+> ```
+
+### Admin Features:
+- ✅ Dashboard with product/category/badge stats
+- ✅ Add / Edit / Delete products
+- ✅ Upload product images (drag & drop or file picker)
+- ✅ Paste image URLs
+- ✅ Manage categories (manual, not hardcoded)
+- ✅ Manage badges (custom name + color)
+- ✅ Real-time sync with Firebase
+
+---
+
+## 🌐 Running Locally (VS Code)
+
+### Option 1 — Live Server (Recommended)
+
+1. Install the **Live Server** extension in VS Code
+2. Right-click `index.html` → **Open with Live Server**
+
+### Option 2 — Python HTTP Server
+
+```bash
+cd shopnova
+python -m http.server 8080
+# Visit: http://localhost:8080
 ```
 
----
+### Option 3 — Node.js
 
-## 📋 Admin Dashboard Features
-
-### Products Tab
-- Add new products with name, price, description
-- Upload images via **URL** or paste multiple URLs
-- Assign **category** and **badge** from your created lists
-- Set **sale percentage** (auto-calculates discounted price)
-- Set **stock quantity**
-
-### Categories Tab
-- Create categories freely — they appear **instantly** on the homepage and shop page
-- Delete unused categories
-
-### Badges Tab
-- Create custom badge names (e.g. "Hot", "New", "Featured", "Limited")
-- These appear as colored chips on product cards
-
-### Reviews Tab
-- See all **pending reviews** submitted by users
-- **Approve** → review becomes visible on product page
-- **Reject** → review is permanently deleted
-
-### Coupons Tab
-- Create coupon codes with:
-  - Custom code (e.g. `SAVE20`)
-  - Discount percentage
-  - Minimum order value
-  - Maximum uses
-- Toggle active/inactive status
-
-### Campaigns Tab
-- Create promotional campaigns visible on homepage and `/campaigns` page
-- Link a coupon code to a campaign
-- Toggle active/inactive
-
----
-
-## 🏗️ Project File Structure
-
-```
-liquidstore/
-├── public/
-│   └── index.html
-├── src/
-│   ├── firebase.js              ← 🔑 Your Firebase config goes here
-│   ├── App.js                   ← Routes and providers
-│   ├── index.js                 ← Entry point
-│   ├── index.css                ← Global styles + CSS variables
-│   │
-│   ├── context/
-│   │   ├── AuthContext.js       ← Google auth, Phone OTP, Admin login
-│   │   └── StoreContext.js      ← Cart, wishlist, coupon state
-│   │
-│   ├── components/
-│   │   ├── LiquidBackground.js  ← WebCanvas liquid parallax animation
-│   │   ├── Navbar.js            ← Responsive top navigation
-│   │   ├── ProductCard.js       ← Reusable product card
-│   │   └── Footer.js            ← Site footer
-│   │
-│   └── pages/
-│       ├── Home.js              ← Landing page + hero + scrolling banner
-│       ├── Login.js             ← Google + Phone OTP auth
-│       ├── Shop.js              ← Product grid with search/filter/sort
-│       ├── ProductDetail.js     ← Product page + image gallery + reviews
-│       ├── Cart.js              ← Cart + coupon + order summary
-│       ├── Wishlist.js          ← Saved items
-│       ├── Profile.js           ← User profile page
-│       ├── Admin.js             ← Full admin dashboard
-│       └── Campaigns.js        ← Active deals page
-│
-├── firestore.rules              ← Copy this to Firebase Console
-├── package.json
-└── README.md                    ← This file
+```bash
+npm install -g serve
+serve shopnova -p 8080
 ```
 
+> ⚠️ **Important:** Must run on a server (not `file://`) because of ES Modules and Firebase SDK.
+
 ---
 
-## ✅ Features Checklist
+## ✨ Features
 
-| Feature | Location |
-|---------|----------|
-| 3D liquid parallax (scroll + cursor) | `LiquidBackground.js` |
-| Google login | `Login.js` + `AuthContext.js` |
-| Phone OTP login | `Login.js` + `AuthContext.js` |
-| Admin hardcoded login | `AuthContext.js` |
-| Add/Edit/Delete products | `Admin.js` → Products tab |
-| Photo URL upload (single + multiple) | `Admin.js` → Products tab |
-| Manual categories (auto-visible) | `Admin.js` → Categories tab |
-| Manual badges | `Admin.js` → Badges tab |
-| Wishlist | `Wishlist.js` + `StoreContext.js` |
-| Cart with qty control | `Cart.js` + `StoreContext.js` |
-| Coupon / voucher system | `Admin.js` + `Cart.js` |
-| Campaigns management | `Admin.js` + `Campaigns.js` |
-| Sale / discount on products | `Admin.js` Products → salePercent |
-| Horizontal auto-scroll product banner | `Home.js` (CSS animation) |
-| Review & rating submit | `ProductDetail.js` |
-| Admin review approval | `Admin.js` → Reviews tab |
-| Approved reviews on product page | `ProductDetail.js` |
-| Search + filter + sort | `Shop.js` |
-| Mobile responsive | All pages (CSS media queries) |
-| Firebase Firestore backend | All pages |
-| Persistent cart (localStorage) | `StoreContext.js` |
-| User profile page | `Profile.js` |
-| Toast notifications | `react-hot-toast` |
-| Image gallery (multi-photo) | `ProductDetail.js` |
-| Share product link | `ProductDetail.js` |
+| Feature | Details |
+|---|---|
+| 🛍️ Product Grid | Responsive grid, cards with image, price, badge, rating |
+| 🏷️ Categories | Dynamic pills in navbar — auto-added from admin |
+| 🎖️ Badges | Custom badges (New, Sale, Hot, etc.) with custom colors |
+| 🔍 Search | Live search in navbar (desktop + mobile) |
+| ↕️ Sort | Sort by price, name, or newest |
+| ❤️ Wishlist | Sidebar wishlist with move-to-cart |
+| 🛒 Cart | Sidebar cart with qty controls, subtotal |
+| 🎠 Product Scroller | Auto left-to-right infinite scroll strip |
+| 🎬 Hero Banner | Auto-sliding hero with 3 slides, touch swipe |
+| 📱 Mobile Friendly | Hamburger menu, responsive grid, touch support |
+| 🔔 Toast Notifications | Non-intrusive success/error toasts |
+| 🖼️ Product Modal | Full-screen detail modal with qty picker |
+| 💾 Persistence | Cart & wishlist saved to localStorage |
+| 🔥 Firebase | Real-time Firestore + Firebase Storage |
 
 ---
 
 ## 🎨 Customization
 
-### Change Brand Colors
-Edit `src/index.css` — look for the `:root` block:
+### Change Brand Name
+In `index.html` and `admin/index.html`, change `ShopNova` to your brand.
+
+### Change Currency
+In `js/app.js` and `js/admin.js`, replace `₹` with your currency symbol.
+
+### Change Colors
+In `css/main.css`, update the CSS variables:
 ```css
 :root {
-  --accent: #7c3aed;      /* Primary purple */
-  --accent2: #06b6d4;     /* Cyan */
-  --accent3: #f59e0b;     /* Amber */
-  --c1: #0a0a1a;          /* Background dark */
+  --gold:  #c9a84c;  /* accent color */
+  --navy:  #0d1b2a;  /* background */
 }
 ```
 
-### Change Brand Name
-Search and replace `LiquidStore` across all files.
+---
 
-### Change Currency Symbol
-Search and replace `₹` with your preferred symbol (e.g. `$`, `€`, `£`).
+## 🚀 Deployment Options (Free)
 
-### Change Admin Password
-In `src/context/AuthContext.js`, lines 12-13.
+| Platform | Steps |
+|---|---|
+| **Firebase Hosting** | `npm i -g firebase-tools` → `firebase init hosting` → `firebase deploy` |
+| **Netlify** | Drag & drop `shopnova/` folder to netlify.com |
+| **Vercel** | `npm i -g vercel` → `vercel` in project folder |
+| **GitHub Pages** | Push to repo → Settings → Pages → Deploy from branch |
 
 ---
 
-## 🌐 Deployment (Free)
+## 📦 Dependencies (CDN — no npm needed)
 
-### Deploy to Vercel
-```bash
-npm install -g vercel
-npm run build
-vercel --prod
-```
+- Firebase SDK 10.12.0
+- Phosphor Icons 2.1.1
+- Google Fonts (Cormorant Garamond + DM Sans)
 
-### Deploy to Netlify
-```bash
-npm run build
-# Drag the `build/` folder to netlify.com/drop
-```
-
-After deployment, add your domain to Firebase Console:
-**Authentication → Settings → Authorized domains**
-
----
-
-## 🐛 Common Issues
-
-**"Firebase: Error (auth/unauthorized-domain)"**
-→ Add your domain in Firebase Console → Authentication → Authorized domains
-
-**Phone OTP not working**
-→ Make sure Phone auth is enabled in Firebase Console and your phone number includes country code (+91 for India)
-
-**Products not showing**
-→ Check Firestore rules are published; check collection name is exactly `products`
-
-**Google login popup blocked**
-→ Allow popups for localhost in your browser settings
-
----
-
-## 📦 Dependencies
-
-| Package | Purpose |
-|---------|---------|
-| `react-router-dom` | Page routing |
-| `firebase` | Auth + Firestore database |
-| `framer-motion` | Animations |
-| `react-hot-toast` | Toast notifications |
-| `react-icons` | Icon library |
-
----
-
-Built with ❤️ — LiquidStore © 2024
+All loaded from CDN — no build step required!
