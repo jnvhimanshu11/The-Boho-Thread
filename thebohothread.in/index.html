@@ -190,7 +190,7 @@
 <footer>
   <div class="footer-grid">
     <div class="footer-brand">
-      <div style="font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:700;color:var(--gold);">The<span style="color:var(--cream);font-weight:300;">Boho<span> style="color:var(--gold);">Thread</span></span></div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:700;color:var(--gold);">The<span style="color:var(--cream);font-weight:300;">Boho</span><span style="color:var(--gold);">Thread</span></div>
       <p>Curated products for modern living. Quality, design, and value — all in one place.</p>
     </div>
     <div class="footer-col">
@@ -287,6 +287,35 @@
       <div class="modal-actions">
         <button class="add-cart-btn" id="modal-add-cart">Add to Cart</button>
         <button class="modal-wish-btn" id="modal-wish-btn" title="Add to Wishlist"><i class="ph ph-heart"></i></button>
+      </div>
+
+      <!-- ── REVIEWS SECTION ── -->
+      <div class="reviews-section" id="modal-reviews-section">
+        <div class="reviews-header">
+          <h4>Customer Reviews</h4>
+          <div class="reviews-summary" id="reviews-summary"></div>
+        </div>
+
+        <!-- Approved reviews list -->
+        <div id="approved-reviews-list"></div>
+
+        <!-- Write a review -->
+        <div class="write-review-wrap" id="write-review-wrap">
+          <h5>Write a Review</h5>
+          <div class="star-picker" id="star-picker">
+            <span class="star-pick" data-val="1">★</span>
+            <span class="star-pick" data-val="2">★</span>
+            <span class="star-pick" data-val="3">★</span>
+            <span class="star-pick" data-val="4">★</span>
+            <span class="star-pick" data-val="5">★</span>
+          </div>
+          <input class="review-name-input" id="review-name" placeholder="Your name" maxlength="60" />
+          <textarea class="review-textarea" id="review-text" placeholder="Share your thoughts about this product…" maxlength="500" rows="3"></textarea>
+          <button class="submit-review-btn" id="submit-review-btn" onclick="submitReview()">
+            <i class="ph ph-paper-plane-tilt"></i> Submit Review
+          </button>
+          <p class="review-disclaimer">Your review will appear after admin approval.</p>
+        </div>
       </div>
     </div>
   </div>

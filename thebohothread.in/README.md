@@ -1,202 +1,138 @@
-# 🛍️ ShopNova — E-Commerce Website
+# TheBohoThread — Setup Guide
 
-A complete, responsive 3D-styled e-commerce website with admin panel, Firebase backend, wishlist, product scroller, and more.
+## 🚀 Quick Start
 
----
+### 1. Set Up Firebase (Free — Spark Plan)
 
-## 📁 Project Structure
-
-```
-shopnova/
-├── index.html              ← Main storefront
-├── css/
-│   ├── main.css            ← Storefront styles
-│   └── admin.css           ← Admin panel styles
-├── js/
-│   ├── app.js              ← Storefront logic (Firebase)
-│   └── admin.js            ← Admin logic (Firebase)
-└── admin/
-    └── index.html          ← Admin panel
-```
-
----
-
-## 🔥 Firebase Setup (Free Tier — Spark Plan)
-
-### Step 1 — Create a Firebase Project
-
+**Step 1 — Create a Firebase project**
 1. Go to https://console.firebase.google.com
-2. Click **Add Project** → Enter a project name → Continue
-3. Disable Google Analytics (optional) → **Create Project**
+2. Click **"Add project"** → name it `thebohothread` → Continue
+3. Disable Google Analytics (optional) → **Create project**
 
-### Step 2 — Enable Firestore Database
+**Step 2 — Enable Firestore Database**
+1. In the left sidebar click **Build → Firestore Database**
+2. Click **Create database**
+3. Choose **"Start in test mode"** (you can secure it later) → Next
+4. Select a region close to you (e.g. `asia-south1` for India) → **Enable**
 
-1. In the left menu → **Build → Firestore Database**
-2. Click **Create database** → Choose **Start in test mode**
-3. Choose your region → Click **Enable**
+**Step 3 — Enable Firebase Storage**
+1. In the left sidebar click **Build → Storage**
+2. Click **Get started** → Start in test mode → **Done**
 
-### Step 3 — Enable Firebase Storage (for image uploads)
+**Step 4 — Get your config keys**
+1. Click the ⚙️ gear icon → **Project settings**
+2. Scroll down to **"Your apps"** → click the **</>** (web) icon
+3. Register your app (any nickname) → click **Register app**
+4. Copy the `firebaseConfig` object shown
 
-1. In the left menu → **Build → Storage**
-2. Click **Get Started** → **Start in test mode** → **Next** → **Done**
+**Step 5 — Paste config into your files**
 
-### Step 4 — Get your Firebase Config
+Open both files below and replace the placeholder values:
+- `js/admin.js` (lines 11–18)
+- `js/app.js` (lines 10–17)
 
-1. Click the ⚙️ **gear icon** → **Project settings**
-2. Scroll to **Your apps** → Click **</>** (Web)
-3. Register app (any nickname) → Copy the `firebaseConfig` object
-
-### Step 5 — Update Config in Code
-
-Replace the `firebaseConfig` object in **both** files:
-- `js/app.js`
-- `js/admin.js`
-
-```javascript
+Replace this block in both files:
+```js
 const firebaseConfig = {
-  apiKey:            "AIza...",
-  authDomain:        "your-project.firebaseapp.com",
-  projectId:         "your-project",
-  storageBucket:     "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId:             "1:123...:web:abc..."
+  apiKey:            "YOUR_API_KEY",           // ← replace
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",        // ← replace
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",         // ← replace
+  appId:             "YOUR_APP_ID"             // ← replace
 };
 ```
 
-### Step 6 — Firestore Security Rules (after testing)
+---
 
-Go to **Firestore → Rules** and paste:
+### 2. Admin Login
+
+Default credentials (change in `js/admin.js`, lines 25–26):
+
+| Field    | Value              |
+|----------|--------------------|
+| Username | `admin`            |
+| Password | `bohothread@2025`  |
+
+Access admin panel: `admin/index.html`
+
+---
+
+### 3. Firestore Collections (auto-created)
+
+| Collection   | Created by        | Purpose                          |
+|--------------|-------------------|----------------------------------|
+| `products`   | Admin panel       | All product details              |
+| `categories` | Admin panel       | Dynamic filter categories        |
+| `badges`     | Admin panel       | Product badges (New, Sale, etc.) |
+| `reviews`    | User submissions  | Customer reviews (with approval) |
+
+---
+
+## 📋 Features Overview
+
+### Admin Panel (`admin/index.html`)
+- 🔐 **Hardcoded login** — username + password in `admin.js`
+- 📦 **Products** — Add / Edit / Delete with:
+  - Photo upload (drag & drop or file picker, stored in Firebase Storage)
+  - OR paste an image URL
+  - Category (from your dynamic list)
+  - Badge (from your dynamic list)
+  - Price, original price, description, rating
+- 🏷️ **Categories** — Create categories → instantly visible on user page filter bar
+- 🎖️ **Badges** — Create custom badges with any color
+- 💬 **Reviews** — Approve / Reject / Delete user reviews
+  - Pending badge dot in sidebar
+  - Auto-recalculates product rating on approval
+- 📊 **Dashboard** — Stats overview + recent products
+
+### User Store (`index.html`)
+- 🔍 **Live filter bar** — Categories update in real-time from Firebase
+- ⭐ **Reviews** — Approved reviews visible in product modal
+- ✍️ **Submit review** — Users submit → goes to admin for approval
+- 🛒 **Cart + Wishlist** — Saved to localStorage
+
+---
+
+## 🔒 Securing Firebase (after launch)
+
+In **Firestore Rules**, replace with:
 
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Public read for products, categories, badges
-    match /products/{doc} {
-      allow read: if true;
-      allow write: if false; // Admin writes via app — lock down properly in production
-    }
-    match /categories/{doc} {
-      allow read: if true;
-      allow write: if false;
-    }
-    match /badges/{doc} {
-      allow read: if true;
-      allow write: if false;
+    // Anyone can read products, categories, badges, approved reviews
+    match /products/{id}   { allow read: if true; allow write: if false; }
+    match /categories/{id} { allow read: if true; allow write: if false; }
+    match /badges/{id}     { allow read: if true; allow write: if false; }
+
+    // Anyone can submit a review; only backend (Firebase Admin SDK) can approve
+    match /reviews/{id} {
+      allow read:   if true;
+      allow create: if request.resource.data.status == "pending";
+      allow update, delete: if false;
     }
   }
 }
 ```
 
-> **Note:** For production, implement Firebase Authentication for admin writes.
+For production, replace the hardcoded admin login with **Firebase Authentication**.
 
 ---
 
-## 🔐 Admin Panel
+## 📁 File Structure
 
-**URL:** `http://localhost:PORT/admin/`
-
-**Default Credentials:**
-- Username: `admin`
-- Password: `shopnova123`
-
-> ⚠️ **Change the password** in `js/admin.js`:
-> ```javascript
-> const ADMIN_PASS = "your_secure_password_here";
-> ```
-
-### Admin Features:
-- ✅ Dashboard with product/category/badge stats
-- ✅ Add / Edit / Delete products
-- ✅ Upload product images (drag & drop or file picker)
-- ✅ Paste image URLs
-- ✅ Manage categories (manual, not hardcoded)
-- ✅ Manage badges (custom name + color)
-- ✅ Real-time sync with Firebase
-
----
-
-## 🌐 Running Locally (VS Code)
-
-### Option 1 — Live Server (Recommended)
-
-1. Install the **Live Server** extension in VS Code
-2. Right-click `index.html` → **Open with Live Server**
-
-### Option 2 — Python HTTP Server
-
-```bash
-cd shopnova
-python -m http.server 8080
-# Visit: http://localhost:8080
 ```
-
-### Option 3 — Node.js
-
-```bash
-npm install -g serve
-serve shopnova -p 8080
+thebohothread/
+├── index.html          ← User-facing store
+├── admin/
+│   └── index.html      ← Admin panel
+├── js/
+│   ├── app.js          ← Store logic + Firebase
+│   ├── admin.js        ← Admin logic + Firebase
+│   └── firebase-config.js  ← (optional shared config)
+└── css/
+    ├── main.css        ← Store styles
+    └── admin.css       ← Admin styles
 ```
-
-> ⚠️ **Important:** Must run on a server (not `file://`) because of ES Modules and Firebase SDK.
-
----
-
-## ✨ Features
-
-| Feature | Details |
-|---|---|
-| 🛍️ Product Grid | Responsive grid, cards with image, price, badge, rating |
-| 🏷️ Categories | Dynamic pills in navbar — auto-added from admin |
-| 🎖️ Badges | Custom badges (New, Sale, Hot, etc.) with custom colors |
-| 🔍 Search | Live search in navbar (desktop + mobile) |
-| ↕️ Sort | Sort by price, name, or newest |
-| ❤️ Wishlist | Sidebar wishlist with move-to-cart |
-| 🛒 Cart | Sidebar cart with qty controls, subtotal |
-| 🎠 Product Scroller | Auto left-to-right infinite scroll strip |
-| 🎬 Hero Banner | Auto-sliding hero with 3 slides, touch swipe |
-| 📱 Mobile Friendly | Hamburger menu, responsive grid, touch support |
-| 🔔 Toast Notifications | Non-intrusive success/error toasts |
-| 🖼️ Product Modal | Full-screen detail modal with qty picker |
-| 💾 Persistence | Cart & wishlist saved to localStorage |
-| 🔥 Firebase | Real-time Firestore + Firebase Storage |
-
----
-
-## 🎨 Customization
-
-### Change Brand Name
-In `index.html` and `admin/index.html`, change `ShopNova` to your brand.
-
-### Change Currency
-In `js/app.js` and `js/admin.js`, replace `₹` with your currency symbol.
-
-### Change Colors
-In `css/main.css`, update the CSS variables:
-```css
-:root {
-  --gold:  #c9a84c;  /* accent color */
-  --navy:  #0d1b2a;  /* background */
-}
-```
-
----
-
-## 🚀 Deployment Options (Free)
-
-| Platform | Steps |
-|---|---|
-| **Firebase Hosting** | `npm i -g firebase-tools` → `firebase init hosting` → `firebase deploy` |
-| **Netlify** | Drag & drop `shopnova/` folder to netlify.com |
-| **Vercel** | `npm i -g vercel` → `vercel` in project folder |
-| **GitHub Pages** | Push to repo → Settings → Pages → Deploy from branch |
-
----
-
-## 📦 Dependencies (CDN — no npm needed)
-
-- Firebase SDK 10.12.0
-- Phosphor Icons 2.1.1
-- Google Fonts (Cormorant Garamond + DM Sans)
-
-All loaded from CDN — no build step required!

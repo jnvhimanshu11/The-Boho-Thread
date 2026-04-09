@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShopNova — Admin Panel</title>
+  <title>TheBohoThread — Admin Panel</title>
   <link rel="stylesheet" href="../css/admin.css" />
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
 </head>
@@ -12,7 +12,7 @@
 <!-- ════════════════ LOGIN PAGE ════════════════ -->
 <div id="login-page">
   <div class="login-card">
-    <h1>ShopNova</h1>
+    <h1>TheBohoThread</h1>
     <p class="sub">Admin Panel — Sign In</p>
     <div class="login-error" id="login-error">Invalid username or password.</div>
     <div class="form-group">
@@ -33,7 +33,7 @@
   <!-- Sidebar -->
   <aside class="admin-sidebar" id="admin-sidebar">
     <div class="sidebar-brand">
-      <h2>Shop<span>Nova</span></h2>
+      <h2>TheBoho<span>Thread</span></h2>
       <p>Admin Panel</p>
     </div>
     <nav class="sidebar-nav">
@@ -50,6 +50,11 @@
       </a>
       <a href="#" data-page="badges" onclick="navigate('badges',this)">
         <i class="ph ph-seal-check"></i> Badges
+      </a>
+      <div class="nav-section">Community</div>
+      <a href="#" data-page="reviews" onclick="navigate('reviews',this)" id="reviews-nav-link">
+        <i class="ph ph-chat-circle-text"></i> Reviews
+        <span class="review-badge-dot" id="nav-review-dot" style="display:none;"></span>
       </a>
       <div class="nav-section">Store</div>
       <a href="../index.html" target="_blank">
@@ -102,6 +107,11 @@
           <div class="stat-icon">⭐</div>
           <div class="stat-label">Avg Rating</div>
           <div class="stat-value" id="stat-rating">—</div>
+        </div>
+        <div class="stat-card" style="cursor:pointer;" onclick="navigate('reviews', document.querySelector('[data-page=reviews]'))">
+          <div class="stat-icon">💬</div>
+          <div class="stat-label">Pending Reviews</div>
+          <div class="stat-value" id="stat-pending-reviews">0</div>
         </div>
       </div>
 
@@ -192,15 +202,25 @@
           <div class="panel-body">
             <div class="form-group">
               <label>Badge Name</label>
-              <input class="form-control" id="new-badge-name" placeholder="e.g. Limited Edition" />
+              <input class="form-control" id="new-badge-name" placeholder="e.g. New Arrival" />
             </div>
             <div class="form-group">
-              <label>Color (hex or CSS)</label>
-              <input class="form-control" id="new-badge-color" placeholder="e.g. #9c6ade" />
+              <label>Background Color</label>
+              <div class="color-preview-row">
+                <input type="color" id="new-badge-color-picker" value="#c9a84c" oninput="document.getElementById('new-badge-color').value=this.value;updateBadgePreview()" style="width:40px;height:40px;border:none;background:none;cursor:pointer;padding:0;" />
+                <input class="form-control" id="new-badge-color" placeholder="#c9a84c" value="#c9a84c" oninput="document.getElementById('new-badge-color-picker').value=this.value;updateBadgePreview()" style="flex:1;" />
+              </div>
             </div>
             <div class="form-group">
               <label>Text Color</label>
-              <input class="form-control" id="new-badge-text" placeholder="e.g. #ffffff" value="#ffffff"/>
+              <div class="color-preview-row">
+                <input type="color" id="new-badge-text-picker" value="#ffffff" oninput="document.getElementById('new-badge-text').value=this.value;updateBadgePreview()" style="width:40px;height:40px;border:none;background:none;cursor:pointer;padding:0;" />
+                <input class="form-control" id="new-badge-text" placeholder="#ffffff" value="#ffffff" oninput="document.getElementById('new-badge-text-picker').value=this.value;updateBadgePreview()" style="flex:1;" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Live Preview</label>
+              <div><span class="pill" id="badge-live-preview" style="background:#c9a84c;color:#ffffff;font-size:0.85rem;padding:5px 16px;">Badge Name</span></div>
             </div>
             <button class="btn btn-gold" onclick="addBadge()"><i class="ph ph-plus"></i> Add Badge</button>
           </div>
@@ -212,6 +232,39 @@
           <div class="panel-body">
             <div id="badges-list" style="display:flex;flex-direction:column;gap:8px;"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REVIEWS ── -->
+    <div class="admin-page" id="page-reviews">
+      <!-- Filter tabs -->
+      <div class="review-tabs">
+        <button class="review-tab active" onclick="filterReviews('pending', this)">
+          <i class="ph ph-clock"></i> Pending
+          <span class="rtab-count" id="rtab-pending">0</span>
+        </button>
+        <button class="review-tab" onclick="filterReviews('approved', this)">
+          <i class="ph ph-check-circle"></i> Approved
+          <span class="rtab-count" id="rtab-approved">0</span>
+        </button>
+        <button class="review-tab" onclick="filterReviews('rejected', this)">
+          <i class="ph ph-x-circle"></i> Rejected
+          <span class="rtab-count" id="rtab-rejected">0</span>
+        </button>
+        <button class="review-tab" onclick="filterReviews('all', this)">
+          All
+          <span class="rtab-count" id="rtab-all">0</span>
+        </button>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-header">
+          <h3 id="reviews-panel-title">Pending Reviews</h3>
+          <span style="font-size:0.82rem;color:var(--text-muted);">Reviews require approval before appearing on the store</span>
+        </div>
+        <div class="panel-body" style="padding:0;">
+          <div id="reviews-list" style="display:flex;flex-direction:column;gap:0;"></div>
         </div>
       </div>
     </div>
@@ -298,7 +351,7 @@
 
       <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
         <button class="btn btn-outline-gold" onclick="closeProductModal()">Cancel</button>
-        <button class="btn btn-gold" onclick="saveProduct()"><i class="ph ph-floppy-disk"></i> Save Product</button>
+        <button class="btn btn-gold" id="save-product-btn" onclick="saveProduct()"><i class="ph ph-floppy-disk"></i> Save Product</button>
       </div>
     </div>
   </div>
@@ -323,6 +376,19 @@
 
 <div id="admin-toast"></div>
 
+<script>
+function updateBadgePreview() {
+  const name  = document.getElementById("new-badge-name").value || "Badge Name";
+  const color = document.getElementById("new-badge-color").value || "#c9a84c";
+  const text  = document.getElementById("new-badge-text").value  || "#ffffff";
+  const prev  = document.getElementById("badge-live-preview");
+  if (prev) { prev.textContent = name; prev.style.background = color; prev.style.color = text; }
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const nameInput = document.getElementById("new-badge-name");
+  if (nameInput) nameInput.addEventListener("input", updateBadgePreview);
+});
+</script>
 <script type="module" src="../js/admin.js"></script>
 </body>
 </html>

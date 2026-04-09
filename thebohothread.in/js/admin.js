@@ -1,18 +1,21 @@
 // ============================================================
-// SHOPNOVA — Admin JS (admin.js)
+// TheBohoThread — Admin JS
+// Firebase Firestore + Storage  |  admin.js
 // ============================================================
-import { initializeApp }     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getFirestore, collection, doc,
   addDoc, updateDoc, deleteDoc,
-  onSnapshot, query, orderBy,
+  onSnapshot, query, orderBy, where, getDocs,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getStorage, ref as storageRef, uploadBytes, getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
-// ── Firebase (replace with yours) ─────────────────────────
+// ─────────────────────────────────────────────────────────────
+//  FIREBASE CONFIG  ← Paste your values from Firebase Console
+// ─────────────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey:            "YOUR_API_KEY",
   authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
@@ -21,52 +24,66 @@ const firebaseConfig = {
   messagingSenderId: "YOUR_SENDER_ID",
   appId:             "YOUR_APP_ID"
 };
-const fireApp = initializeApp(firebaseConfig);
-const db      = getFirestore(fireApp);
-const storage = getStorage(fireApp);
 
-// ── Auth (hardcoded) ───────────────────────────────────────
+let firebaseReady = false;
+let db, storage;
+try {
+  const fireApp = initializeApp(firebaseConfig);
+  db      = getFirestore(fireApp);
+  storage = getStorage(fireApp);
+  firebaseReady = (firebaseConfig.apiKey !== "YOUR_API_KEY");
+} catch(e) {
+  console.warn("Firebase init error:", e);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  HARDCODED ADMIN CREDENTIALS  ← Change these!
+// ─────────────────────────────────────────────────────────────
 const ADMIN_USER = "admin";
-const ADMIN_PASS = "shopnova123";   // ← Change this!
+const ADMIN_PASS = "bohothread@2025";
 
-// ── State ──────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────────────────────
 let products   = [];
 let categories = [];
 let badges     = [];
-let currentImageBase64 = "";
-let confirmCallback    = null;
+let allReviews = [];
+let currentReviewFilter = "pending";
+let currentImageBase64  = "";
+let confirmCallback     = null;
 
-// ═══════════════════════════════════════════════════════════
-// LOGIN
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════
+//  AUTH
+// ═════════════════════════════════════════════════════════════
 const loginPage = document.getElementById("login-page");
 const adminApp  = document.getElementById("admin-app");
 
-function checkAuth() {
-  return sessionStorage.getItem("sn_admin_auth") === "1";
-}
+function checkAuth() { return sessionStorage.getItem("tbt_admin") === "1"; }
 
 document.getElementById("login-btn").onclick = doLogin;
-document.getElementById("login-pass").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+["login-pass","login-user"].forEach(id =>
+  document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); })
+);
 
 function doLogin() {
   const u = document.getElementById("login-user").value.trim();
   const p = document.getElementById("login-pass").value;
-  const errEl = document.getElementById("login-error");
   if (u === ADMIN_USER && p === ADMIN_PASS) {
-    sessionStorage.setItem("sn_admin_auth","1");
-    errEl.classList.remove("show");
+    sessionStorage.setItem("tbt_admin", "1");
+    document.getElementById("login-error").style.display = "none";
     loginPage.style.display = "none";
     adminApp.style.display  = "flex";
     startAdminListeners();
   } else {
-    errEl.classList.add("show");
+    document.getElementById("login-error").style.display = "block";
     document.getElementById("login-pass").value = "";
+    document.getElementById("login-pass").focus();
   }
 }
 
 window.logout = function() {
-  sessionStorage.removeItem("sn_admin_auth");
+  sessionStorage.removeItem("tbt_admin");
   location.reload();
 };
 
@@ -76,180 +93,196 @@ if (checkAuth()) {
   startAdminListeners();
 }
 
-// ── Mobile sidebar toggle visibility ──
 window.addEventListener("resize", () => {
-  const toggle = document.getElementById("sidebar-toggle");
-  if (toggle) toggle.style.display = window.innerWidth <= 860 ? "block" : "none";
+  const t = document.getElementById("sidebar-toggle");
+  if (t) t.style.display = window.innerWidth <= 860 ? "block" : "none";
 });
 window.dispatchEvent(new Event("resize"));
 
-// ═══════════════════════════════════════════════════════════
-// NAVIGATION
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═════════════════════════════════════════════════════════════
 window.navigate = function(page, linkEl) {
   document.querySelectorAll(".admin-page").forEach(p => p.classList.remove("active"));
-  document.querySelectorAll(".sidebar-nav a").forEach(a => a.classList.remove("active"));
-  document.getElementById(`page-${page}`).classList.add("active");
+  document.querySelectorAll(".sidebar-nav a[data-page]").forEach(a => a.classList.remove("active"));
+  const pageEl = document.getElementById("page-" + page);
+  if (pageEl) pageEl.classList.add("active");
   if (linkEl) linkEl.classList.add("active");
-  document.getElementById("page-title").textContent =
-    page.charAt(0).toUpperCase() + page.slice(1);
+  else { const n = document.querySelector("[data-page='"+page+"']"); if (n) n.classList.add("active"); }
+  const titles = { dashboard:"Dashboard", products:"Products", categories:"Categories", badges:"Badges", reviews:"Reviews" };
+  document.getElementById("page-title").textContent = titles[page] || page;
   document.getElementById("admin-sidebar").classList.remove("open");
 };
 
-// ═══════════════════════════════════════════════════════════
-// FIREBASE LISTENERS
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════
+//  FIREBASE LISTENERS
+// ═════════════════════════════════════════════════════════════
 function startAdminListeners() {
-  // Products
-  onSnapshot(query(collection(db,"products"), orderBy("createdAt","desc")), snap => {
-    products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderProductsTable();
-    renderRecentTable();
-    updateStats();
-  }, () => {
-    adminToast("Firebase not configured — using local demo data.", "error");
+  if (!firebaseReady) {
+    adminToast("Firebase not configured — showing demo data. See README.md to connect your database.", "error");
     loadLocalDemo();
-  });
+    return;
+  }
 
-  // Categories
+  onSnapshot(query(collection(db,"products"), orderBy("createdAt","desc")), snap => {
+    products = snap.docs.map(d => ({id:d.id,...d.data()}));
+    renderProductsTable(); renderRecentTable(); updateStats();
+  }, () => loadLocalDemo());
+
+  // Categories: real-time → automatically updates user page filter bar
   onSnapshot(collection(db,"categories"), snap => {
-    categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderCategoriesList();
-    populateCategorySelect();
-    updateStats();
+    categories = snap.docs.map(d => ({id:d.id,...d.data()}));
+    renderCategoriesList(); populateCategorySelect(); updateStats();
   });
 
-  // Badges
   onSnapshot(collection(db,"badges"), snap => {
-    badges = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderBadgesList();
-    populateBadgeSelect();
-    updateStats();
+    badges = snap.docs.map(d => ({id:d.id,...d.data()}));
+    renderBadgesList(); populateBadgeSelect(); updateStats();
   });
+
+  onSnapshot(query(collection(db,"reviews"), orderBy("createdAt","desc")), snap => {
+    allReviews = snap.docs.map(d => ({id:d.id,...d.data()}));
+    updateReviewStats(); renderReviewsList();
+  }, () => { allReviews=[]; updateReviewStats(); renderReviewsList(); });
 }
 
 function loadLocalDemo() {
   products = [
-    { id:"d1", name:"Ivory Ceramic Vase", category:"Decor", price:1299, badge:"New", rating:4.5, image:"https://images.unsplash.com/photo-1578500351865-d6c3706f46bc?w=200&q=60" },
-    { id:"d2", name:"Linen Throw Blanket", category:"Textiles", price:2499, badge:"Bestseller", rating:5, image:"https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?w=200&q=60" },
+    {id:"d1",name:"Ivory Ceramic Vase",category:"Decor",price:1299,originalPrice:1799,badge:"New",rating:4.5,description:"Handcrafted ceramic vase with matte ivory finish.",image:"https://images.unsplash.com/photo-1578500351865-d6c3706f46bc?w=200"},
+    {id:"d2",name:"Linen Throw Blanket",category:"Textiles",price:2499,badge:"Bestseller",rating:5,description:"Premium linen blend throw — soft and elegant.",image:"https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?w=200"},
+    {id:"d3",name:"Oak Side Table",category:"Furniture",price:5999,originalPrice:7499,badge:"Sale",rating:4,description:"Solid oak with clean geometric lines.",image:"https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=200"},
+    {id:"d4",name:"Artisan Coffee Mug",category:"Kitchen",price:649,badge:"Hot",rating:4.5,description:"Hand-thrown stoneware mug.",image:"https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=200"},
   ];
-  categories = [{ id:"c1", name:"Decor" },{ id:"c2", name:"Textiles" }];
-  badges     = [{ id:"b1", name:"New", color:"#4caf7d", textColor:"#fff" },{ id:"b2", name:"Sale", color:"#e05c5c", textColor:"#fff" }];
+  categories = [
+    {id:"c1",name:"Decor",icon:"🏺"},
+    {id:"c2",name:"Textiles",icon:"🧶"},
+    {id:"c3",name:"Furniture",icon:"🪑"},
+    {id:"c4",name:"Kitchen",icon:"🍳"},
+  ];
+  badges = [
+    {id:"b1",name:"New",color:"#4caf7d",textColor:"#fff"},
+    {id:"b2",name:"Sale",color:"#e05c5c",textColor:"#fff"},
+    {id:"b3",name:"Bestseller",color:"#c9a84c",textColor:"#0d1b2a"},
+    {id:"b4",name:"Hot",color:"#f5692a",textColor:"#fff"},
+  ];
+  allReviews = [
+    {id:"r1",productId:"d1",productName:"Ivory Ceramic Vase",author:"Priya S.",rating:5,text:"Absolutely love this! Stunning quality.",status:"pending",createdAt:{toDate:()=>new Date()}},
+    {id:"r2",productId:"d2",productName:"Linen Throw Blanket",author:"Rahul M.",rating:4,text:"Very cozy. Great for winter evenings.",status:"pending",createdAt:{toDate:()=>new Date(Date.now()-86400000)}},
+    {id:"r3",productId:"d1",productName:"Ivory Ceramic Vase",author:"Meena R.",rating:5,text:"Beautiful, exactly as described.",status:"approved",createdAt:{toDate:()=>new Date(Date.now()-172800000)}},
+  ];
   renderProductsTable(); renderRecentTable(); renderCategoriesList();
-  populateCategorySelect(); renderBadgesList(); populateBadgeSelect(); updateStats();
+  populateCategorySelect(); renderBadgesList(); populateBadgeSelect();
+  updateStats(); updateReviewStats(); renderReviewsList();
 }
 
-// ═══════════════════════════════════════════════════════════
-// STATS
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════
+//  STATS
+// ═════════════════════════════════════════════════════════════
 function updateStats() {
   document.getElementById("stat-products").textContent = products.length;
   document.getElementById("stat-cats").textContent     = categories.length;
   document.getElementById("stat-badges").textContent   = badges.length;
-  const ratings = products.filter(p=>p.rating).map(p=>p.rating);
-  document.getElementById("stat-rating").textContent =
-    ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1) : "—";
+  const r = products.filter(p=>p.rating).map(p=>p.rating);
+  document.getElementById("stat-rating").textContent = r.length ? (r.reduce((a,b)=>a+b,0)/r.length).toFixed(1) : "—";
 }
 
-// ═══════════════════════════════════════════════════════════
-// PRODUCTS TABLE
-// ═══════════════════════════════════════════════════════════
+function updateReviewStats() {
+  const pending  = allReviews.filter(r=>r.status==="pending").length;
+  const approved = allReviews.filter(r=>r.status==="approved").length;
+  const rejected = allReviews.filter(r=>r.status==="rejected").length;
+  const el = document.getElementById("stat-pending-reviews");
+  if (el) el.textContent = pending;
+  const dot = document.getElementById("nav-review-dot");
+  if (dot) dot.style.display = pending > 0 ? "inline-block" : "none";
+  ["pending","approved","rejected"].forEach(k => {
+    const e = document.getElementById("rtab-"+k); if(e) e.textContent = {pending,approved,rejected}[k];
+  });
+  const all = document.getElementById("rtab-all"); if(all) all.textContent = allReviews.length;
+}
+
+// ═════════════════════════════════════════════════════════════
+//  PRODUCTS TABLE
+// ═════════════════════════════════════════════════════════════
+function getBadgeStyle(name) {
+  const b = badges.find(x=>x.name===name);
+  return b ? "background:"+b.color+";color:"+b.textColor+";border:none;" : "background:rgba(201,168,76,0.15);color:var(--gold);";
+}
+
 function productRowHTML(p) {
-  const badge = p.badge
-    ? `<span class="pill pill-gold" style="${getBadgeStyle(p.badge)}">${p.badge}</span>`
-    : `<span style="color:var(--text-muted);font-size:0.8rem;">—</span>`;
   const img = p.image
-    ? `<img class="table-img" src="${p.image}" alt="" onerror="this.style.opacity='0.3'" />`
-    : `<div class="table-img" style="background:var(--navy-mid);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.7rem;">No img</div>`;
+    ? `<img class="table-img" src="${p.image}" alt="" onerror="this.src='https://via.placeholder.com/48/1a2a3a/c9a84c?text=?'">`
+    : `<div class="table-img no-img">—</div>`;
+  const badge = p.badge
+    ? `<span class="pill" style="${getBadgeStyle(p.badge)}">${p.badge}</span>`
+    : `<span style="color:var(--text-muted);">—</span>`;
   return `<tr>
     <td>${img}</td>
     <td style="font-weight:500;">${p.name}</td>
     <td><span style="color:var(--gold);font-size:0.82rem;">${p.category||"—"}</span></td>
-    <td>₹${(p.price||0).toLocaleString()}</td>
+    <td style="white-space:nowrap;">₹${(p.price||0).toLocaleString()}</td>
     <td>${badge}</td>
-    <td>${p.rating||"—"}</td>
-    <td>
-      <div class="table-actions">
-        <button class="btn btn-outline-gold btn-sm" onclick="openProductModal('${p.id}')">
-          <i class="ph ph-pencil"></i> Edit
-        </button>
-        <button class="btn btn-danger btn-sm" onclick="confirmDelete('product','${p.id}','${p.name.replace(/'/g,"\\'")}')">
-          <i class="ph ph-trash"></i>
-        </button>
-      </div>
-    </td>
+    <td>${p.rating ? "<span style='color:var(--gold);'>★</span> "+p.rating : "—"}</td>
+    <td><div class="table-actions">
+      <button class="btn btn-outline-gold btn-sm" onclick="openProductModal('${p.id}')"><i class="ph ph-pencil-simple"></i> Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete('product','${p.id}','${p.name.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')"><i class="ph ph-trash"></i></button>
+    </div></td>
   </tr>`;
 }
 
 function renderProductsTable(filter="") {
   const tbody = document.getElementById("products-tbody");
   if (!tbody) return;
-  const list = filter
-    ? products.filter(p => p.name.toLowerCase().includes(filter.toLowerCase()))
-    : products;
-  tbody.innerHTML = list.length
-    ? list.map(productRowHTML).join("")
-    : `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">No products yet.</td></tr>`;
+  const list = filter ? products.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase())||(p.category||"").toLowerCase().includes(filter.toLowerCase())) : products;
+  tbody.innerHTML = list.length ? list.map(productRowHTML).join("") : `<tr><td colspan="7" style="text-align:center;padding:48px;color:var(--text-muted);">No products yet. <a href="#" onclick="openProductModal()" style="color:var(--gold);">Add one →</a></td></tr>`;
 }
 
 function renderRecentTable() {
   const tbody = document.getElementById("recent-tbody");
   if (!tbody) return;
-  const list = products.slice(0,5);
-  tbody.innerHTML = list.length
-    ? list.map(p => `<tr>
-        <td>${p.image ? `<img class="table-img" src="${p.image}" alt="" onerror="this.style.opacity='0.3'"/>` : `<div class="table-img" style="background:var(--navy-mid);"></div>`}</td>
-        <td style="font-weight:500;">${p.name}</td>
-        <td><span style="color:var(--gold);font-size:0.82rem;">${p.category||"—"}</span></td>
-        <td>₹${(p.price||0).toLocaleString()}</td>
-        <td>${p.badge ? `<span class="pill pill-gold">${p.badge}</span>` : "—"}</td>
-        <td>
-          <div class="table-actions">
-            <button class="btn btn-outline-gold btn-sm" onclick="openProductModal('${p.id}')"><i class="ph ph-pencil"></i></button>
-          </div>
-        </td>
-      </tr>`).join("")
-    : `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No products yet. <a href="#" onclick="openProductModal()" style="color:var(--gold);">Add one?</a></td></tr>`;
+  tbody.innerHTML = products.slice(0,6).map(p=>`<tr>
+    <td>${p.image?`<img class="table-img" src="${p.image}" alt="" onerror="this.src='https://via.placeholder.com/48/1a2a3a/c9a84c?text=?'">`:`<div class="table-img no-img">—</div>`}</td>
+    <td style="font-weight:500;">${p.name}</td>
+    <td><span style="color:var(--gold);font-size:0.82rem;">${p.category||"—"}</span></td>
+    <td>₹${(p.price||0).toLocaleString()}</td>
+    <td>${p.badge?`<span class="pill" style="${getBadgeStyle(p.badge)}">${p.badge}</span>`:"—"}</td>
+    <td><button class="btn btn-outline-gold btn-sm" onclick="openProductModal('${p.id}')"><i class="ph ph-pencil-simple"></i></button></td>
+  </tr>`).join("") || `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">No products yet.</td></tr>`;
 }
 
 window.filterProductTable = function(val) { renderProductsTable(val); };
 
-// ═══════════════════════════════════════════════════════════
-// PRODUCT MODAL
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════
+//  PRODUCT MODAL
+// ═════════════════════════════════════════════════════════════
 window.openProductModal = function(id) {
-  const modal = document.getElementById("product-modal-backdrop");
-  const titleEl = document.getElementById("product-modal-title");
-
   clearImage();
+  document.getElementById("product-modal-backdrop").classList.add("open");
+  const isEdit = !!id;
+  document.getElementById("product-modal-title").textContent = isEdit ? "Edit Product" : "Add New Product";
   document.getElementById("edit-product-id").value = id || "";
 
-  if (id) {
-    const p = products.find(x => x.id === id);
+  if (isEdit) {
+    const p = products.find(x=>x.id===id);
     if (!p) return;
-    titleEl.textContent = "Edit Product";
-    document.getElementById("p-name").value       = p.name || "";
-    document.getElementById("p-category").value   = p.category || "";
-    document.getElementById("p-desc").value        = p.description || "";
-    document.getElementById("p-price").value       = p.price || "";
-    document.getElementById("p-orig-price").value  = p.originalPrice || "";
-    document.getElementById("p-rating").value      = p.rating || "";
-    document.getElementById("p-badge").value       = p.badge || "";
-    document.getElementById("p-image-url").value   = p.image || "";
-    if (p.image) previewFromURL(p.image);
+    document.getElementById("p-name").value      = p.name        || "";
+    document.getElementById("p-desc").value       = p.description || "";
+    document.getElementById("p-price").value      = p.price       || "";
+    document.getElementById("p-orig-price").value = p.originalPrice || "";
+    document.getElementById("p-rating").value     = p.rating      || "";
+    document.getElementById("p-image-url").value  = p.image       || "";
+    if (p.image) showImagePreview(p.image);
+    // Delay for options to render
+    setTimeout(()=>{
+      document.getElementById("p-category").value = p.category || "";
+      document.getElementById("p-badge").value    = p.badge    || "";
+    }, 60);
   } else {
-    titleEl.textContent = "Add Product";
-    document.getElementById("p-name").value       = "";
-    document.getElementById("p-category").value   = "";
-    document.getElementById("p-desc").value        = "";
-    document.getElementById("p-price").value       = "";
-    document.getElementById("p-orig-price").value  = "";
-    document.getElementById("p-rating").value      = "";
-    document.getElementById("p-badge").value       = "";
-    document.getElementById("p-image-url").value   = "";
+    ["p-name","p-desc","p-price","p-orig-price","p-rating","p-image-url"].forEach(id=>{
+      document.getElementById(id).value="";
+    });
+    document.getElementById("p-category").value="";
+    document.getElementById("p-badge").value="";
   }
-
-  modal.classList.add("open");
 };
 
 window.closeProductModal = function() {
@@ -267,58 +300,50 @@ window.saveProduct = async function() {
   const badge = document.getElementById("p-badge").value;
   let   image = document.getElementById("p-image-url").value.trim();
 
-  if (!name) { adminToast("Product name is required.", "error"); return; }
-  if (!price || isNaN(price)) { adminToast("Valid price is required.", "error"); return; }
+  if (!name)          { adminToast("Product name is required.", "error"); return; }
+  if (!cat)           { adminToast("Please select a category.", "error"); return; }
+  if (!price||isNaN(price)||price<=0) { adminToast("Valid price is required.", "error"); return; }
 
-  // If a file was uploaded (base64), upload to Firebase Storage
-  if (currentImageBase64) {
+  const saveBtn = document.getElementById("save-product-btn");
+  if (saveBtn) { saveBtn.disabled=true; saveBtn.innerHTML=`<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;display:inline-block;"></i> Saving…`; }
+
+  // Upload file if selected
+  if (currentImageBase64 && firebaseReady) {
     try {
       image = await uploadBase64ToStorage(currentImageBase64, name);
     } catch(e) {
-      adminToast("Image upload failed, using URL instead.", "error");
+      adminToast("Image upload failed — saving without image.", "error");
     }
   }
 
-  const data = {
-    name, category: cat, description: desc, price,
-    ...(orig ? { originalPrice: orig } : {}),
-    ...(rating ? { rating } : {}),
-    ...(badge ? { badge } : { badge:"" }),
-    ...(image ? { image } : {}),
-  };
+  const data = { name, category:cat, description:desc, price, originalPrice:orig, rating, badge:badge||"", image:image||"" };
 
   try {
-    if (id) {
-      await updateDoc(doc(db,"products",id), data);
-      adminToast(`"${name}" updated successfully.`, "success");
+    if (firebaseReady) {
+      if (id) { await updateDoc(doc(db,"products",id), data); }
+      else    { data.createdAt=serverTimestamp(); await addDoc(collection(db,"products"), data); }
     } else {
-      data.createdAt = serverTimestamp();
-      await addDoc(collection(db,"products"), data);
-      adminToast(`"${name}" added successfully! 🎉`, "success");
+      if (id) { const i=products.findIndex(p=>p.id===id); if(i>-1) products[i]={...products[i],...data}; }
+      else    { products.unshift({id:"local-"+Date.now(),...data,createdAt:{toMillis:()=>Date.now()}}); }
+      renderProductsTable(); renderRecentTable(); updateStats();
     }
+    adminToast(id ? `"${name}" updated ✓` : `"${name}" added! 🎉`, "success");
     closeProductModal();
   } catch(e) {
     console.error(e);
-    adminToast("Firebase error — check config.", "error");
-    // Fallback: update local state for demo
-    if (!id) {
-      products.unshift({ id:`local-${Date.now()}`, ...data, createdAt:{ toMillis:()=>Date.now() } });
-    } else {
-      const idx = products.findIndex(p=>p.id===id);
-      if (idx>-1) products[idx] = { ...products[idx], ...data };
-    }
-    renderProductsTable(); renderRecentTable(); updateStats();
-    closeProductModal();
+    adminToast("Save failed — check Firebase config.", "error");
+  } finally {
+    if (saveBtn) { saveBtn.disabled=false; saveBtn.innerHTML=`<i class="ph ph-floppy-disk"></i> Save Product`; }
   }
 };
 
-// ═══════════════════════════════════════════════════════════
-// IMAGE HANDLING
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════
+//  IMAGE HANDLING
+// ═════════════════════════════════════════════════════════════
 window.handleImageFile = function(e) {
   const file = e.target.files[0];
   if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { adminToast("Image too large (max 5 MB).", "error"); return; }
+  if (file.size > 5*1024*1024) { adminToast("Image too large (max 5 MB).", "error"); return; }
   const reader = new FileReader();
   reader.onload = ev => {
     currentImageBase64 = ev.target.result;
@@ -329,170 +354,243 @@ window.handleImageFile = function(e) {
 };
 
 window.previewFromURL = function(url) {
-  if (!url) { document.getElementById("img-preview-wrap").style.display="none"; return; }
+  if (!url.trim()) { document.getElementById("img-preview-wrap").style.display="none"; return; }
   currentImageBase64 = "";
-  showImagePreview(url);
+  showImagePreview(url.trim());
 };
 
 function showImagePreview(src) {
   const wrap = document.getElementById("img-preview-wrap");
   const img  = document.getElementById("img-preview");
   img.src = src;
+  img.onerror = () => { adminToast("Could not load image from that URL.", "error"); wrap.style.display="none"; };
   wrap.style.display = "flex";
 }
 
 window.clearImage = function() {
   currentImageBase64 = "";
-  document.getElementById("p-image-url").value = "";
-  document.getElementById("img-preview-wrap").style.display = "none";
-  document.getElementById("img-preview").src = "";
-  document.getElementById("img-file-input").value = "";
+  const url = document.getElementById("p-image-url"); if(url) url.value="";
+  const wrap = document.getElementById("img-preview-wrap"); if(wrap) wrap.style.display="none";
+  const img  = document.getElementById("img-preview"); if(img) img.src="";
+  const fi   = document.getElementById("img-file-input"); if(fi) fi.value="";
 };
 
 async function uploadBase64ToStorage(base64, name) {
-  const blob     = await fetch(base64).then(r=>r.blob());
-  const filename = `products/${Date.now()}_${name.replace(/\s+/g,"-")}.jpg`;
-  const sRef     = storageRef(storage, filename);
+  const blob = await fetch(base64).then(r=>r.blob());
+  const ext  = blob.type.split("/")[1] || "jpg";
+  const path = "products/"+Date.now()+"_"+name.replace(/\s+/g,"-").toLowerCase()+"."+ext;
+  const sRef = storageRef(storage, path);
   await uploadBytes(sRef, blob);
   return getDownloadURL(sRef);
 }
 
-// Drag & drop
 const dropZone = document.getElementById("img-drop-zone");
-dropZone?.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
-dropZone?.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
-dropZone?.addEventListener("drop", e => {
-  e.preventDefault();
-  dropZone.classList.remove("drag-over");
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith("image/")) {
-    const reader = new FileReader();
-    reader.onload = ev => {
-      currentImageBase64 = ev.target.result;
-      showImagePreview(ev.target.result);
-    };
-    reader.readAsDataURL(file);
-  }
-});
+if (dropZone) {
+  dropZone.addEventListener("dragover",  e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+  dropZone.addEventListener("dragleave", ()=> dropZone.classList.remove("drag-over"));
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault(); dropZone.classList.remove("drag-over");
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = ev => { currentImageBase64=ev.target.result; showImagePreview(ev.target.result); document.getElementById("p-image-url").value=""; };
+      reader.readAsDataURL(file);
+    }
+  });
+}
 
-// ═══════════════════════════════════════════════════════════
-// CATEGORIES
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════
+//  CATEGORIES
+// ═════════════════════════════════════════════════════════════
 function renderCategoriesList() {
   const el = document.getElementById("categories-list");
   if (!el) return;
-  el.innerHTML = categories.length
-    ? categories.map(c => `
-        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--navy);border-radius:8px;padding:10px 14px;border:1px solid rgba(255,255,255,0.06);">
-          <span>${c.icon||""} ${c.name}</span>
-          <button class="btn btn-danger btn-sm" onclick="confirmDelete('category','${c.id}','${c.name}')">
-            <i class="ph ph-trash"></i>
-          </button>
-        </div>`).join("")
-    : `<p style="color:var(--text-muted);font-size:0.88rem;">No categories yet.</p>`;
+  if (!categories.length) {
+    el.innerHTML = `<p style="color:var(--text-muted);font-size:0.88rem;padding:8px 0;">No categories yet.</p>`;
+    return;
+  }
+  el.innerHTML = categories.map(c=>`
+    <div class="list-item-row">
+      <span class="list-icon">${c.icon||"🏷️"}</span>
+      <span class="list-name">${c.name}</span>
+      <span class="list-live-badge">● Live on store</span>
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete('category','${c.id}','${c.name.replace(/'/g,"\\'")}')">
+        <i class="ph ph-trash"></i>
+      </button>
+    </div>`).join("");
 }
 
 function populateCategorySelect() {
   const sel = document.getElementById("p-category");
   if (!sel) return;
-  const current = sel.value;
-  sel.innerHTML = `<option value="">Select category…</option>` +
-    categories.map(c => `<option value="${c.name}">${c.name}</option>`).join("");
-  sel.value = current;
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">Select category…</option>`+
+    categories.map(c=>`<option value="${c.name}">${c.icon?" "+c.icon+" ":""}${c.name}</option>`).join("");
+  if (cur) sel.value = cur;
 }
 
 window.addCategory = async function() {
   const name = document.getElementById("new-cat-name").value.trim();
-  const icon = document.getElementById("new-cat-icon").value.trim();
-  if (!name) { adminToast("Category name required.", "error"); return; }
-  if (categories.find(c=>c.name.toLowerCase()===name.toLowerCase())) {
-    adminToast("Category already exists.", "error"); return;
-  }
+  const icon = document.getElementById("new-cat-icon").value.trim() || "🏷️";
+  if (!name) { adminToast("Category name is required.", "error"); return; }
+  if (categories.find(c=>c.name.toLowerCase()===name.toLowerCase())) { adminToast("Category already exists.", "error"); return; }
   try {
-    await addDoc(collection(db,"categories"), { name, icon, createdAt: serverTimestamp() });
-    adminToast(`Category "${name}" added!`, "success");
-  } catch(e) {
-    categories.push({ id:`c-${Date.now()}`, name, icon });
-    renderCategoriesList(); populateCategorySelect(); updateStats();
-    adminToast(`Category "${name}" added (local).`, "success");
-  }
-  document.getElementById("new-cat-name").value = "";
-  document.getElementById("new-cat-icon").value = "";
+    if (firebaseReady) {
+      await addDoc(collection(db,"categories"), {name, icon, createdAt:serverTimestamp()});
+    } else {
+      categories.push({id:"c-"+Date.now(), name, icon});
+      renderCategoriesList(); populateCategorySelect(); updateStats();
+    }
+    adminToast(`"${name}" category created — now live on store! ✓`, "success");
+    document.getElementById("new-cat-name").value="";
+    document.getElementById("new-cat-icon").value="";
+  } catch(e) { adminToast("Failed to add category.", "error"); }
 };
 
-// ═══════════════════════════════════════════════════════════
-// BADGES
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════
+//  BADGES
+// ═════════════════════════════════════════════════════════════
 function renderBadgesList() {
   const el = document.getElementById("badges-list");
   if (!el) return;
-  el.innerHTML = badges.length
-    ? badges.map(b => `
-        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--navy);border-radius:8px;padding:10px 14px;border:1px solid rgba(255,255,255,0.06);">
-          <span class="pill" style="background:${b.color||'var(--gold)'};color:${b.textColor||'#fff'}">${b.name}</span>
-          <button class="btn btn-danger btn-sm" onclick="confirmDelete('badge','${b.id}','${b.name}')">
-            <i class="ph ph-trash"></i>
-          </button>
-        </div>`).join("")
-    : `<p style="color:var(--text-muted);font-size:0.88rem;">No badges yet.</p>`;
+  if (!badges.length) {
+    el.innerHTML = `<p style="color:var(--text-muted);font-size:0.88rem;padding:8px 0;">No badges yet.</p>`;
+    return;
+  }
+  el.innerHTML = badges.map(b=>`
+    <div class="list-item-row">
+      <span class="pill" style="background:${b.color||"var(--gold)"};color:${b.textColor||"#fff"};min-width:90px;text-align:center;">${b.name}</span>
+      <span style="font-size:0.76rem;color:var(--text-muted);">bg:${b.color||"—"} text:${b.textColor||"—"}</span>
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete('badge','${b.id}','${b.name.replace(/'/g,"\\'")}')">
+        <i class="ph ph-trash"></i>
+      </button>
+    </div>`).join("");
 }
 
 function populateBadgeSelect() {
   const sel = document.getElementById("p-badge");
   if (!sel) return;
-  const current = sel.value;
-  sel.innerHTML = `<option value="">No Badge</option>` +
-    badges.map(b => `<option value="${b.name}">${b.name}</option>`).join("");
-  sel.value = current;
-}
-
-function getBadgeStyle(name) {
-  const b = badges.find(x=>x.name===name);
-  return b ? `background:${b.color};color:${b.textColor};border:none;` : "";
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">No Badge</option>`+badges.map(b=>`<option value="${b.name}">${b.name}</option>`).join("");
+  if (cur) sel.value = cur;
 }
 
 window.addBadge = async function() {
   const name  = document.getElementById("new-badge-name").value.trim();
   const color = document.getElementById("new-badge-color").value.trim() || "#c9a84c";
-  const text  = document.getElementById("new-badge-text").value.trim() || "#ffffff";
-  if (!name) { adminToast("Badge name required.", "error"); return; }
-  if (badges.find(b=>b.name.toLowerCase()===name.toLowerCase())) {
-    adminToast("Badge already exists.", "error"); return;
-  }
+  const text  = document.getElementById("new-badge-text").value.trim()  || "#ffffff";
+  if (!name) { adminToast("Badge name is required.", "error"); return; }
+  if (badges.find(b=>b.name.toLowerCase()===name.toLowerCase())) { adminToast("Badge already exists.", "error"); return; }
   try {
-    await addDoc(collection(db,"badges"), { name, color, textColor: text, createdAt: serverTimestamp() });
-    adminToast(`Badge "${name}" added!`, "success");
-  } catch(e) {
-    badges.push({ id:`b-${Date.now()}`, name, color, textColor: text });
-    renderBadgesList(); populateBadgeSelect(); updateStats();
-    adminToast(`Badge "${name}" added (local).`, "success");
-  }
-  document.getElementById("new-badge-name").value  = "";
-  document.getElementById("new-badge-color").value = "";
+    if (firebaseReady) {
+      await addDoc(collection(db,"badges"), {name,color,textColor:text,createdAt:serverTimestamp()});
+    } else {
+      badges.push({id:"b-"+Date.now(),name,color,textColor:text});
+      renderBadgesList(); populateBadgeSelect(); updateStats();
+    }
+    adminToast(`Badge "${name}" created ✓`, "success");
+    document.getElementById("new-badge-name").value="";
+    document.getElementById("new-badge-color").value="";
+    document.getElementById("new-badge-text").value="#ffffff";
+  } catch(e) { adminToast("Failed to add badge.", "error"); }
 };
 
-// ═══════════════════════════════════════════════════════════
-// DELETE CONFIRMATION
-// ═══════════════════════════════════════════════════════════
-window.confirmDelete = function(type, id, name) {
+// ═════════════════════════════════════════════════════════════
+//  REVIEWS
+// ═════════════════════════════════════════════════════════════
+window.filterReviews = function(filter, tabEl) {
+  currentReviewFilter = filter;
+  document.querySelectorAll(".review-tab").forEach(t=>t.classList.remove("active"));
+  if (tabEl) tabEl.classList.add("active");
+  const titles={pending:"Pending Reviews",approved:"Approved Reviews",rejected:"Rejected Reviews",all:"All Reviews"};
+  const el=document.getElementById("reviews-panel-title"); if(el) el.textContent=titles[filter]||"Reviews";
+  renderReviewsList();
+};
+
+function renderReviewsList() {
+  const el=document.getElementById("reviews-list"); if(!el) return;
+  const list = currentReviewFilter==="all" ? allReviews : allReviews.filter(r=>r.status===currentReviewFilter);
+  if (!list.length) {
+    el.innerHTML=`<div style="padding:48px;text-align:center;color:var(--text-muted);">
+      <i class="ph ph-chat-circle-text" style="font-size:2.5rem;opacity:0.25;display:block;margin-bottom:12px;"></i>
+      <p>No ${currentReviewFilter==="all"?"":currentReviewFilter+" "}reviews yet.</p></div>`;
+    return;
+  }
+  el.innerHTML = list.map(r => {
+    const stars = Array.from({length:5},(_,i)=>`<span style="color:${i<r.rating?"#c9a84c":"rgba(154,172,189,0.3)"};">★</span>`).join("");
+    const date  = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}) : "—";
+    const sb    = {pending:`<span class="review-status pending">⏳ Pending</span>`,approved:`<span class="review-status approved">✓ Approved</span>`,rejected:`<span class="review-status rejected">✕ Rejected</span>`}[r.status]||"";
+    const acts  = r.status==="pending"
+      ? `<button class="btn btn-success btn-sm" onclick="approveReview('${r.id}','${(r.productId||"").replace(/'/g,"\\'")}')"><i class="ph ph-check-circle"></i> Approve</button><button class="btn btn-danger btn-sm" onclick="rejectReview('${r.id}')"><i class="ph ph-x-circle"></i> Reject</button>`
+      : r.status==="approved"
+      ? `<button class="btn btn-danger btn-sm" onclick="rejectReview('${r.id}')"><i class="ph ph-x-circle"></i> Revoke</button>`
+      : `<button class="btn btn-success btn-sm" onclick="approveReview('${r.id}','${(r.productId||"").replace(/'/g,"\\'")}')"><i class="ph ph-check-circle"></i> Approve</button>`;
+    return `<div class="review-admin-row">
+      <div class="review-row-top">
+        <div class="review-row-meta"><span class="review-author">${r.author||"Anonymous"}</span><span>${stars}</span><span class="review-date">${date}</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><span class="review-product-tag">${r.productName||"Unknown"}</span>${sb}</div>
+      </div>
+      <p class="review-text-content">${r.text||"<em style='color:var(--text-muted);'>No comment</em>"}</p>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">${acts}
+        <button class="btn btn-danger btn-sm" onclick="confirmDelete('review','${r.id}','review by ${(r.author||"Anonymous").replace(/'/g,"\\'")}')"><i class="ph ph-trash"></i> Delete</button>
+      </div></div>`;
+  }).join("");
+}
+
+window.approveReview = async function(reviewId, productId) {
+  try {
+    if (firebaseReady) {
+      await updateDoc(doc(db,"reviews",reviewId), {status:"approved",approvedAt:serverTimestamp()});
+      if (productId) await recalcProductRating(productId);
+    } else {
+      const r=allReviews.find(x=>x.id===reviewId); if(r) r.status="approved";
+      updateReviewStats(); renderReviewsList();
+    }
+    adminToast("Review approved and published! ✓","success");
+  } catch(e) { adminToast("Failed to approve review.","error"); }
+};
+
+window.rejectReview = async function(reviewId) {
+  try {
+    if (firebaseReady) { await updateDoc(doc(db,"reviews",reviewId), {status:"rejected"}); }
+    else { const r=allReviews.find(x=>x.id===reviewId); if(r) r.status="rejected"; updateReviewStats(); renderReviewsList(); }
+    adminToast("Review rejected.","");
+  } catch(e) { adminToast("Failed to reject review.","error"); }
+};
+
+async function recalcProductRating(productId) {
+  try {
+    const snap = await getDocs(query(collection(db,"reviews"),where("productId","==",productId),where("status","==","approved")));
+    const revs = snap.docs.map(d=>d.data());
+    if (!revs.length) return;
+    const avg = revs.reduce((s,r)=>s+(r.rating||0),0)/revs.length;
+    await updateDoc(doc(db,"products",productId), {rating:Math.round(avg*10)/10});
+  } catch(e) {}
+}
+
+// ═════════════════════════════════════════════════════════════
+//  DELETE CONFIRMATION
+// ═════════════════════════════════════════════════════════════
+window.confirmDelete = function(type,id,name) {
   document.getElementById("confirm-msg").textContent = `Delete "${name}"? This cannot be undone.`;
   document.getElementById("confirm-modal").classList.add("open");
   confirmCallback = async () => {
     try {
-      if (type === "product")  await deleteDoc(doc(db,"products",id));
-      if (type === "category") await deleteDoc(doc(db,"categories",id));
-      if (type === "badge")    await deleteDoc(doc(db,"badges",id));
-      adminToast(`"${name}" deleted.`, "success");
-    } catch(e) {
-      // Local fallback
-      if (type==="product")  products   = products.filter(x=>x.id!==id);
-      if (type==="category") categories = categories.filter(x=>x.id!==id);
-      if (type==="badge")    badges     = badges.filter(x=>x.id!==id);
-      renderProductsTable(); renderRecentTable();
-      renderCategoriesList(); populateCategorySelect();
-      renderBadgesList(); populateBadgeSelect(); updateStats();
-      adminToast(`"${name}" deleted (local).`);
-    }
+      if (firebaseReady) {
+        const cols={product:"products",category:"categories",badge:"badges",review:"reviews"};
+        if (cols[type]) await deleteDoc(doc(db,cols[type],id));
+        adminToast(`"${name}" deleted.`,"success");
+      } else {
+        if (type==="product")  products=products.filter(x=>x.id!==id);
+        if (type==="category") categories=categories.filter(x=>x.id!==id);
+        if (type==="badge")    badges=badges.filter(x=>x.id!==id);
+        if (type==="review")   allReviews=allReviews.filter(x=>x.id!==id);
+        renderProductsTable(); renderRecentTable(); renderCategoriesList();
+        populateCategorySelect(); renderBadgesList(); populateBadgeSelect();
+        updateStats(); updateReviewStats(); renderReviewsList();
+        adminToast(`"${name}" deleted.`,"success");
+      }
+    } catch(e) { adminToast("Delete failed.","error"); }
     closeConfirm();
   };
   document.getElementById("confirm-ok-btn").onclick = confirmCallback;
@@ -503,21 +601,21 @@ window.closeConfirm = function() {
   confirmCallback = null;
 };
 
-// Close modals on backdrop click
-document.getElementById("product-modal-backdrop").onclick = e => {
-  if (e.target === document.getElementById("product-modal-backdrop")) closeProductModal();
-};
-document.getElementById("confirm-modal").onclick = e => {
-  if (e.target === document.getElementById("confirm-modal")) closeConfirm();
-};
+document.getElementById("product-modal-backdrop").onclick = e => { if(e.target===document.getElementById("product-modal-backdrop")) closeProductModal(); };
+document.getElementById("confirm-modal").onclick          = e => { if(e.target===document.getElementById("confirm-modal")) closeConfirm(); };
 
-// ═══════════════════════════════════════════════════════════
-// TOAST
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════
+//  TOAST
+// ═════════════════════════════════════════════════════════════
 window.adminToast = function(msg, type="") {
   const el = document.createElement("div");
-  el.className = `a-toast ${type}`;
+  el.className = "a-toast " + type;
   el.textContent = msg;
   document.getElementById("admin-toast").appendChild(el);
-  setTimeout(() => el.remove(), 3200);
+  setTimeout(()=>el.remove(), 3500);
 };
+
+// Inject spin keyframe
+const s=document.createElement("style");
+s.textContent="@keyframes spin{to{transform:rotate(360deg)}}";
+document.head.appendChild(s);
