@@ -21,7 +21,9 @@ import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-
   measurementId: "G-5VTK93354M"
 };
 
-// Initialize Firebase
+
+// Initialize Firebase configuration
+
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
