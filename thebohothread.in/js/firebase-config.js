@@ -9,14 +9,16 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebas
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 
+// Google Firebase configuration Keys
+
   const firebaseConfig = {
-  apiKey: "AIzaSyAVBiyOmq3EOhpKESXy1lW3rSfNqHh35Mk",
-  authDomain: "e-commerce-745b7.firebaseapp.com",
-  projectId: "e-commerce-745b7",
-  storageBucket: "e-commerce-745b7.firebasestorage.app",
-  messagingSenderId: "787107058065",
-  appId: "1:787107058065:web:5fd82bbd55850793184a30",
-  measurementId: "G-849YKJF3VK"
+  apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+  authDomain: "thebohothread-96e2c.firebaseapp.com",
+  projectId: "thebohothread-96e2c",
+  storageBucket: "thebohothread-96e2c.firebasestorage.app",
+  messagingSenderId: "100688387088",
+  appId: "1:100688387088:web:f8a6af7565d3c25952fe95",
+  measurementId: "G-5VTK93354M"
 };
 
 // Initialize Firebase
