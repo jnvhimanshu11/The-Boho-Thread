@@ -53,6 +53,14 @@ document.getElementById('login-btn').onclick = doLogin;
   document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); })
 );
 
+function togglePassword() {
+  const input = document.getElementById('login-pass');
+  const icon  = document.getElementById('eye-icon');
+  const show  = input.type === 'password';
+  input.type  = show ? 'text' : 'password';
+  icon.className = show ? 'ph ph-eye-slash' : 'ph ph-eye';
+}
+
 function doLogin() {
   const u = document.getElementById('login-user').value.trim();
   const p = document.getElementById('login-pass').value;

@@ -92,6 +92,33 @@ input, select, textarea { font-family: inherit; }
 textarea.form-control { resize: vertical; min-height: 90px; }
 select.form-control { cursor: pointer; appearance: auto; }
 
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-wrapper .form-control {
+  padding-right: 44px;
+}
+.eye-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: var(--trans);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.eye-toggle:hover { color: var(--gold); }
+.eye-toggle:focus { outline: none; color: var(--gold); }
+
 .btn-login {
   width: 100%;
   background: var(--gold);
