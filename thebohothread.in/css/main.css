@@ -95,22 +95,25 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; line-height: 1.15; }
   transition: var(--trans);
   white-space: nowrap;
 }
-.nav-links a:hover, .nav-links a.active {
+.nav-links a:hover {
   color: var(--gold);
   background: rgba(201,168,76,0.1);
 }
 
-/* Category pills in nav */
+/* Category pills in nav — hidden (moved to collection section) */
 #nav-categories {
+  display: none;
+}
+
+/* Category pills in Our Collection section */
+#collection-categories {
   display: flex;
   align-items: center;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  max-width: 400px;
-  flex-shrink: 1;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
 }
-#nav-categories::-webkit-scrollbar { display: none; }
+
 .cat-pill {
   padding: 5px 13px;
   border-radius: 99px;
@@ -147,6 +150,7 @@ h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; line-height: 1.15; }
   position: relative;
 }
 .nav-btn:hover { background: rgba(201,168,76,0.12); color: var(--gold); }
+a.nav-btn { text-decoration: none; display: flex; align-items: center; justify-content: center; }
 .nav-btn .badge-count {
   position: absolute;
   top: 4px; right: 4px;
@@ -876,14 +880,13 @@ footer {
    ================================================================ */
 @media (max-width: 1024px) {
   .footer-grid { grid-template-columns: 1fr 1fr; }
-  #nav-categories { max-width: 240px; }
   .nav-search { width: 150px; }
   .nav-search:focus-within { width: 180px; }
 }
 
 @media (max-width: 768px) {
   :root { --nav-h: 60px; }
-  .nav-links, #nav-categories, .nav-search { display: none; }
+  .nav-links, .nav-search { display: none; }
   .nav-hamburger { display: flex; }
   .hero { height: 380px; }
   .hero-slide-content { padding: 0 28px; }
