@@ -237,7 +237,7 @@ window.submitReview = async function() {
   const p=allProducts.find(x=>x.id===currentReviewProductId);
   if (btn) { btn.disabled=true; btn.innerHTML=`<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;display:inline-block;"></i> Submitting…`; }
   const res=await apiFetch(API.reviews,{ method:'POST', body:JSON.stringify({ product_id:currentReviewProductId, product_name:p?.name||'Unknown', author:name, rating:selectedStarRating, review_text:text }) });
-  if (res.success) { toast('Thank you! Your review is pending approval 🙏','success'); resetReviewForm(); }
+  if (res.success) { toast('Thank you! Your review is submitted 🙏','success'); resetReviewForm(); }
   else             { toast(res.error||'Could not submit review.','error'); }
   if (btn) { btn.disabled=false; btn.innerHTML=`<i class="ph ph-paper-plane-tilt"></i> Submit Review`; }
 };

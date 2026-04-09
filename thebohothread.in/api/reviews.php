@@ -62,7 +62,7 @@ if ($method === 'POST') {
          VALUES (?, ?, ?, ?, ?, 'pending')"
     )->execute([$pid2, $pnm, $auth, $rtg, $txt]);
 
-    ok(['message' => 'Review submitted — pending approval. Thank you!']);
+    ok(['message' => 'Review submitted — will posted soon on wall. Thank you!']);
 }
 
 // ── PUT — update status ──────────────────────────────────────
