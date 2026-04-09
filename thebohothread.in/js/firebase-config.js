@@ -13,7 +13,7 @@ import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-
 
   const firebaseConfig = {
   apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
-  authDomain: "thebohothread.in",
+  authDomain: "auth.thebohothread.in",
   projectId: "thebohothread-96e2c",
   storageBucket: "thebohothread-96e2c.firebasestorage.app",
   messagingSenderId: "100688387088",
@@ -21,7 +21,7 @@ import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-
   measurementId: "G-5VTK93354M"
 };
 
-
+// Initialize Firebase
 
 
 const app = initializeApp(firebaseConfig);
