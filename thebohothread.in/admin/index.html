@@ -705,9 +705,29 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 <script src="../js/admin.js"></script>
 
-<!-- ── Store Settings: Firebase Integration ── -->
+<!-- ── RTE Helper Functions ── -->
+<script>
+  function rteExec(cmd, val) {
+    document.getElementById('rte-editor').focus();
+    document.execCommand(cmd, false, val || null);
+  }
+  function rteBlock(tag) {
+    document.getElementById('rte-editor').focus();
+    document.execCommand('formatBlock', false, tag);
+  }
+  function rteInsertLink() {
+    const url = prompt('Enter URL:', 'https://');
+    if (url) { document.getElementById('rte-editor').focus(); document.execCommand('createLink', false, url); }
+  }
+  function rteClear() {
+    document.getElementById('rte-editor').focus();
+    document.execCommand('removeFormat', false, null);
+  }
+</script>
+
+<!-- ── Single Firebase Module: Store Settings + Data Policy ── -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -719,94 +739,50 @@ document.addEventListener("DOMContentLoaded", () => {
     appId: "1:100688387088:web:f8a6af7565d3c25952fe95"
   };
 
-  const app = initializeApp(firebaseConfig);
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const db  = getFirestore(app);
-  const CONTACT_DOC = doc(db, 'store_settings', 'contact');
 
-  // Load existing settings into form when page navigates to store-settings
+  const CONTACT_DOC = doc(db, 'store_settings', 'contact');
+  const POLICY_DOC  = doc(db, 'store_settings', 'data_policy');
+
+  // ─── STORE SETTINGS ───────────────────────────────────────
   async function loadStoreSettings() {
     try {
       const snap = await getDoc(CONTACT_DOC);
       if (snap.exists()) {
         const d = snap.data();
         const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-        set('ss-address',   d.address);
-        set('ss-phone',     d.phone);
-        set('ss-whatsapp',  d.whatsapp);
-        set('ss-email',     d.email);
-        set('ss-map',       d.map_embed_url);
-        set('ss-facebook',  d.facebook);
-        set('ss-instagram', d.instagram);
-        set('ss-twitter',   d.twitter);
+        set('ss-address', d.address); set('ss-phone', d.phone); set('ss-whatsapp', d.whatsapp);
+        set('ss-email', d.email); set('ss-map', d.map_embed_url); set('ss-facebook', d.facebook);
+        set('ss-instagram', d.instagram); set('ss-twitter', d.twitter);
       }
     } catch(e) { console.log('Could not load store settings', e); }
   }
 
-  // Save
   window.saveStoreSettings = async function() {
-    const btn    = document.getElementById('ss-save-btn');
+    const btn = document.getElementById('ss-save-btn');
     const status = document.getElementById('ss-save-status');
     btn.disabled = true;
     btn.innerHTML = '<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;display:inline-block;"></i> Saving…';
     status.style.display = 'none';
-
     const get = id => (document.getElementById(id)?.value || '').trim();
-    const data = {
-      address:       get('ss-address'),
-      phone:         get('ss-phone'),
-      whatsapp:      get('ss-whatsapp'),
-      email:         get('ss-email'),
-      map_embed_url: get('ss-map'),
-      facebook:      get('ss-facebook'),
-      instagram:     get('ss-instagram'),
-      twitter:       get('ss-twitter'),
-      updated_at:    new Date().toISOString()
-    };
-
     try {
-      await setDoc(CONTACT_DOC, data, { merge: true });
-      btn.disabled = false;
+      await setDoc(CONTACT_DOC, {
+        address: get('ss-address'), phone: get('ss-phone'), whatsapp: get('ss-whatsapp'),
+        email: get('ss-email'), map_embed_url: get('ss-map'), facebook: get('ss-facebook'),
+        instagram: get('ss-instagram'), twitter: get('ss-twitter'), updated_at: new Date().toISOString()
+      }, { merge: true });
       btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Save All Settings';
       status.style.display = 'inline-flex';
       setTimeout(() => { status.style.display = 'none'; }, 4000);
     } catch(e) {
-      btn.disabled = false;
+      alert('Error saving store settings: ' + e.message);
       btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Save All Settings';
-      alert('Error saving: ' + e.message);
     }
+    btn.disabled = false;
   };
 
-  // Hook into navigate to load settings when that page is opened
-  const originalNavigate = window.navigate;
-  window.navigate = function(page, linkEl) {
-    originalNavigate(page, linkEl);
-    if (page === 'store-settings') loadStoreSettings();
-  };
-
-  // Also load on DOMContentLoaded in case user lands directly
-  document.addEventListener('DOMContentLoaded', () => {
-    // Pre-load so it's ready
-    setTimeout(loadStoreSettings, 800);
-  });
-</script>
-
-<!-- ── Rich Text Editor: Data Policy ── -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
-    authDomain: "thebohothread-96e2c.firebaseapp.com",
-    projectId: "thebohothread-96e2c",
-    storageBucket: "thebohothread-96e2c.firebasestorage.app",
-    messagingSenderId: "100688387088",
-    appId: "1:100688387088:web:f8a6af7565d3c25952fe95"
-  };
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
-  const POLICY_DOC = doc(db, 'store_settings', 'data_policy');
-
+  // ─── DATA POLICY EDITOR ───────────────────────────────────
   const DEFAULT_HTML = `
     <h2>What Data We Collect</h2>
     <p>When you contact us through our website, we collect the following information that you voluntarily provide:</p>
@@ -833,23 +809,19 @@ document.addEventListener("DOMContentLoaded", () => {
       <li>Withdraw consent at any time by contacting us</li>
     </ul>
     <h2>Contact Us</h2>
-    <p>If you have any questions about how we handle your data, please reach out to us at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a>.</p>
+    <p>If you have any questions, reach out at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a>.</p>
     <blockquote>By submitting the contact form, you agree that your data may be stored and used to respond to your enquiry as described above.</blockquote>
   `;
 
-  // ── Load content into editor ──
   async function loadPolicyEditor() {
     const editor = document.getElementById('rte-editor');
     if (!editor) return;
     try {
       const snap = await getDoc(POLICY_DOC);
       editor.innerHTML = (snap.exists() && snap.data().content) ? snap.data().content : DEFAULT_HTML;
-    } catch(e) {
-      editor.innerHTML = DEFAULT_HTML;
-    }
+    } catch(e) { editor.innerHTML = DEFAULT_HTML; }
   }
 
-  // ── Save ──
   window.savePolicyContent = async function() {
     const editor = document.getElementById('rte-editor');
     const btn    = document.getElementById('policy-save-btn');
@@ -862,46 +834,27 @@ document.addEventListener("DOMContentLoaded", () => {
       status.style.display = 'inline-flex';
       setTimeout(() => { status.style.display = 'none'; }, 4000);
     } catch(e) {
-      alert('Error saving: ' + e.message);
+      alert('Error publishing: ' + e.message);
     }
     btn.disabled = false;
     btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Save & Publish';
   };
 
-  // ── Reset to default ──
   window.resetPolicyContent = function() {
     if (!confirm('Reset to default content? This will overwrite your current edits.')) return;
     document.getElementById('rte-editor').innerHTML = DEFAULT_HTML;
   };
 
-  // ── Hook navigate ──
-  const _nav2 = window.navigate;
-  window.navigate = function(page, linkEl) {
-    _nav2(page, linkEl);
-    if (page === 'data-policy') loadPolicyEditor();
-  };
-
-  document.addEventListener('DOMContentLoaded', () => setTimeout(loadPolicyEditor, 900));
-</script>
-
-<!-- ── RTE Helper Functions (non-module) ── -->
-<script>
-  function rteExec(cmd, val) {
-    document.getElementById('rte-editor').focus();
-    document.execCommand(cmd, false, val || null);
-  }
-  function rteBlock(tag) {
-    document.getElementById('rte-editor').focus();
-    document.execCommand('formatBlock', false, tag);
-  }
-  function rteInsertLink() {
-    const url = prompt('Enter URL:', 'https://');
-    if (url) { document.getElementById('rte-editor').focus(); document.execCommand('createLink', false, url); }
-  }
-  function rteClear() {
-    document.getElementById('rte-editor').focus();
-    document.execCommand('removeFormat', false, null);
-  }
+  // ─── NAVIGATE HOOK ────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    const _nav = window.navigate;
+    window.navigate = function(page, linkEl) {
+      _nav(page, linkEl);
+      if (page === 'store-settings') loadStoreSettings();
+      if (page === 'data-policy')    loadPolicyEditor();
+    };
+    setTimeout(loadStoreSettings, 600);
+  });
 </script>
 </body>
 </html>

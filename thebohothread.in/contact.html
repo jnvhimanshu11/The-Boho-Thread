@@ -341,7 +341,7 @@
   </div>
   <iframe
     id="store-map"
-    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3502.327685655787!2d77.37010207550186!3d28.620641975669147!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390ce5662f5f14e7%3A0xc34375b47a064f7!2sNoida%20Sector%2059%20Metro%20Station!5e0!3m2!1sen!2sin!4v1712740000000!5m2!1sen!2sin"
+    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3499.8!2d77.4333!3d28.6671!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cf1b3e6c2ea5d%3A0x4a8e7d66b5f1a3!2sSahibabad+Industrial+Area%2C+Ghaziabad%2C+Uttar+Pradesh+201010!5e0!3m2!1sen!2sin!4v1"
     allowfullscreen=""
     loading="lazy"
     referrerpolicy="no-referrer-when-downgrade"
@@ -380,7 +380,7 @@
       <div class="contact-info-icon"><i class="ph ph-map-pin"></i></div>
       <div>
         <div style="color:var(--cream);font-weight:500;margin-bottom:4px;">Our Address</div>
-        <span id="store-address">Sector 59, 201301, Noida, Uttar Pradesh</span>
+        <span id="store-address">Noida Sector 59, Noida, 201301, Uttar Pradesh</span>
       </div>
     </div>
 
@@ -537,7 +537,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
   authDomain: "thebohothread-96e2c.firebaseapp.com",
   projectId: "thebohothread-96e2c",
@@ -652,9 +652,9 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          access_key: 'YOUR_WEB3FORMS_KEY', // Get free key from web3forms.com
+          access_key: '75e3d840-6219-4069-929f-1caa6522c2cb', // Get free key from web3forms.com
           to_email: 'jnvhimanshu11@gmail.com',
-          subject: '[TheBohoThread Contact] ' + subject,
+          subject: 'Mail from TheBohoThread: ' + subject,
           name: name,
           email: email,
           phone: phone,
