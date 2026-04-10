@@ -3,7 +3,7 @@
 // ============================================================
 
 import { initializeApp }           from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithRedirect,
+import { getAuth, GoogleAuthProvider, signInWithPopup,
          RecaptchaVerifier, signInWithPhoneNumber,
          onAuthStateChanged, signOut }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.signInWithGoogle = async function() {
   setAuthLoading('google', true);
   try {
-    const result = await signInWithRedirect(auth, provider);
+    const result = await signInWithPopup(auth, provider);
     closeAuthModal();
     showAuthToast(`Welcome, ${result.user.displayName || 'User'}! 👋`);
   } catch(e) {
