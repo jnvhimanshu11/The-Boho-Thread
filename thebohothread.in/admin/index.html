@@ -60,6 +60,12 @@
         <i class="ph ph-fire"></i> Trending
       </a>
       <div class="nav-section">Store</div>
+      <a href="#" data-page="store-settings" onclick="navigate('store-settings',this)">
+        <i class="ph ph-gear"></i> Store Settings
+      </a>
+      <a href="../contact.html" target="_blank">
+        <i class="ph ph-address-book"></i> Contact Page
+      </a>
       <a href="../index.html" target="_blank">
         <i class="ph ph-storefront"></i> View Store
       </a>
@@ -321,6 +327,85 @@
       </div>
     </div>
 
+    <!-- ── STORE SETTINGS ── -->
+    <div class="admin-page" id="page-store-settings">
+      <div style="max-width:800px;">
+
+        <div class="admin-panel" style="margin-bottom:24px;">
+          <div class="panel-header">
+            <h3><i class="ph ph-map-pin" style="color:var(--gold);"></i> &nbsp;Store Location &amp; Contact Details</h3>
+            <span style="font-size:0.8rem;color:var(--text-muted);">Changes reflect live on the Contact Us page</span>
+          </div>
+          <div class="panel-body">
+
+            <div class="form-group">
+              <label>Store Address</label>
+              <input class="form-control" id="ss-address" placeholder="e.g. 4/38, Sahibabad Industrial Area, Ghaziabad, 201010, Uttar Pradesh" />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Phone Number</label>
+                <input class="form-control" id="ss-phone" placeholder="e.g. +917982957558" />
+              </div>
+              <div class="form-group">
+                <label>WhatsApp Number</label>
+                <input class="form-control" id="ss-whatsapp" placeholder="e.g. 917982957558 (with country code, no +)" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Store Email</label>
+              <input class="form-control" id="ss-email" type="email" placeholder="e.g. siahomeandkitchen@gmail.com" />
+            </div>
+
+            <div class="form-group">
+              <label>Google Maps Embed URL</label>
+              <input class="form-control" id="ss-map" placeholder="Paste the full Google Maps embed URL (iframe src)" />
+              <small style="color:var(--text-muted);font-size:0.78rem;margin-top:4px;display:block;">
+                Go to Google Maps → Share → Embed a map → Copy only the src="..." URL
+              </small>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="admin-panel" style="margin-bottom:24px;">
+          <div class="panel-header">
+            <h3><i class="ph ph-share-network" style="color:var(--gold);"></i> &nbsp;Social Media Links</h3>
+          </div>
+          <div class="panel-body">
+
+            <div class="form-group">
+              <label>Facebook Page URL</label>
+              <input class="form-control" id="ss-facebook" placeholder="https://facebook.com/yourpage" />
+            </div>
+
+            <div class="form-group">
+              <label>Instagram Profile URL</label>
+              <input class="form-control" id="ss-instagram" placeholder="https://instagram.com/yourprofile" />
+            </div>
+
+            <div class="form-group">
+              <label>Twitter / X Profile URL <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+              <input class="form-control" id="ss-twitter" placeholder="https://twitter.com/yourhandle" />
+            </div>
+
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:center;">
+          <button class="btn btn-gold" onclick="saveStoreSettings()" id="ss-save-btn">
+            <i class="ph ph-floppy-disk"></i> Save All Settings
+          </button>
+          <span id="ss-save-status" style="font-size:0.85rem;color:var(--success);display:none;">
+            <i class="ph ph-check-circle"></i> Saved! Contact page updated.
+          </span>
+        </div>
+
+      </div>
+    </div>
+
   </div><!-- /admin-main -->
 </div><!-- /admin-app -->
 
@@ -452,5 +537,90 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 <script src="../js/admin.js"></script>
+
+<!-- ── Store Settings: Firebase Integration ── -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+    authDomain: "thebohothread-96e2c.firebaseapp.com",
+    projectId: "thebohothread-96e2c",
+    storageBucket: "thebohothread-96e2c.firebasestorage.app",
+    messagingSenderId: "100688387088",
+    appId: "1:100688387088:web:f8a6af7565d3c25952fe95"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  const CONTACT_DOC = doc(db, 'store_settings', 'contact');
+
+  // Load existing settings into form when page navigates to store-settings
+  async function loadStoreSettings() {
+    try {
+      const snap = await getDoc(CONTACT_DOC);
+      if (snap.exists()) {
+        const d = snap.data();
+        const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+        set('ss-address',   d.address);
+        set('ss-phone',     d.phone);
+        set('ss-whatsapp',  d.whatsapp);
+        set('ss-email',     d.email);
+        set('ss-map',       d.map_embed_url);
+        set('ss-facebook',  d.facebook);
+        set('ss-instagram', d.instagram);
+        set('ss-twitter',   d.twitter);
+      }
+    } catch(e) { console.log('Could not load store settings', e); }
+  }
+
+  // Save
+  window.saveStoreSettings = async function() {
+    const btn    = document.getElementById('ss-save-btn');
+    const status = document.getElementById('ss-save-status');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;display:inline-block;"></i> Saving…';
+    status.style.display = 'none';
+
+    const get = id => (document.getElementById(id)?.value || '').trim();
+    const data = {
+      address:       get('ss-address'),
+      phone:         get('ss-phone'),
+      whatsapp:      get('ss-whatsapp'),
+      email:         get('ss-email'),
+      map_embed_url: get('ss-map'),
+      facebook:      get('ss-facebook'),
+      instagram:     get('ss-instagram'),
+      twitter:       get('ss-twitter'),
+      updated_at:    new Date().toISOString()
+    };
+
+    try {
+      await setDoc(CONTACT_DOC, data, { merge: true });
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Save All Settings';
+      status.style.display = 'inline-flex';
+      setTimeout(() => { status.style.display = 'none'; }, 4000);
+    } catch(e) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Save All Settings';
+      alert('Error saving: ' + e.message);
+    }
+  };
+
+  // Hook into navigate to load settings when that page is opened
+  const originalNavigate = window.navigate;
+  window.navigate = function(page, linkEl) {
+    originalNavigate(page, linkEl);
+    if (page === 'store-settings') loadStoreSettings();
+  };
+
+  // Also load on DOMContentLoaded in case user lands directly
+  document.addEventListener('DOMContentLoaded', () => {
+    // Pre-load so it's ready
+    setTimeout(loadStoreSettings, 800);
+  });
+</script>
 </body>
 </html>

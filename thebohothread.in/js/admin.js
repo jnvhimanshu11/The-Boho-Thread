@@ -102,7 +102,7 @@ window.navigate = function(page, linkEl) {
   if (pageEl) pageEl.classList.add('active');
   if (linkEl) linkEl.classList.add('active');
   else { const n=document.querySelector("[data-page='"+page+"']"); if(n) n.classList.add('active'); }
-  const titles = { dashboard:'Dashboard', products:'Products', categories:'Categories', badges:'Badges', reviews:'Reviews', trending:'Trending' };
+  const titles = { dashboard:'Dashboard', products:'Products', categories:'Categories', badges:'Badges', reviews:'Reviews', trending:'Trending', 'store-settings':'Store Settings' };
   document.getElementById('page-title').textContent = titles[page] || page;
   document.getElementById('admin-sidebar').classList.remove('open');
 };
