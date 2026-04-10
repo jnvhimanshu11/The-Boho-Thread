@@ -1,30 +1,38 @@
 // ============================================================
-// TheBohoThread — Main App JS  (MySQL backend edition)
-// All data is fetched from /api/*.php  →  MySQL database
+// TheBohoThread — Main App JS  (Firebase Firestore edition)
+// ============================================================
+// NOTE: This file uses ES module imports — the <script> tag
+// in shop.html / index.html must have type="module"
 // ============================================================
 
-const API = {
-  products:   '/api/products.php',
-  categories: '/api/categories.php',
-  badges:     '/api/badges.php',
-  reviews:    '/api/reviews.php',
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, getDocs, addDoc,
+  query, orderBy, where, serverTimestamp, getDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+  authDomain: "thebohothread-96e2c.firebaseapp.com",
+  projectId: "thebohothread-96e2c",
+  storageBucket: "thebohothread-96e2c.firebasestorage.app",
+  messagingSenderId: "100688387088",
+  appId: "1:100688387088:web:f8a6af7565d3c25952fe95"
 };
 
-async function apiFetch(url, opts = {}) {
+const _app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const db   = getFirestore(_app);
+
+// ── Firestore helpers ─────────────────────────────────────────
+async function fsGetAll(colName, orderField = 'createdAt', dir = 'desc') {
   try {
-    const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
-    const text = await res.text();
-    if (!text || text.trim() === '') {
-      console.error('API returned empty response for', url);
-      return { success: false, error: 'Server returned an empty response. Check PHP error logs.' };
-    }
-    try {
-      return JSON.parse(text);
-    } catch (parseErr) {
-      console.error('API JSON parse error for', url, '— raw response:', text);
-      return { success: false, error: 'Server response was not valid JSON. Check PHP error logs.' };
-    }
-  } catch (e) { console.error('API fetch error:', e); return { success: false, error: e.message }; }
+    const q = query(collection(db, colName), orderBy(orderField, dir));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) {
+    const snap = await getDocs(collection(db, colName));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
 }
 
 let allProducts    = [];
@@ -60,23 +68,52 @@ const wishlistBody    = document.getElementById('wishlist-body');
 const productModal    = document.getElementById('product-modal');
 const toastContainer  = document.getElementById('toast-container');
 
-// ── LOAD DATA ────────────────────────────────────────────────
+// ── LOAD DATA (Firebase) ─────────────────────────────────────
 async function loadData() {
   productsGrid.innerHTML = '<div class="loader-wrap"><div class="spinner"></div></div>';
-  const [pRes, cRes, tRes] = await Promise.all([apiFetch(API.products), apiFetch(API.categories), apiFetch(API.trending)]);
-  if (pRes.success) { allProducts = pRes.data.map(normaliseProduct); } else { loadDemoData(); return; }
-  if (cRes.success) { allCategories = cRes.data; }
-  // Use admin-curated trending list if available, otherwise default to newest products
-  const trendingIds = (tRes.success && tRes.data.length > 0) ? tRes.data.map(t => t.id) : null;
-  renderProducts(); renderScroller(trendingIds); renderCategories();
+  try {
+    const [prods, cats] = await Promise.all([
+      fsGetAll('products', 'createdAt', 'desc'),
+      fsGetAll('categories', 'name', 'asc'),
+    ]);
+    allProducts   = prods.map(normaliseProduct);
+    allCategories = cats;
+
+    // Load trending list from Firestore
+    let trendingIds = null;
+    try {
+      const tSnap = await getDoc(doc(db, 'trending', 'list'));
+      if (tSnap.exists() && tSnap.data().product_ids?.length) {
+        trendingIds = tSnap.data().product_ids;
+      }
+    } catch(e) { /* no trending set yet */ }
+
+    renderProducts(); renderScroller(trendingIds); renderCategories();
+  } catch(e) {
+    console.error('Firebase load error:', e);
+    loadDemoData();
+  }
 }
 
 function normaliseProduct(r) {
-  return { id:r.id, name:r.name, category:r.category, description:r.description, price:r.price,
-    originalPrice:r.original_price, rating:r.rating, badge:r.badge, image:r.image,
-    images: Array.isArray(r.images) ? r.images : (r.image ? [r.image] : []),
-    sizes:  Array.isArray(r.sizes)  ? r.sizes  : [],
-    createdAt:{ toMillis: () => new Date(r.created_at).getTime() } };
+  // Support Firestore Timestamps and plain dates
+  const createdAt = r.createdAt?.toMillis
+    ? r.createdAt
+    : { toMillis: () => r.created_at ? new Date(r.created_at).getTime() : 0 };
+  return {
+    id:            r.id,
+    name:          r.name,
+    category:      r.category,
+    description:   r.description,
+    price:         r.price,
+    originalPrice: r.original_price ?? r.originalPrice ?? null,
+    rating:        r.rating ?? null,
+    badge:         r.badge || '',
+    image:         r.image || '',
+    images:        Array.isArray(r.images) ? r.images : (r.image ? [r.image] : []),
+    sizes:         Array.isArray(r.sizes)  ? r.sizes  : [],
+    createdAt,
+  };
 }
 
 function loadDemoData() {
@@ -236,9 +273,20 @@ async function loadProductReviews(productId) {
   const summaryEl=document.getElementById('reviews-summary');
   if (!listEl) return;
   listEl.innerHTML=`<div style="padding:12px 0;color:var(--text-muted);font-size:0.84rem;font-style:italic;">Loading reviews…</div>`;
-  const res=await apiFetch(`${API.reviews}?product_id=${productId}`);
-  if (!res.success) { listEl.innerHTML=`<div class="no-reviews-msg">Could not load reviews.</div>`; return; }
-  renderApprovedReviews(res.data,listEl,summaryEl);
+  try {
+    const q = query(
+      collection(db, 'reviews'),
+      where('product_id', '==', productId),
+      where('status', '==', 'approved'),
+      orderBy('createdAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    const reviews = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderApprovedReviews(reviews, listEl, summaryEl);
+  } catch(e) {
+    console.error('Load reviews error:', e);
+    listEl.innerHTML=`<div class="no-reviews-msg">Could not load reviews.</div>`;
+  }
 }
 
 function renderApprovedReviews(reviews,listEl,summaryEl) {
@@ -248,7 +296,8 @@ function renderApprovedReviews(reviews,listEl,summaryEl) {
   if (summaryEl) summaryEl.innerHTML=`<span class="avg-rating-num">${rounded}</span>${Array.from({length:5},(_,i)=>`<span style="color:${i<Math.round(avg)?'#c9a84c':'rgba(201,168,76,0.25)'};">★</span>`).join('')}<span class="review-count-txt">${reviews.length} review${reviews.length>1?'s':''}</span>`;
   listEl.innerHTML=reviews.map(r=>{
     const stars=Array.from({length:5},(_,i)=>`<span style="color:${i<r.rating?'#c9a84c':'rgba(201,168,76,0.25)'};">★</span>`).join('');
-    const date=r.created_at?new Date(r.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'';
+    const _rdate = r.createdAt?.toDate ? r.createdAt.toDate() : (r.created_at ? new Date(r.created_at) : null);
+    const date = _rdate ? _rdate.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '';
     return `<div class="review-item"><div class="review-item-top"><span class="review-item-author">${r.author||'Anonymous'}</span><div>${stars}</div><span class="review-item-date">${date}</span></div>${r.review_text?`<p class="review-item-text">${r.review_text}</p>`:''}</div>`;
   }).join('');
 }
@@ -262,9 +311,21 @@ window.submitReview = async function() {
   if (!currentReviewProductId) return;
   const p=allProducts.find(x=>x.id===currentReviewProductId);
   if (btn) { btn.disabled=true; btn.innerHTML=`<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;display:inline-block;"></i> Submitting…`; }
-  const res=await apiFetch(API.reviews,{ method:'POST', body:JSON.stringify({ product_id:currentReviewProductId, product_name:p?.name||'Unknown', author:name, rating:selectedStarRating, review_text:text }) });
-  if (res.success) { toast('Thank you! Your review is submitted 🙏','success'); resetReviewForm(); }
-  else             { toast(res.error||'Could not submit review.','error'); }
+  try {
+    await addDoc(collection(db, 'reviews'), {
+      product_id:   currentReviewProductId,
+      product_name: p?.name || 'Unknown',
+      author:       name,
+      rating:       selectedStarRating,
+      review_text:  text,
+      status:       'pending',
+      createdAt:    serverTimestamp(),
+    });
+    toast('Thank you! Your review is submitted 🙏','success');
+    resetReviewForm();
+  } catch(e) {
+    toast('Could not submit review: ' + e.message,'error');
+  }
   if (btn) { btn.disabled=false; btn.innerHTML=`<i class="ph ph-paper-plane-tilt"></i> Submit Review`; }
 };
 

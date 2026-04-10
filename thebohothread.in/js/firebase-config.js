@@ -1,17 +1,12 @@
 // ============================================================
-// SHOPNOVA - Firebase Configuration
-// Replace these values with your own Firebase project config
-// Get it from: https://console.firebase.google.com
+// TheBohoThread — Firebase Configuration
 // ============================================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
-
-
-// ── Firebase config (shared with firebase-config.js) ────────
-  const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
   authDomain: "thebohothread-96e2c.firebaseapp.com",
   projectId: "thebohothread-96e2c",
@@ -21,10 +16,6 @@ import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-
   measurementId: "G-5VTK93354M"
 };
 
-// Initialize Firebasex
-
-
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-const analytics = getAnalytics(app);

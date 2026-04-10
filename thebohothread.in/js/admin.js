@@ -1,31 +1,80 @@
 // ============================================================
-// TheBohoThread — Admin JS  (MySQL backend edition)
-// All CRUD operations go to /api/*.php → MySQL database
+// TheBohoThread — Admin JS  (Firebase Firestore edition)
+// All CRUD operations go directly to Firebase Firestore
+// No PHP/MySQL required — works 100% from the browser
 // ============================================================
 
-const API = {
-  products:   '/api/products.php',
-  categories: '/api/categories.php',
-  badges:     '/api/badges.php',
-  reviews:    '/api/reviews.php',
-  trending:   '/api/trending.php',
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore,
+  collection, doc,
+  getDocs, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
+  query, orderBy, serverTimestamp, where
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+// ── Firebase init ────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+  authDomain: "thebohothread-96e2c.firebaseapp.com",
+  projectId: "thebohothread-96e2c",
+  storageBucket: "thebohothread-96e2c.firebasestorage.app",
+  messagingSenderId: "100688387088",
+  appId: "1:100688387088:web:f8a6af7565d3c25952fe95"
 };
 
-async function apiFetch(url, opts = {}) {
+const app     = initializeApp(firebaseConfig);
+const db      = getFirestore(app);
+const storage = getStorage(app);
+
+// ── Firestore helpers ────────────────────────────────────────
+const COL = {
+  products:   'products',
+  categories: 'categories',
+  badges:     'badges',
+  reviews:    'reviews',
+  trending:   'trending',
+};
+
+async function fsGetAll(colName, orderField = 'createdAt', dir = 'desc') {
   try {
-    const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
-    const text = await res.text();
-    if (!text || text.trim() === '') {
-      console.error('API returned empty response for', url);
-      return { success: false, error: 'Server returned an empty response. Check PHP error logs.' };
-    }
-    try {
-      return JSON.parse(text);
-    } catch (parseErr) {
-      console.error('API JSON parse error for', url, '— raw response:', text);
-      return { success: false, error: 'Server response was not valid JSON. Check PHP error logs.' };
-    }
-  } catch (e) { console.error('API fetch error:', e); return { success: false, error: e.message }; }
+    const q = query(collection(db, colName), orderBy(orderField, dir));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    // fallback: unordered get (if index not yet ready)
+    const snap = await getDocs(collection(db, colName));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+}
+
+async function fsAdd(colName, data) {
+  const docRef = await addDoc(collection(db, colName), {
+    ...data,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return { id: docRef.id, ...data };
+}
+
+async function fsUpdate(colName, docId, data) {
+  await updateDoc(doc(db, colName, docId), { ...data, updatedAt: serverTimestamp() });
+  return { id: docId, ...data };
+}
+
+async function fsDelete(colName, docId) {
+  await deleteDoc(doc(db, colName, docId));
+}
+
+async function fsSet(colName, docId, data) {
+  await setDoc(doc(db, colName, docId), { ...data, updatedAt: serverTimestamp() });
+}
+
+// Upload base64 image to Firebase Storage, return download URL
+async function uploadBase64Image(base64DataUrl, path) {
+  const storageRef = ref(storage, path);
+  await uploadString(storageRef, base64DataUrl, 'data_url');
+  return await getDownloadURL(storageRef);
 }
 
 // ── CREDENTIALS ──────────────────────────────────────────────
@@ -65,6 +114,7 @@ function togglePassword() {
   input.type  = show ? 'text' : 'password';
   icon.className = show ? 'ph ph-eye-slash' : 'ph ph-eye';
 }
+window.togglePassword = togglePassword;
 
 function doLogin() {
   const u = document.getElementById('login-user').value.trim();
@@ -108,37 +158,43 @@ window.navigate = function(page, linkEl) {
 };
 
 // ═════════════════════════════════════════════════════════════
-//  LOAD ALL DATA
+//  LOAD ALL DATA  (from Firestore)
 // ═════════════════════════════════════════════════════════════
 async function loadAllData() {
-  const [pRes, cRes, bRes, rRes, tRes] = await Promise.all([
-    apiFetch(API.products),
-    apiFetch(API.categories),
-    apiFetch(API.badges),
-    apiFetch(API.reviews),
-    apiFetch(API.trending),
-  ]);
+  try {
+    adminToast('Loading data from Firebase…', '');
 
-  if (pRes.success) products   = pRes.data; else loadLocalDemo();
-  if (cRes.success) categories = cRes.data;
-  if (bRes.success) badges     = bRes.data;
-  if (rRes.success) allReviews = rRes.data;
-  if (tRes.success) trendingList = tRes.data.map(t => t.id);
+    const [prods, cats, bdgs, revs] = await Promise.all([
+      fsGetAll(COL.products, 'createdAt', 'desc'),
+      fsGetAll(COL.categories, 'name', 'asc'),
+      fsGetAll(COL.badges, 'name', 'asc'),
+      fsGetAll(COL.reviews, 'createdAt', 'desc'),
+    ]);
 
-  renderProductsTable(); renderRecentTable(); renderCategoriesList();
-  populateCategorySelect(); renderBadgesList(); populateBadgeSelect();
-  populateTrendingSelect(); renderTrendingList();
-  updateStats(); updateReviewStats(); renderReviewsList();
-}
+    products    = prods;
+    categories  = cats;
+    badges      = bdgs;
+    allReviews  = revs;
 
-function loadLocalDemo() {
-  products = [
-    {id:1,name:'Ivory Ceramic Vase',category:'Decor',price:1299,original_price:1799,badge:'New',rating:4.5,description:'Handcrafted ceramic vase.',image:'https://images.unsplash.com/photo-1578500351865-d6c3706f46bc?w=200'},
-    {id:2,name:'Linen Throw Blanket',category:'Textiles',price:2499,badge:'Bestseller',rating:5,description:'Premium linen throw.',image:'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?w=200'},
-  ];
-  categories=[{id:1,name:'Decor',icon:'🏺'},{id:2,name:'Textiles',icon:'🧶'},{id:3,name:'Furniture',icon:'🪑'},{id:4,name:'Kitchen',icon:'🍳'}];
-  badges=[{id:1,name:'New',color:'#4caf7d',text_color:'#fff'},{id:2,name:'Sale',color:'#e05c5c',text_color:'#fff'},{id:3,name:'Bestseller',color:'#c9a84c',text_color:'#0d1b2a'},{id:4,name:'Hot',color:'#f5692a',text_color:'#fff'}];
-  adminToast('Could not connect to MySQL API — showing demo data. Check api/db.php config.', 'error');
+    // Load trending doc
+    try {
+      const tSnap = await getDoc(doc(db, COL.trending, 'list'));
+      if (tSnap.exists()) {
+        trendingList = tSnap.data().product_ids || [];
+      } else {
+        trendingList = [];
+      }
+    } catch(e) { trendingList = []; }
+
+    renderProductsTable(); renderRecentTable(); renderCategoriesList();
+    populateCategorySelect(); renderBadgesList(); populateBadgeSelect();
+    populateTrendingSelect(); renderTrendingList();
+    updateStats(); updateReviewStats(); renderReviewsList();
+    adminToast('Data loaded ✓', 'success');
+  } catch (e) {
+    console.error('Firebase load error:', e);
+    adminToast('Firebase error: ' + e.message, 'error');
+  }
 }
 
 // ═════════════════════════════════════════════════════════════
@@ -216,14 +272,12 @@ window.openProductModal = function(id) {
   document.getElementById('product-modal-title').textContent=isEdit?'Edit Product':'Add New Product';
   document.getElementById('edit-product-id').value=id||'';
 
-  // Reset size mode
   usingSizePricing=false; sizeRows=[];
   document.getElementById('p-use-sizes').checked=false;
   document.getElementById('p-no-size-pricing').style.display='block';
   document.getElementById('p-sizes-container').style.display='none';
   document.getElementById('p-sizes-list').innerHTML='';
 
-  // Reset images
   productImageSlots=[];
   renderImageSlots();
 
@@ -237,7 +291,6 @@ window.openProductModal = function(id) {
       document.getElementById('p-badge').value=p.badge||'';
     },60);
 
-    // Load sizes
     const hasSizes = p.sizes && Array.isArray(p.sizes) && p.sizes.length > 0;
     if (hasSizes) {
       usingSizePricing=true;
@@ -251,7 +304,6 @@ window.openProductModal = function(id) {
       document.getElementById('p-orig-price').value = p.original_price||p.originalPrice||'';
     }
 
-    // Load images — build slots from images array + fallback to single image
     const imgs = (p.images && Array.isArray(p.images) && p.images.length > 0)
       ? p.images
       : (p.image ? [p.image] : []);
@@ -261,7 +313,6 @@ window.openProductModal = function(id) {
     ['p-name','p-desc','p-price','p-orig-price','p-rating'].forEach(fid=>{ const el=document.getElementById(fid); if(el) el.value=''; });
     document.getElementById('p-category').value='';
     document.getElementById('p-badge').value='';
-    // Start with one empty image slot
     productImageSlots=[{url:'',base64:''}];
     renderImageSlots();
   }
@@ -287,60 +338,80 @@ window.saveProduct = async function() {
 
   if (!imagesArr.length) { adminToast('Please add at least one product image.','error'); return; }
 
-  // Primary image = first slot
-  const primaryImage = imagesArr[0];
-
-  let price = null, orig = null, sizes = null;
-
-  if (usingSizePricing) {
-    // Read size rows from DOM
-    const rows = document.querySelectorAll('.size-row');
-    sizes = [];
-    for (const row of rows) {
-      const sz = row.querySelector('.size-name').value.trim();
-      const sp = parseFloat(row.querySelector('.size-price').value);
-      const so = row.querySelector('.size-orig').value !== '' ? parseFloat(row.querySelector('.size-orig').value) : null;
-      if (!sz) { adminToast('Please enter a size label for all size rows.','error'); return; }
-      if (!sp || isNaN(sp) || sp <= 0) { adminToast(`Valid price required for size "${sz}".`,'error'); return; }
-      sizes.push({size:sz, price:sp, original_price:so});
-    }
-    if (!sizes.length) { adminToast('Add at least one size row or disable size-wise pricing.','error'); return; }
-    // Use first size price as the base price for display/sort
-    price = sizes[0].price;
-    orig  = sizes[0].original_price;
-  } else {
-    price = parseFloat(document.getElementById('p-price').value);
-    const origVal = document.getElementById('p-orig-price').value;
-    orig = origVal !== '' ? parseFloat(origVal) : null;
-    if (!price || isNaN(price) || price <= 0) { adminToast('Valid price is required.','error'); return; }
-  }
-
   const saveBtn=document.getElementById('save-product-btn');
   if (saveBtn) { saveBtn.disabled=true; saveBtn.innerHTML=`<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;display:inline-block;"></i> Saving…`; }
 
-  const payload = {
-    name, category:cat, description:desc, price, original_price:orig,
-    rating, badge:badge||'', image:primaryImage,
-    images: imagesArr,
-    sizes: sizes || [],
-  };
+  try {
+    // Upload any base64 images to Firebase Storage
+    const uploadedImages = [];
+    for (let i = 0; i < imagesArr.length; i++) {
+      const val = imagesArr[i];
+      if (val.startsWith('data:')) {
+        // It's base64 — upload to Firebase Storage
+        adminToast(`Uploading image ${i+1}/${imagesArr.length}…`, '');
+        const path = `products/${id || 'new_' + Date.now()}/image_${i}_${Date.now()}.jpg`;
+        const url = await uploadBase64Image(val, path);
+        uploadedImages.push(url);
+      } else {
+        uploadedImages.push(val);
+      }
+    }
 
-  const res = id
-    ? await apiFetch(`${API.products}?id=${id}`, { method:'PUT',  body:JSON.stringify(payload) })
-    : await apiFetch(API.products,                { method:'POST', body:JSON.stringify(payload) });
+    const primaryImage = uploadedImages[0];
 
-  if (res.success) {
-    if (id) { const i=products.findIndex(p=>String(p.id)===String(id)); if(i>-1) products[i]=res.data; }
-    else    { products.unshift(res.data); }
+    let price = null, orig = null, sizes = null;
+
+    if (usingSizePricing) {
+      const rows = document.querySelectorAll('.size-row');
+      sizes = [];
+      for (const row of rows) {
+        const sz = row.querySelector('.size-name').value.trim();
+        const sp = parseFloat(row.querySelector('.size-price').value);
+        const so = row.querySelector('.size-orig').value !== '' ? parseFloat(row.querySelector('.size-orig').value) : null;
+        if (!sz) { adminToast('Please enter a size label for all size rows.','error'); return; }
+        if (!sp || isNaN(sp) || sp <= 0) { adminToast(`Valid price required for size "${sz}".`,'error'); return; }
+        sizes.push({size:sz, price:sp, original_price:so});
+      }
+      if (!sizes.length) { adminToast('Add at least one size row or disable size-wise pricing.','error'); return; }
+      price = sizes[0].price;
+      orig  = sizes[0].original_price;
+    } else {
+      price = parseFloat(document.getElementById('p-price').value);
+      const origVal = document.getElementById('p-orig-price').value;
+      orig = origVal !== '' ? parseFloat(origVal) : null;
+      if (!price || isNaN(price) || price <= 0) { adminToast('Valid price is required.','error'); return; }
+    }
+
+    const payload = {
+      name, category:cat, description:desc, price, original_price: orig || null,
+      rating: rating || null, badge: badge||'', image: primaryImage,
+      images: uploadedImages,
+      sizes: sizes || [],
+    };
+
+    let savedProduct;
+    if (id) {
+      // Update existing
+      await fsUpdate(COL.products, id, payload);
+      savedProduct = { id, ...payload };
+      const i = products.findIndex(p => p.id === id);
+      if (i > -1) products[i] = savedProduct;
+    } else {
+      // Create new
+      savedProduct = await fsAdd(COL.products, payload);
+      products.unshift(savedProduct);
+    }
+
     renderProductsTable(); renderRecentTable(); updateStats();
     populateTrendingSelect();
     adminToast(id?`"${name}" updated ✓`:`"${name}" added! 🎉`,'success');
     closeProductModal();
-  } else {
-    adminToast(res.error||'Save failed — check your API/database config.','error');
+  } catch(e) {
+    console.error('Save product error:', e);
+    adminToast('Save failed: ' + e.message, 'error');
+  } finally {
+    if (saveBtn) { saveBtn.disabled=false; saveBtn.innerHTML=`<i class="ph ph-floppy-disk"></i> Save Product`; }
   }
-
-  if (saveBtn) { saveBtn.disabled=false; saveBtn.innerHTML=`<i class="ph ph-floppy-disk"></i> Save Product`; }
 };
 
 // ═════════════════════════════════════════════════════════════
@@ -394,7 +465,6 @@ window.setImageSlotURL = function(idx, val) {
 };
 
 window.previewSlotURL = function(idx) {
-  // Trigger re-render to show thumbnail
   if (productImageSlots[idx] && productImageSlots[idx].url) renderImageSlots();
 };
 
@@ -485,13 +555,22 @@ window.addCategory = async function() {
   const name=document.getElementById('new-cat-name').value.trim();
   const icon=document.getElementById('new-cat-icon').value.trim()||'🏷️';
   if (!name) { adminToast('Category name is required.','error'); return; }
-  const res=await apiFetch(API.categories,{method:'POST',body:JSON.stringify({name,icon})});
-  if (res.success) {
-    categories.push(res.data);
+
+  // Check duplicate locally
+  if (categories.find(c=>c.name.toLowerCase()===name.toLowerCase())) {
+    adminToast('Category already exists.','error'); return;
+  }
+
+  try {
+    const saved = await fsAdd(COL.categories, { name, icon });
+    categories.push(saved);
+    categories.sort((a,b)=>a.name.localeCompare(b.name));
     renderCategoriesList(); populateCategorySelect(); updateStats();
     adminToast(`"${name}" category created — now live on store! ✓`,'success');
     document.getElementById('new-cat-name').value=''; document.getElementById('new-cat-icon').value='';
-  } else { adminToast(res.error||'Failed to add category.','error'); }
+  } catch(e) {
+    adminToast('Failed to add category: ' + e.message, 'error');
+  }
 };
 
 // ═════════════════════════════════════════════════════════════
@@ -522,13 +601,23 @@ window.addBadge = async function() {
   const color = document.getElementById('new-badge-color').value.trim()||'#c9a84c';
   const text  = document.getElementById('new-badge-text').value.trim()||'#ffffff';
   if (!name) { adminToast('Badge name is required.','error'); return; }
-  const res=await apiFetch(API.badges,{method:'POST',body:JSON.stringify({name,color,text_color:text})});
-  if (res.success) {
-    badges.push(res.data);
+
+  if (badges.find(b=>b.name.toLowerCase()===name.toLowerCase())) {
+    adminToast('Badge already exists.','error'); return;
+  }
+
+  try {
+    const saved = await fsAdd(COL.badges, { name, color, text_color: text });
+    badges.push(saved);
+    badges.sort((a,b)=>a.name.localeCompare(b.name));
     renderBadgesList(); populateBadgeSelect(); updateStats();
     adminToast(`Badge "${name}" created ✓`,'success');
-    document.getElementById('new-badge-name').value=''; document.getElementById('new-badge-color').value=''; document.getElementById('new-badge-text').value='#ffffff';
-  } else { adminToast(res.error||'Failed to add badge.','error'); }
+    document.getElementById('new-badge-name').value='';
+    document.getElementById('new-badge-color').value='';
+    document.getElementById('new-badge-text').value='#ffffff';
+  } catch(e) {
+    adminToast('Failed to add badge: ' + e.message, 'error');
+  }
 };
 
 // ═════════════════════════════════════════════════════════════
@@ -552,13 +641,13 @@ function renderReviewsList() {
   }
   el.innerHTML=list.map(r=>{
     const stars=Array.from({length:5},(_,i)=>`<span style="color:${i<r.rating?'#c9a84c':'rgba(154,172,189,0.3)'};">★</span>`).join('');
-    const date=r.created_at?new Date(r.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'—';
+    const date=r.created_at?new Date(r.created_at.toDate?r.created_at.toDate():r.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'—';
     const sb={pending:`<span class="review-status pending">⏳ Pending</span>`,approved:`<span class="review-status approved">✓ Approved</span>`,rejected:`<span class="review-status rejected">✕ Rejected</span>`}[r.status]||'';
     const acts=r.status==='pending'
-      ?`<button class="btn btn-success btn-sm" onclick="approveReview(${r.id},${r.product_id})"><i class="ph ph-check-circle"></i> Approve</button><button class="btn btn-danger btn-sm" onclick="rejectReview(${r.id})"><i class="ph ph-x-circle"></i> Reject</button>`
+      ?`<button class="btn btn-success btn-sm" onclick="approveReview('${r.id}','${r.product_id}')"><i class="ph ph-check-circle"></i> Approve</button><button class="btn btn-danger btn-sm" onclick="rejectReview('${r.id}')"><i class="ph ph-x-circle"></i> Reject</button>`
       :r.status==='approved'
-      ?`<button class="btn btn-danger btn-sm" onclick="rejectReview(${r.id})"><i class="ph ph-x-circle"></i> Revoke</button>`
-      :`<button class="btn btn-success btn-sm" onclick="approveReview(${r.id},${r.product_id})"><i class="ph ph-check-circle"></i> Approve</button>`;
+      ?`<button class="btn btn-danger btn-sm" onclick="rejectReview('${r.id}')"><i class="ph ph-x-circle"></i> Revoke</button>`
+      :`<button class="btn btn-success btn-sm" onclick="approveReview('${r.id}','${r.product_id}')"><i class="ph ph-check-circle"></i> Approve</button>`;
     return `<div class="review-admin-row">
       <div class="review-row-top">
         <div class="review-row-meta"><span class="review-author">${r.author||'Anonymous'}</span><span>${stars}</span><span class="review-date">${date}</span></div>
@@ -566,29 +655,36 @@ function renderReviewsList() {
       </div>
       <p class="review-text-content">${r.review_text||'<em style="color:var(--text-muted);">No comment</em>'}</p>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">${acts}
-        <button class="btn btn-danger btn-sm" onclick="confirmDelete('review',${r.id},'review by ${(r.author||'Anonymous').replace(/'/g,"\\'")}')"><i class="ph ph-trash"></i> Delete</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDelete('review','${r.id}','review by ${(r.author||'Anonymous').replace(/'/g,"\\'")}')"><i class="ph ph-trash"></i> Delete</button>
       </div></div>`;
   }).join('');
 }
 
 window.approveReview = async function(reviewId, productId) {
-  const res=await apiFetch(`${API.reviews}?id=${reviewId}`,{method:'PUT',body:JSON.stringify({status:'approved'})});
-  if (res.success) {
-    const r=allReviews.find(x=>x.id===reviewId); if(r) r.status='approved';
-    updateReviewStats(); renderReviewsList();
-    // Refresh product rating in table
-    const pRes=await apiFetch(API.products);
-    if(pRes.success){ products=pRes.data; renderProductsTable(); renderRecentTable(); updateStats(); }
+  try {
+    await fsUpdate(COL.reviews, reviewId, { status: 'approved', approved_at: serverTimestamp() });
+    const r = allReviews.find(x=>x.id===reviewId); if(r) r.status='approved';
+
+    // Recalculate product rating
+    const approved = allReviews.filter(x=>x.product_id===productId && x.status==='approved');
+    if (approved.length && productId) {
+      const avg = approved.reduce((s,x)=>s+(x.rating||0),0) / approved.length;
+      await fsUpdate(COL.products, productId, { rating: Math.round(avg*10)/10 });
+      const p = products.find(x=>x.id===productId); if(p) p.rating = Math.round(avg*10)/10;
+    }
+
+    updateReviewStats(); renderReviewsList(); renderProductsTable(); renderRecentTable();
     adminToast('Review approved and published! ✓','success');
-  } else { adminToast('Failed to approve review.','error'); }
+  } catch(e) { adminToast('Failed to approve review: '+e.message,'error'); }
 };
 
 window.rejectReview = async function(reviewId) {
-  const res=await apiFetch(`${API.reviews}?id=${reviewId}`,{method:'PUT',body:JSON.stringify({status:'rejected'})});
-  if (res.success) {
-    const r=allReviews.find(x=>x.id===reviewId); if(r) r.status='rejected';
-    updateReviewStats(); renderReviewsList(); adminToast('Review rejected.','');
-  } else { adminToast('Failed to reject review.','error'); }
+  try {
+    await fsUpdate(COL.reviews, reviewId, { status: 'rejected' });
+    const r = allReviews.find(x=>x.id===reviewId); if(r) r.status='rejected';
+    updateReviewStats(); renderReviewsList();
+    adminToast('Review rejected.','');
+  } catch(e) { adminToast('Failed to reject review: '+e.message,'error'); }
 };
 
 // ═════════════════════════════════════════════════════════════
@@ -598,20 +694,24 @@ window.confirmDelete = function(type,id,name) {
   document.getElementById('confirm-msg').textContent=`Delete "${name}"? This cannot be undone.`;
   document.getElementById('confirm-modal').classList.add('open');
   confirmCallback = async () => {
-    const endpoints={product:API.products,category:API.categories,badge:API.badges,review:API.reviews};
-    const url=endpoints[type];
-    if (!url) { closeConfirm(); return; }
-    const res=await apiFetch(`${url}?id=${id}`,{method:'DELETE'});
-    if (res.success) {
+    try {
+      const colMap = { product:COL.products, category:COL.categories, badge:COL.badges, review:COL.reviews };
+      const colName = colMap[type];
+      if (!colName) { closeConfirm(); return; }
+      await fsDelete(colName, String(id));
+
       if(type==='product')  products=products.filter(x=>String(x.id)!==String(id));
       if(type==='category') categories=categories.filter(x=>String(x.id)!==String(id));
       if(type==='badge')    badges=badges.filter(x=>String(x.id)!==String(id));
       if(type==='review')   allReviews=allReviews.filter(x=>String(x.id)!==String(id));
+
       renderProductsTable(); renderRecentTable(); renderCategoriesList();
       populateCategorySelect(); renderBadgesList(); populateBadgeSelect();
       updateStats(); updateReviewStats(); renderReviewsList();
       adminToast(`"${name}" deleted.`,'success');
-    } else { adminToast('Delete failed.','error'); }
+    } catch(e) {
+      adminToast('Delete failed: '+e.message,'error');
+    }
     closeConfirm();
   };
   document.getElementById('confirm-ok-btn').onclick=confirmCallback;
@@ -674,7 +774,7 @@ function renderTrendingList() {
 
 window.addToTrending = function() {
   const sel = document.getElementById('trending-product-select');
-  const pid = sel ? parseInt(sel.value) : 0;
+  const pid = sel ? sel.value : '';
   if (!pid) { adminToast('Please select a product.','error'); return; }
   if (trendingList.includes(pid)) { adminToast('This product is already in Trending.','error'); return; }
   if (trendingList.length >= 20) { adminToast('Maximum 20 trending products allowed.','error'); return; }
@@ -699,13 +799,14 @@ window.moveTrending = function(idx, delta) {
 window.saveTrending = async function() {
   const btn = document.getElementById('save-trending-btn');
   if (btn) { btn.disabled=true; btn.innerHTML=`<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;display:inline-block;"></i> Saving…`; }
-  const res = await apiFetch(API.trending, { method:'POST', body:JSON.stringify({ product_ids: trendingList }) });
-  if (res.success) {
+  try {
+    await fsSet(COL.trending, 'list', { product_ids: trendingList });
     adminToast(`Trending list saved! (${trendingList.length} products) — visible on store now ✓`, 'success');
-  } else {
-    adminToast(res.error || 'Failed to save trending list.', 'error');
+  } catch(e) {
+    adminToast('Failed to save trending: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled=false; btn.innerHTML=`<i class="ph ph-floppy-disk"></i> Save Order`; }
   }
-  if (btn) { btn.disabled=false; btn.innerHTML=`<i class="ph ph-floppy-disk"></i> Save Order`; }
 };
 
 window.clearTrending = function() {
