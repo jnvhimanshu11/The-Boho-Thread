@@ -10,7 +10,7 @@ import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-
 
 
 
-
+// ── Firebase config (shared with firebase-config.js) ────────
   const firebaseConfig = {
   apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
   authDomain: "thebohothread-96e2c.firebaseapp.com",
