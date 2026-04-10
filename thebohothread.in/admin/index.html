@@ -6,6 +6,32 @@
   <title>TheBohoThread — Admin Panel</title>
   <link rel="stylesheet" href="../css/admin.css" />
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
+  <style>
+    .rte-btn {
+      background: var(--navy-card);
+      color: var(--text-muted);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 5px;
+      padding: 4px 9px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      min-width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .rte-btn:hover { background: rgba(201,168,76,0.15); color: var(--gold); border-color: rgba(201,168,76,0.3); }
+    #rte-editor:focus { border-color: rgba(201,168,76,0.35); }
+    #rte-editor h1 { font-family:'Cormorant Garamond',serif; font-size:2rem; color:var(--gold); margin:1.2em 0 0.4em; }
+    #rte-editor h2 { font-family:'Cormorant Garamond',serif; font-size:1.5rem; color:var(--cream); border-bottom:1px solid rgba(201,168,76,0.2); padding-bottom:6px; margin:1.2em 0 0.4em; }
+    #rte-editor h3 { font-family:'Cormorant Garamond',serif; font-size:1.2rem; color:var(--gold-lt); margin:1em 0 0.4em; }
+    #rte-editor p  { margin-bottom:0.9em; }
+    #rte-editor ul, #rte-editor ol { padding-left:1.5em; margin-bottom:0.9em; }
+    #rte-editor blockquote { border-left:3px solid var(--gold); margin:1em 0; padding:10px 16px; background:rgba(201,168,76,0.06); border-radius:0 6px 6px 0; font-style:italic; }
+    #rte-editor a { color:var(--gold); text-decoration:underline; }
+  </style>
 </head>
 <body>
 
@@ -62,6 +88,9 @@
       <div class="nav-section">Store</div>
       <a href="#" data-page="store-settings" onclick="navigate('store-settings',this)">
         <i class="ph ph-gear"></i> Store Settings
+      </a>
+      <a href="#" data-page="data-policy" onclick="navigate('data-policy',this)">
+        <i class="ph ph-file-text"></i> Data Policy Page
       </a>
       <a href="../contact.html" target="_blank">
         <i class="ph ph-address-book"></i> Contact Page
@@ -406,6 +435,144 @@
       </div>
     </div>
 
+    <!-- ── DATA POLICY EDITOR ── -->
+    <div class="admin-page" id="page-data-policy">
+      <div style="max-width:900px;">
+
+        <div class="admin-panel">
+          <div class="panel-header">
+            <h3><i class="ph ph-file-text" style="color:var(--gold);"></i> &nbsp;Data Collection &amp; Privacy Policy Page</h3>
+            <span style="font-size:0.8rem;color:var(--text-muted);">Edits go live instantly on <a href="../data-policy.html" target="_blank" style="color:var(--gold);">data-policy.html</a></span>
+          </div>
+          <div class="panel-body">
+
+            <!-- Rich Text Toolbar -->
+            <div id="rte-toolbar" style="
+              display:flex;flex-wrap:wrap;gap:4px;
+              background:var(--navy);border:1px solid rgba(255,255,255,0.1);
+              border-radius:8px 8px 0 0;padding:10px 12px;
+              border-bottom:none;
+            ">
+              <!-- Font Family -->
+              <select onchange="rteExec('fontName',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
+                <option value="">Font Family</option>
+                <option value="'Cormorant Garamond',serif">Cormorant (Serif)</option>
+                <option value="'DM Sans',sans-serif">DM Sans</option>
+                <option value="Georgia,serif">Georgia</option>
+                <option value="Arial,sans-serif">Arial</option>
+                <option value="'Courier New',monospace">Courier (Mono)</option>
+              </select>
+
+              <!-- Font Size -->
+              <select onchange="rteExec('fontSize',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
+                <option value="">Size</option>
+                <option value="1">10px</option>
+                <option value="2">13px</option>
+                <option value="3">16px</option>
+                <option value="4">18px</option>
+                <option value="5">24px</option>
+                <option value="6">32px</option>
+                <option value="7">48px</option>
+              </select>
+
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+
+              <!-- Heading -->
+              <select onchange="rteBlock(this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
+                <option value="">Heading</option>
+                <option value="h1">Heading 1</option>
+                <option value="h2">Heading 2</option>
+                <option value="h3">Heading 3</option>
+                <option value="p">Paragraph</option>
+                <option value="blockquote">Blockquote</option>
+              </select>
+
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+
+              <!-- Format buttons -->
+              <button class="rte-btn" onclick="rteExec('bold')" title="Bold"><b>B</b></button>
+              <button class="rte-btn" onclick="rteExec('italic')" title="Italic"><i>I</i></button>
+              <button class="rte-btn" onclick="rteExec('underline')" title="Underline"><u>U</u></button>
+              <button class="rte-btn" onclick="rteExec('strikeThrough')" title="Strikethrough"><s>S</s></button>
+
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+
+              <!-- Alignment -->
+              <button class="rte-btn" onclick="rteExec('justifyLeft')" title="Align Left"><i class="ph ph-text-align-left"></i></button>
+              <button class="rte-btn" onclick="rteExec('justifyCenter')" title="Align Center"><i class="ph ph-text-align-center"></i></button>
+              <button class="rte-btn" onclick="rteExec('justifyRight')" title="Align Right"><i class="ph ph-text-align-right"></i></button>
+
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+
+              <!-- Lists -->
+              <button class="rte-btn" onclick="rteExec('insertUnorderedList')" title="Bullet List"><i class="ph ph-list-bullets"></i></button>
+              <button class="rte-btn" onclick="rteExec('insertOrderedList')" title="Numbered List"><i class="ph ph-list-numbers"></i></button>
+
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+
+              <!-- Color -->
+              <div style="display:flex;align-items:center;gap:4px;">
+                <label style="font-size:0.75rem;color:var(--text-muted);">Color</label>
+                <input type="color" value="#f0ece4" onchange="rteExec('foreColor',this.value)"
+                  style="width:30px;height:30px;border:1px solid rgba(255,255,255,0.12);border-radius:4px;background:none;cursor:pointer;padding:2px;" title="Text Color" />
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;">
+                <label style="font-size:0.75rem;color:var(--text-muted);">Highlight</label>
+                <input type="color" value="#c9a84c" onchange="rteExec('hiliteColor',this.value)"
+                  style="width:30px;height:30px;border:1px solid rgba(255,255,255,0.12);border-radius:4px;background:none;cursor:pointer;padding:2px;" title="Highlight Color" />
+              </div>
+
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+
+              <!-- Link / Unlink -->
+              <button class="rte-btn" onclick="rteInsertLink()" title="Insert Link"><i class="ph ph-link"></i></button>
+              <button class="rte-btn" onclick="rteExec('unlink')" title="Remove Link"><i class="ph ph-link-break"></i></button>
+
+              <!-- Undo / Redo -->
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExec('undo')" title="Undo"><i class="ph ph-arrow-counter-clockwise"></i></button>
+              <button class="rte-btn" onclick="rteExec('redo')" title="Redo"><i class="ph ph-arrow-clockwise"></i></button>
+
+              <!-- Clear -->
+              <button class="rte-btn" onclick="rteClear()" title="Clear Formatting" style="margin-left:auto;"><i class="ph ph-eraser"></i></button>
+            </div>
+
+            <!-- Editor Area -->
+            <div id="rte-editor" contenteditable="true" spellcheck="true" style="
+              min-height:420px;
+              background:var(--navy-card);
+              border:1px solid rgba(255,255,255,0.1);
+              border-radius:0 0 8px 8px;
+              padding:24px 28px;
+              color:var(--text-main);
+              font-size:0.95rem;
+              line-height:1.85;
+              outline:none;
+              overflow-y:auto;
+            ">
+              <p style="color:var(--text-muted);">Loading content…</p>
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:center;margin-top:20px;flex-wrap:wrap;">
+              <button class="btn btn-gold" onclick="savePolicyContent()" id="policy-save-btn">
+                <i class="ph ph-floppy-disk"></i> Save &amp; Publish
+              </button>
+              <button class="btn btn-outline-gold" onclick="resetPolicyContent()">
+                <i class="ph ph-arrow-counter-clockwise"></i> Reset to Default
+              </button>
+              <a href="../data-policy.html" target="_blank" class="btn" style="background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid rgba(255,255,255,0.1);">
+                <i class="ph ph-arrow-square-out"></i> Preview Page
+              </a>
+              <span id="policy-save-status" style="font-size:0.85rem;color:var(--success);display:none;">
+                <i class="ph ph-check-circle"></i> Published successfully!
+              </span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /admin-main -->
 </div><!-- /admin-app -->
 
@@ -621,6 +788,120 @@ document.addEventListener("DOMContentLoaded", () => {
     // Pre-load so it's ready
     setTimeout(loadStoreSettings, 800);
   });
+</script>
+
+<!-- ── Rich Text Editor: Data Policy ── -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+    authDomain: "thebohothread-96e2c.firebaseapp.com",
+    projectId: "thebohothread-96e2c",
+    storageBucket: "thebohothread-96e2c.firebasestorage.app",
+    messagingSenderId: "100688387088",
+    appId: "1:100688387088:web:f8a6af7565d3c25952fe95"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  const POLICY_DOC = doc(db, 'store_settings', 'data_policy');
+
+  const DEFAULT_HTML = `
+    <h2>What Data We Collect</h2>
+    <p>When you contact us through our website, we collect the following information that you voluntarily provide:</p>
+    <ul>
+      <li><strong>Name</strong> — to address you personally in our response</li>
+      <li><strong>Email address</strong> — to reply to your enquiry</li>
+      <li><strong>Phone number</strong> — for order or support follow-up if needed</li>
+      <li><strong>Message content</strong> — to understand and respond to your query</li>
+    </ul>
+    <h2>How We Use Your Data</h2>
+    <p>Your information is used solely for the following purposes:</p>
+    <ul>
+      <li>Responding to your enquiries and support requests</li>
+      <li>Processing and following up on orders</li>
+      <li>Improving our customer experience</li>
+    </ul>
+    <p>We <strong>do not</strong> sell, rent, or share your personal data with third parties for marketing purposes.</p>
+    <h2>Data Storage</h2>
+    <p>Your submitted contact form data is securely transmitted to our team's email inbox. We retain this data only as long as necessary to resolve your query, after which it is deleted.</p>
+    <h2>Your Rights</h2>
+    <ul>
+      <li>Request access to the personal data we hold about you</li>
+      <li>Request correction or deletion of your data</li>
+      <li>Withdraw consent at any time by contacting us</li>
+    </ul>
+    <h2>Contact Us</h2>
+    <p>If you have any questions about how we handle your data, please reach out to us at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a>.</p>
+    <blockquote>By submitting the contact form, you agree that your data may be stored and used to respond to your enquiry as described above.</blockquote>
+  `;
+
+  // ── Load content into editor ──
+  async function loadPolicyEditor() {
+    const editor = document.getElementById('rte-editor');
+    if (!editor) return;
+    try {
+      const snap = await getDoc(POLICY_DOC);
+      editor.innerHTML = (snap.exists() && snap.data().content) ? snap.data().content : DEFAULT_HTML;
+    } catch(e) {
+      editor.innerHTML = DEFAULT_HTML;
+    }
+  }
+
+  // ── Save ──
+  window.savePolicyContent = async function() {
+    const editor = document.getElementById('rte-editor');
+    const btn    = document.getElementById('policy-save-btn');
+    const status = document.getElementById('policy-save-status');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;display:inline-block;"></i> Publishing…';
+    status.style.display = 'none';
+    try {
+      await setDoc(POLICY_DOC, { content: editor.innerHTML, updated_at: new Date().toISOString() }, { merge: true });
+      status.style.display = 'inline-flex';
+      setTimeout(() => { status.style.display = 'none'; }, 4000);
+    } catch(e) {
+      alert('Error saving: ' + e.message);
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Save & Publish';
+  };
+
+  // ── Reset to default ──
+  window.resetPolicyContent = function() {
+    if (!confirm('Reset to default content? This will overwrite your current edits.')) return;
+    document.getElementById('rte-editor').innerHTML = DEFAULT_HTML;
+  };
+
+  // ── Hook navigate ──
+  const _nav2 = window.navigate;
+  window.navigate = function(page, linkEl) {
+    _nav2(page, linkEl);
+    if (page === 'data-policy') loadPolicyEditor();
+  };
+
+  document.addEventListener('DOMContentLoaded', () => setTimeout(loadPolicyEditor, 900));
+</script>
+
+<!-- ── RTE Helper Functions (non-module) ── -->
+<script>
+  function rteExec(cmd, val) {
+    document.getElementById('rte-editor').focus();
+    document.execCommand(cmd, false, val || null);
+  }
+  function rteBlock(tag) {
+    document.getElementById('rte-editor').focus();
+    document.execCommand('formatBlock', false, tag);
+  }
+  function rteInsertLink() {
+    const url = prompt('Enter URL:', 'https://');
+    if (url) { document.getElementById('rte-editor').focus(); document.execCommand('createLink', false, url); }
+  }
+  function rteClear() {
+    document.getElementById('rte-editor').focus();
+    document.execCommand('removeFormat', false, null);
+  }
 </script>
 </body>
 </html>
