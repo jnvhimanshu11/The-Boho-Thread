@@ -11,7 +11,6 @@ import {
   getDocs, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
   query, orderBy, serverTimestamp, where
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // ── Firebase init ────────────────────────────────────────────
 const firebaseConfig = {
@@ -25,7 +24,6 @@ const firebaseConfig = {
 
 const app     = initializeApp(firebaseConfig);
 const db      = getFirestore(app);
-const storage = getStorage(app);
 
 // ── Firestore helpers ────────────────────────────────────────
 const COL = {
@@ -70,12 +68,7 @@ async function fsSet(colName, docId, data) {
   await setDoc(doc(db, colName, docId), { ...data, updatedAt: serverTimestamp() });
 }
 
-// Upload base64 image to Firebase Storage, return download URL
-async function uploadBase64Image(base64DataUrl, path) {
-  const storageRef = ref(storage, path);
-  await uploadString(storageRef, base64DataUrl, 'data_url');
-  return await getDownloadURL(storageRef);
-}
+
 
 // ── CREDENTIALS ──────────────────────────────────────────────
 const ADMIN_USER = 'jnvhimanshu11@gmail.com';
@@ -342,20 +335,8 @@ window.saveProduct = async function() {
   if (saveBtn) { saveBtn.disabled=true; saveBtn.innerHTML=`<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;display:inline-block;"></i> Saving…`; }
 
   try {
-    // Upload any base64 images to Firebase Storage
-    const uploadedImages = [];
-    for (let i = 0; i < imagesArr.length; i++) {
-      const val = imagesArr[i];
-      if (val.startsWith('data:')) {
-        // It's base64 — upload to Firebase Storage
-        adminToast(`Uploading image ${i+1}/${imagesArr.length}…`, '');
-        const path = `products/${id || 'new_' + Date.now()}/image_${i}_${Date.now()}.jpg`;
-        const url = await uploadBase64Image(val, path);
-        uploadedImages.push(url);
-      } else {
-        uploadedImages.push(val);
-      }
-    }
+    // Store images directly in Firestore (base64 or URL) — no Storage needed
+    const uploadedImages = imagesArr; // base64 strings stored directly in Firestore
 
     const primaryImage = uploadedImages[0];
 
@@ -470,14 +451,31 @@ window.previewSlotURL = function(idx) {
 
 window.handleImageSlotFile = function(idx, e) {
   const file = e.target.files[0]; if (!file) return;
-  if (file.size > 5*1024*1024) { adminToast('Image too large (max 5 MB).','error'); return; }
+  if (file.size > 10*1024*1024) { adminToast('Image too large (max 10 MB).','error'); return; }
   const reader = new FileReader();
   reader.onload = ev => {
-    if (productImageSlots[idx]) {
-      productImageSlots[idx].base64 = ev.target.result;
-      productImageSlots[idx].url    = '';
-    }
-    renderImageSlots();
+    // Compress image via canvas to keep Firestore doc size small (max ~700KB base64)
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 900; // max dimension px
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.82);
+      if (productImageSlots[idx]) {
+        productImageSlots[idx].base64 = compressed;
+        productImageSlots[idx].url    = '';
+      }
+      renderImageSlots();
+      const kb = Math.round(compressed.length * 0.75 / 1024);
+      adminToast(`Image ready (${kb} KB) ✓`, 'success');
+    };
+    img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 };
