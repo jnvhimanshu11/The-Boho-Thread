@@ -157,12 +157,27 @@ async function loadAllData() {
   try {
     adminToast('Loading data from Firebase…', '');
 
-    const [prods, cats, bdgs, revs] = await Promise.all([
+    const [prods, cats, bdgs] = await Promise.all([
       fsGetAll(COL.products, 'createdAt', 'desc'),
       fsGetAll(COL.categories, 'name', 'asc'),
       fsGetAll(COL.badges, 'name', 'asc'),
-      fsGetAll(COL.reviews, 'createdAt', 'desc'),
     ]);
+
+    // Load reviews without orderBy to avoid Firestore composite index requirement.
+    // Sort by createdAt in JS instead.
+    let revs = [];
+    try {
+      const revSnap = await getDocs(collection(db, COL.reviews));
+      revs = revSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      revs.sort((a, b) => {
+        const ta = a.createdAt?.toMillis?.() ?? (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+        const tb = b.createdAt?.toMillis?.() ?? (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+        return tb - ta;
+      });
+    } catch(e) {
+      console.error('Reviews load error:', e);
+      adminToast('Could not load reviews: ' + e.message, 'error');
+    }
 
     products    = prods;
     categories  = cats;
@@ -206,7 +221,17 @@ function updateReviewStats() {
   const approved = allReviews.filter(r=>r.status==='approved').length;
   const rejected = allReviews.filter(r=>r.status==='rejected').length;
   const el=document.getElementById('stat-pending-reviews'); if(el) el.textContent=pending;
-  const dot=document.getElementById('nav-review-dot'); if(dot) dot.style.display=pending>0?'inline-block':'none';
+  // Show pending count badge in nav (number instead of just a dot)
+  const dot=document.getElementById('nav-review-dot');
+  if(dot) {
+    if(pending>0) {
+      dot.style.display='inline-flex';
+      dot.textContent=pending>99?'99+':String(pending);
+    } else {
+      dot.style.display='none';
+      dot.textContent='';
+    }
+  }
   ['pending','approved','rejected'].forEach(k=>{ const e=document.getElementById('rtab-'+k); if(e) e.textContent={pending,approved,rejected}[k]; });
   const all=document.getElementById('rtab-all'); if(all) all.textContent=allReviews.length;
 }

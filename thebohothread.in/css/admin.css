@@ -482,7 +482,7 @@ select.form-control { cursor: pointer; appearance: auto; }
    ═══════════════════════════════════════════════════════════ */
 
 /* Nav dot indicator for pending reviews */
-.review-badge-dot {
+.review-badge-dot-OLD {
   width: 8px; height: 8px;
   background: var(--gold);
   border-radius: 50%;
@@ -682,4 +682,21 @@ select.form-control { cursor: pointer; appearance: auto; }
 #trending-list button:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+/* Pending reviews count badge in nav */
+.review-badge-dot {
+  min-width: 18px; height: 18px;
+  padding: 0 5px;
+  background: #e05c5c;
+  color: #fff;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  animation: pulse-dot 2s ease-in-out infinite;
 }
