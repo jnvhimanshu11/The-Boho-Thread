@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+    // Clean URL — always show just the domain
+    history.replaceState(null, '', '/');
+    // Also clean URL on any internal page navigation
+    document.addEventListener('click', function(e) {
+      var a = e.target.closest('a[href]');
+      if (!a) return;
+      var href = a.getAttribute('href');
+      if (!href || a.target || href.startsWith('http') || href.startsWith('//') || href.startsWith('mailto') || href.startsWith('tel') || href.startsWith('#') || href.startsWith('javascript')) return;
+      // Let the navigation happen, then clean URL on the next page (each page has its own script)
+    });
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Return &amp; Refund Policy — TheBohoThread</title>

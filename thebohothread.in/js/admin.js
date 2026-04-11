@@ -142,6 +142,7 @@ function doLogin() {
     loginPage.style.display = 'none';
     adminApp.style.display  = 'flex';
     loadAllData();
+    history.replaceState(null, '', '/');
   } else {
     document.getElementById('login-error').style.display = 'block';
     document.getElementById('login-pass').value = '';
@@ -151,7 +152,7 @@ function doLogin() {
 
 window.logout = function() { sessionStorage.removeItem('tbt_admin'); location.reload(); };
 
-if (checkAuth()) { loginPage.style.display='none'; adminApp.style.display='flex'; loadAllData(); }
+if (checkAuth()) { loginPage.style.display='none'; adminApp.style.display='flex'; loadAllData(); history.replaceState(null, '', '/'); }
 
 window.addEventListener('resize', () => {
   const t = document.getElementById('sidebar-toggle');
@@ -172,6 +173,8 @@ window.navigate = function(page, linkEl) {
   const titles = { dashboard:'Dashboard', products:'Products', categories:'Categories', badges:'Badges', reviews:'Reviews', trending:'Trending', 'store-settings':'Store Settings', 'data-policy':'Data Policy Page', 'faq':'FAQ Page', 'shipping':'Shipping & Delivery Policy', 'returns':'Return & Refund Policy' };
   document.getElementById('page-title').textContent = titles[page] || page;
   document.getElementById('admin-sidebar').classList.remove('open');
+  // Clean URL — show only the domain, no path/hash
+  history.replaceState(null, '', '/');
 };
 
 // ═════════════════════════════════════════════════════════════
