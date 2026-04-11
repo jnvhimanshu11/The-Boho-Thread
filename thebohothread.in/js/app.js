@@ -215,7 +215,7 @@ function productCardHTML(p) {
       <img src="${(p.images&&p.images.length>0)?p.images[0]:(p.image||'https://via.placeholder.com/400x300/1a2a3a/c9a84c?text=No+Image')}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x300/1a2a3a/c9a84c?text=No+Image'"/>
       <div class="product-badges">${badge}</div>
       <button class="wish-btn ${wishlisted?'wishlisted':''}" onclick="event.stopPropagation();toggleWishlist('${p.id}')" aria-label="Wishlist">
-        <i class="ph ph-heart${wishlisted?'-fill':''}"></i>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path class="heart-icon" d="M12 21C12 21 3 14.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14.5 12 21 12 21Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
     <div class="product-card-body">
@@ -285,7 +285,7 @@ window.openProductModal = function(id) {
   const wishlisted=wishlist.map(String).includes(String(id));
   const wBtn=document.getElementById('modal-wish-btn');
   wBtn.className='modal-wish-btn '+(wishlisted?'wishlisted':'');
-  wBtn.innerHTML=`<i class="ph ph-heart${wishlisted?'-fill':''}"></i>`;
+  wBtn.innerHTML=`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path class="heart-icon" d="M12 21C12 21 3 14.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14.5 12 21 12 21Z" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   wBtn.onclick=()=>toggleWishlist(id);
   document.getElementById('modal-add-cart').onclick=()=>{addToCartQty(id,modalQty);closeModal();};
   productModal.classList.add('open'); document.body.style.overflow='hidden';
@@ -416,7 +416,7 @@ window.toggleWishlist = function(id) {
 };
 function updateWishlistUI() { wishCountEl.textContent=wishlist.length; wishCountEl.classList.toggle('show',wishlist.length>0); renderWishlist(); }
 function renderWishlist() {
-  if (!wishlist.length) { wishlistBody.innerHTML=`<div style="text-align:center;padding:60px 0;color:var(--text-muted);"><i class="ph ph-heart" style="font-size:3rem;opacity:0.3;display:block;margin-bottom:12px;"></i><p>Your wishlist is empty</p></div>`; return; }
+  if (!wishlist.length) { wishlistBody.innerHTML=`<div style="text-align:center;padding:60px 0;color:var(--text-muted);"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:48px;height:48px;opacity:0.3;display:block;margin:0 auto 12px;"><path d="M12 21C12 21 3 14.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14.5 12 21 12 21Z" stroke="#aaa" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><p>Your wishlist is empty</p></div>`; return; }
   wishlistBody.innerHTML=wishlist.map(id=>{
     const p=allProducts.find(x=>String(x.id)===String(id)); if(!p) return '';
     return `<div class="cart-item"><img src="${p.image||'https://via.placeholder.com/80x80/1a2a3a/c9a84c?text=?'}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/80x80/1a2a3a/c9a84c?text=?'"/><div class="cart-item-info"><h4>${p.name}</h4><p>₹${p.price.toLocaleString()}</p><button class="btn-primary" style="margin-top:8px;font-size:0.8rem;padding:6px 14px;" onclick="addToCart('${id}');closeSidebars()">Move to Cart</button></div><button class="remove-item" onclick="toggleWishlist('${id}')"><i class="ph ph-trash"></i></button></div>`;
