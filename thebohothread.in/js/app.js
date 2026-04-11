@@ -73,14 +73,18 @@ const toastContainer  = document.getElementById('toast-container');
 async function loadData() {
   productsGrid.innerHTML = '<div class="loader-wrap"><div class="spinner"></div></div>';
   try {
-    const [prods, cats, bdgs] = await Promise.all([
+    const [prods, cats] = await Promise.all([
       fsGetAll('products', 'createdAt', 'desc'),
       fsGetAll('categories', 'name', 'asc'),
-      fsGetAll('badges', 'name', 'asc'),
     ]);
     allProducts   = prods.map(normaliseProduct);
     allCategories = cats;
-    allBadges     = bdgs;
+
+    // Load badges without orderBy to avoid Firestore index requirement
+    try {
+      const bSnap = await getDocs(collection(db, 'badges'));
+      allBadges = bSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) { allBadges = []; }
 
     // Load trending list from Firestore
     let trendingIds = null;
@@ -198,11 +202,11 @@ function productCardHTML(p) {
   const stars = starsHTML(p.rating||0);
   const badge = p.badge ? `<span class="product-badge" style="${getBadgeStyle(p.badge)}">${p.badge}</span>` : '';
   const origPrice = p.originalPrice?`<span class="original">₹${p.originalPrice.toLocaleString()}</span>`:'';
-  return `<article class="product-card" onclick="openProductModal(${p.id})">
+  return `<article class="product-card" onclick="openProductModal('${p.id}')">
     <div class="product-card-img-wrap">
       <img src="${(p.images&&p.images.length>0)?p.images[0]:(p.image||'https://via.placeholder.com/400x300/1a2a3a/c9a84c?text=No+Image')}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x300/1a2a3a/c9a84c?text=No+Image'"/>
       <div class="product-badges">${badge}</div>
-      <button class="wish-btn ${wishlisted?'wishlisted':''}" onclick="event.stopPropagation();toggleWishlist(${p.id})" aria-label="Wishlist">
+      <button class="wish-btn ${wishlisted?'wishlisted':''}" onclick="event.stopPropagation();toggleWishlist('${p.id}')" aria-label="Wishlist">
         <i class="ph ph-heart${wishlisted?'-fill':''}"></i>
       </button>
     </div>
@@ -213,7 +217,7 @@ function productCardHTML(p) {
       <p class="product-desc">${p.description||''}</p>
       <div class="product-footer">
         <div class="product-price">₹${p.price.toLocaleString()}${origPrice}</div>
-        <button class="add-cart-btn" onclick="event.stopPropagation();addToCart(${p.id})">Add</button>
+        <button class="add-cart-btn" onclick="event.stopPropagation();addToCart('${p.id}')">Add</button>
       </div>
     </div>
   </article>`;
@@ -236,7 +240,7 @@ function renderScroller(trendingIds) {
   if (!items.length) { if (scrollerSection) scrollerSection.style.display = 'none'; return; }
   const html = items.map(p=>{
     const imgSrc = (p.images && p.images.length > 0) ? p.images[0] : (p.image || 'https://via.placeholder.com/200x140/1a2a3a/c9a84c?text=No+Image');
-    return `<div class="scroll-card" onclick="openProductModal(${p.id})">
+    return `<div class="scroll-card" onclick="openProductModal('${p.id}')">
     <img src="${imgSrc}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/200x140/1a2a3a/c9a84c?text=N/A'"/>
     <div class="scroll-card-info"><h4>${p.name}</h4><p>₹${p.price.toLocaleString()}</p></div>
   </div>`;
@@ -359,17 +363,19 @@ window.submitReview = async function() {
 
 // ── CART ─────────────────────────────────────────────────────
 function saveCart() { localStorage.setItem('tbt_cart',JSON.stringify(cart)); }
-window.addToCart = function(id) { addToCartQty(id,1); };
+window.addToCart = function(id) { addToCartQty(String(id),1); };
 function addToCartQty(id,qty) {
-  const p=allProducts.find(x=>x.id===id); if(!p) return;
-  const ex=cart.find(c=>c.id===id);
-  if (ex) ex.qty+=qty; else cart.push({id,qty});
+  const sid=String(id);
+  const p=allProducts.find(x=>String(x.id)===sid); if(!p) return;
+  const ex=cart.find(c=>String(c.id)===sid);
+  if (ex) ex.qty+=qty; else cart.push({id:sid,qty});
   saveCart(); updateCartUI(); toast(`${p.name} added to cart 🛒`);
 }
-window.removeFromCart = function(id) { cart=cart.filter(c=>c.id!==id); saveCart(); updateCartUI(); };
+window.removeFromCart = function(id) { const sid=String(id); cart=cart.filter(c=>String(c.id)!==sid); saveCart(); updateCartUI(); };
 window.changeQty = function(id,delta) {
-  const item=cart.find(c=>c.id===id); if(!item) return;
-  item.qty=Math.max(1,item.qty+delta); if(item.qty<1){removeFromCart(id);return;}
+  const sid=String(id);
+  const item=cart.find(c=>String(c.id)===sid); if(!item) return;
+  item.qty=Math.max(1,item.qty+delta); if(item.qty<1){removeFromCart(sid);return;}
   saveCart(); updateCartUI();
 };
 function updateCartUI() {
@@ -380,9 +386,9 @@ function renderCart() {
   if (!cart.length) { cartBody.innerHTML=`<div style="text-align:center;padding:60px 0;color:var(--text-muted);"><i class="ph ph-shopping-cart" style="font-size:3rem;opacity:0.3;display:block;margin-bottom:12px;"></i><p>Your cart is empty</p></div>`; cartTotalEl.textContent='₹0.00'; return; }
   let sum=0;
   cartBody.innerHTML=cart.map(item=>{
-    const p=allProducts.find(x=>x.id===item.id); if(!p) return '';
+    const p=allProducts.find(x=>String(x.id)===String(item.id)); if(!p) return '';
     sum+=p.price*item.qty;
-    return `<div class="cart-item"><img src="${p.image||'https://via.placeholder.com/80x80/1a2a3a/c9a84c?text=?'}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/80x80/1a2a3a/c9a84c?text=?'"/><div class="cart-item-info"><h4>${p.name}</h4><p>₹${p.price.toLocaleString()}</p><div class="cart-item-qty"><button class="qty-btn" onclick="changeQty(${item.id},-1)">−</button><span class="qty-val">${item.qty}</span><button class="qty-btn" onclick="changeQty(${item.id},1)">+</button></div></div><button class="remove-item" onclick="removeFromCart(${item.id})"><i class="ph ph-trash"></i></button></div>`;
+    return `<div class="cart-item"><img src="${p.image||'https://via.placeholder.com/80x80/1a2a3a/c9a84c?text=?'}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/80x80/1a2a3a/c9a84c?text=?'"/><div class="cart-item-info"><h4>${p.name}</h4><p>₹${p.price.toLocaleString()}</p><div class="cart-item-qty"><button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button><span class="qty-val">${item.qty}</span><button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button></div></div><button class="remove-item" onclick="removeFromCart('${item.id}')"><i class="ph ph-trash"></i></button></div>`;
   }).join('');
   cartTotalEl.textContent=`₹${sum.toLocaleString(undefined,{minimumFractionDigits:2})}`;
 }
@@ -404,7 +410,7 @@ function renderWishlist() {
   if (!wishlist.length) { wishlistBody.innerHTML=`<div style="text-align:center;padding:60px 0;color:var(--text-muted);"><i class="ph ph-heart" style="font-size:3rem;opacity:0.3;display:block;margin-bottom:12px;"></i><p>Your wishlist is empty</p></div>`; return; }
   wishlistBody.innerHTML=wishlist.map(id=>{
     const p=allProducts.find(x=>String(x.id)===String(id)); if(!p) return '';
-    return `<div class="cart-item"><img src="${p.image||'https://via.placeholder.com/80x80/1a2a3a/c9a84c?text=?'}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/80x80/1a2a3a/c9a84c?text=?'"/><div class="cart-item-info"><h4>${p.name}</h4><p>₹${p.price.toLocaleString()}</p><button class="btn-primary" style="margin-top:8px;font-size:0.8rem;padding:6px 14px;" onclick="addToCart(${id});closeSidebars()">Move to Cart</button></div><button class="remove-item" onclick="toggleWishlist(${id})"><i class="ph ph-trash"></i></button></div>`;
+    return `<div class="cart-item"><img src="${p.image||'https://via.placeholder.com/80x80/1a2a3a/c9a84c?text=?'}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/80x80/1a2a3a/c9a84c?text=?'"/><div class="cart-item-info"><h4>${p.name}</h4><p>₹${p.price.toLocaleString()}</p><button class="btn-primary" style="margin-top:8px;font-size:0.8rem;padding:6px 14px;" onclick="addToCart('${id}');closeSidebars()">Move to Cart</button></div><button class="remove-item" onclick="toggleWishlist('${id}')"><i class="ph ph-trash"></i></button></div>`;
   }).join('');
 }
 
