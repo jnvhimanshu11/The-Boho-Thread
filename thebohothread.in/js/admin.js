@@ -119,6 +119,18 @@ const adminApp  = document.getElementById('admin-app');
 
 function checkAuth() { return sessionStorage.getItem('tbt_admin') === '1'; }
 
+function showAccessDenied() {
+  loginPage.style.display = 'none';
+  adminApp.style.display  = 'none';
+  document.body.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0d1b2a;flex-direction:column;gap:12px;font-family:DM Sans,sans-serif;text-align:center;padding:24px;';
+  document.body.innerHTML = `
+    <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="#c9a84c" stroke-width="1.5" style="opacity:0.7"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <h2 style="color:#f0e6d0;margin:0;font-size:1.4rem;">Access Denied</h2>
+    <p style="color:#8a9bb0;margin:0;max-width:320px;line-height:1.6;">You are not authorised to access the admin panel. Please log in with the admin account.</p>
+    <a href="/shop.html" style="margin-top:8px;color:#c9a84c;font-size:0.9rem;">← Back to Shop</a>
+  `;
+}
+
 document.getElementById('login-btn').onclick = doLogin;
 ['login-pass','login-user'].forEach(id =>
   document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); })
@@ -152,7 +164,25 @@ function doLogin() {
 
 window.logout = function() { sessionStorage.removeItem('tbt_admin'); location.reload(); };
 
-if (checkAuth()) { loginPage.style.display='none'; adminApp.style.display='flex'; loadAllData(); history.replaceState(null, '', '/'); }
+// ── Block non-admin Firebase users from seeing the admin panel ──
+import { initializeApp as _initApp, getApps as _getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth as _getAuth, onAuthStateChanged as _onAuth } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+const _authApp = _getApps().find(a => a.name === 'auth-instance') || _initApp(firebaseConfig, 'admin-auth-check');
+const _auth = _getAuth(_authApp);
+
+if (checkAuth()) {
+  // Already logged in via admin form — just load
+  loginPage.style.display='none'; adminApp.style.display='flex'; loadAllData(); history.replaceState(null, '', '/');
+} else {
+  // Check if a Google/phone user is signed in — if so and not admin email, block them
+  _onAuth(_auth, firebaseUser => {
+    if (firebaseUser && firebaseUser.email !== ADMIN_USER) {
+      // A non-admin user is signed in — show access denied
+      showAccessDenied();
+    }
+    // If no firebase user, or it IS the admin email → show login form as normal
+  });
+}
 
 window.addEventListener('resize', () => {
   const t = document.getElementById('sidebar-toggle');
