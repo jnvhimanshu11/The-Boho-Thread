@@ -577,5 +577,5 @@ function renderModalSizes(sizes) {
   cont.querySelectorAll('.size-btn').forEach((b,i) => {
     b.addEventListener('click', e => { e.stopPropagation(); selectSize(i); });
   });
-  selectSize(0);
+  selectSize(0)
 }
