@@ -1067,35 +1067,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // ─── DATA POLICY EDITOR ───────────────────────────────────
-  const DEFAULT_HTML = `
-    <h2>What Data We Collect</h2>
-    <p>When you contact us through our website, we collect the following information that you voluntarily provide:</p>
-    <ul>
-      <li><strong>Name</strong> — to address you personally in our response</li>
-      <li><strong>Email address</strong> — to reply to your enquiry</li>
-      <li><strong>Phone number</strong> — for order or support follow-up if needed</li>
-      <li><strong>Message content</strong> — to understand and respond to your query</li>
-    </ul>
-    <h2>How We Use Your Data</h2>
-    <p>Your information is used solely for the following purposes:</p>
-    <ul>
-      <li>Responding to your enquiries and support requests</li>
-      <li>Processing and following up on orders</li>
-      <li>Improving our customer experience</li>
-    </ul>
-    <p>We <strong>do not</strong> sell, rent, or share your personal data with third parties for marketing purposes.</p>
-    <h2>Data Storage</h2>
-    <p>Your submitted contact form data is securely transmitted to our team's email inbox. We retain this data only as long as necessary to resolve your query, after which it is deleted.</p>
-    <h2>Your Rights</h2>
-    <ul>
-      <li>Request access to the personal data we hold about you</li>
-      <li>Request correction or deletion of your data</li>
-      <li>Withdraw consent at any time by contacting us</li>
-    </ul>
-    <h2>Contact Us</h2>
-    <p>If you have any questions, reach out at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a>.</p>
-    <blockquote>By submitting the contact form, you agree that your data may be stored and used to respond to your enquiry as described above.</blockquote>
-  `;
+  const DEFAULT_HTML = ``;
 
   async function loadPolicyEditor() {
     const editor = document.getElementById('rte-editor');
@@ -1136,84 +1108,21 @@ document.addEventListener("DOMContentLoaded", () => {
       editorId: 'rte-editor-faq',
       saveBtnId: 'faq-save-btn',
       statusId: 'faq-save-status',
-      default: `
-        <h2>Ordering & Payment</h2>
-        <p><strong>How do I place an order?</strong><br>Browse our shop, select your items, and reach out to us via the <a href="../contact.html">Contact page</a> or WhatsApp to confirm your order and arrange payment.</p>
-        <p><strong>What payment methods do you accept?</strong><br>We accept UPI, bank transfer, and cash on delivery (available in select areas).</p>
-        <p><strong>Is it safe to shop with TheBohoThread?</strong><br>Yes. We take your privacy and security seriously. See our <a href="../data-policy.html">Privacy Policy</a> for details.</p>
-        <h2>Products</h2>
-        <p><strong>Are the product images accurate?</strong><br>We do our best to represent every product accurately. Slight colour variations may occur due to screen settings and lighting conditions.</p>
-        <p><strong>Can I request a product not listed on the site?</strong><br>Absolutely! Contact us and we'll do our best to source it for you.</p>
-        <h2>Shipping</h2>
-        <p><strong>How long does delivery take?</strong><br>Standard delivery takes 5–7 business days. See our <a href="../shipping.html">Shipping & Delivery Policy</a> for full details.</p>
-        <p><strong>Do you ship pan-India?</strong><br>Yes, we ship across India. International shipping is not currently available.</p>
-        <h2>Returns & Refunds</h2>
-        <p><strong>What is your return policy?</strong><br>We offer a 7-day return window on most items. See our <a href="../returns.html">Return & Refund Policy</a> for full details.</p>
-        <p><strong>How do I initiate a return?</strong><br>Contact us at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a> with your order details and reason for return.</p>
-        <h2>Contact & Support</h2>
-        <p><strong>How can I reach you?</strong><br>Visit our <a href="../contact.html">Contact page</a> or email <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a>.</p>
-        <blockquote>Can't find your answer here? We're just a message away — we'll get back to you within 24 hours.</blockquote>
-      `
+      default: ``
     },
     shipping: {
       docId: 'shipping',
       editorId: 'rte-editor-shipping',
       saveBtnId: 'shipping-save-btn',
       statusId: 'shipping-save-status',
-      default: `
-        <h2>Processing Time</h2>
-        <p>All orders are processed within <strong>1–2 business days</strong> after payment confirmation. Orders placed on weekends or public holidays will be processed the next business day.</p>
-        <h2>Delivery Timelines</h2>
-        <ul>
-          <li><strong>Standard Delivery</strong> — 5–7 business days</li>
-          <li><strong>Express Delivery</strong> — 2–3 business days (select pin codes, additional charges apply)</li>
-          <li><strong>Same-day / Next-day</strong> — Available in Meerut city on request.</li>
-        </ul>
-        <h2>Shipping Coverage</h2>
-        <p>We ship <strong>pan-India</strong> to all major cities and most pin codes. International shipping is <strong>not available</strong> at this time.</p>
-        <h2>Shipping Charges</h2>
-        <ul>
-          <li>Orders above <strong>₹999</strong> — Free standard shipping</li>
-          <li>Orders below ₹999 — Flat ₹60 shipping fee</li>
-        </ul>
-        <h2>Tracking Your Order</h2>
-        <p>Once dispatched, you will receive a tracking number via WhatsApp or email.</p>
-        <h2>Damaged or Lost Shipments</h2>
-        <p>If your order arrives damaged or does not arrive within the estimated timeframe, please contact us immediately at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a>.</p>
-        <blockquote>We partner with trusted courier services to ensure your orders arrive safely and on time.</blockquote>
-      `
+      default: ``
     },
     returns: {
       docId: 'returns',
       editorId: 'rte-editor-returns',
       saveBtnId: 'returns-save-btn',
       statusId: 'returns-save-status',
-      default: `
-        <h2>Return Eligibility</h2>
-        <p>We accept returns within <strong>7 days</strong> of the delivery date. To be eligible:</p>
-        <ul>
-          <li>The item must be unused and in its original condition</li>
-          <li>All original packaging, tags, and accessories must be intact</li>
-          <li>A valid proof of purchase must be provided</li>
-        </ul>
-        <h2>Non-Returnable Items</h2>
-        <ul>
-          <li>Items marked as <strong>Final Sale</strong> or purchased during special promotions</li>
-          <li>Personalised or customised products</li>
-          <li>Items that have been used, washed, or altered</li>
-        </ul>
-        <h2>How to Initiate a Return</h2>
-        <ol>
-          <li>Email us at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a> with your order details and reason for return</li>
-          <li>Our team will respond within <strong>2 business days</strong></li>
-          <li>Ship the item back using a trackable courier and share tracking details</li>
-        </ol>
-        <h2>Refunds</h2>
-        <p>Approved refunds are processed within <strong>5–7 business days</strong>. Shipping charges are non-refundable unless the return is due to our error.</p>
-        <h2>Damaged or Incorrect Items</h2>
-        <p>Contact us within <strong>48 hours</strong> of delivery with photos. We will arrange a replacement or full refund at no extra cost.</p>
-        <blockquote>Your satisfaction is our priority. If something isn't right, just let us know and we'll make it right.</blockquote>
-      `
+      default: ``
     }
   };
 

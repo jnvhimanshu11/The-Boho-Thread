@@ -197,41 +197,7 @@
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
 
-  const DEFAULT_CONTENT = `
-    <h2>What Data We Collect</h2>
-    <p>When you contact us through our website, we collect the following information that you voluntarily provide:</p>
-    <ul>
-      <li><strong>Name</strong> — to address you personally in our response</li>
-      <li><strong>Email address</strong> — to reply to your enquiry</li>
-      <li><strong>Phone number</strong> — for order or support follow-up if needed</li>
-      <li><strong>Message content</strong> — to understand and respond to your query</li>
-    </ul>
-
-    <h2>How We Use Your Data</h2>
-    <p>Your information is used solely for the following purposes:</p>
-    <ul>
-      <li>Responding to your enquiries and support requests</li>
-      <li>Processing and following up on orders</li>
-      <li>Improving our customer experience</li>
-    </ul>
-    <p>We <strong>do not</strong> sell, rent, or share your personal data with third parties for marketing purposes.</p>
-
-    <h2>Data Storage</h2>
-    <p>Your submitted contact form data is securely transmitted to our team's email inbox. We retain this data only as long as necessary to resolve your query, after which it is deleted.</p>
-
-    <h2>Your Rights</h2>
-    <p>You have the right to:</p>
-    <ul>
-      <li>Request access to the personal data we hold about you</li>
-      <li>Request correction or deletion of your data</li>
-      <li>Withdraw consent at any time by contacting us</li>
-    </ul>
-
-    <h2>Contact Us</h2>
-    <p>If you have any questions about how we handle your data, please reach out to us at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a> or visit our <a href="contact.html">Contact page</a>.</p>
-
-    <blockquote>By submitting the contact form, you agree that your data may be stored and used to respond to your enquiry as described above.</blockquote>
-  `;
+  const DEFAULT_CONTENT = ``;
 
   async function loadPolicy() {
     const contentEl   = document.getElementById('policy-content');

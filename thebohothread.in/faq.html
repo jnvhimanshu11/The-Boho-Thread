@@ -199,29 +199,7 @@
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
 
-  const DEFAULT_CONTENT = `
-    <h2>Ordering & Payment</h2>
-    <p><strong>How do I place an order?</strong><br>Browse our shop, select your items, and reach out to us via the <a href="contact.html">Contact page</a> or WhatsApp to confirm your order and arrange payment.</p>
-    <p><strong>What payment methods do you accept?</strong><br>We accept UPI, bank transfer, and cash on delivery (available in select areas). Payment details are shared upon order confirmation.</p>
-    <p><strong>Is it safe to shop with TheBohoThread?</strong><br>Yes. We take your privacy and security seriously. See our <a href="data-policy.html">Privacy Policy</a> for details on how we handle your information.</p>
-
-    <h2>Products</h2>
-    <p><strong>Are the product images accurate?</strong><br>We do our best to represent every product accurately. Slight colour variations may occur due to screen settings and lighting conditions.</p>
-    <p><strong>Can I request a product not listed on the site?</strong><br>Absolutely! Contact us and we'll do our best to source it for you.</p>
-
-    <h2>Shipping</h2>
-    <p><strong>How long does delivery take?</strong><br>Standard delivery takes 5–7 business days. Express options may be available — see our <a href="shipping.html">Shipping & Delivery Policy</a> for full details.</p>
-    <p><strong>Do you ship pan-India?</strong><br>Yes, we ship across India. International shipping is not currently available.</p>
-
-    <h2>Returns & Refunds</h2>
-    <p><strong>What is your return policy?</strong><br>We offer a 7-day return window on most items. Please see our <a href="returns.html">Return & Refund Policy</a> for full details and exclusions.</p>
-    <p><strong>How do I initiate a return?</strong><br>Contact us at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a> with your order details and reason for return.</p>
-
-    <h2>Contact & Support</h2>
-    <p><strong>How can I reach you?</strong><br>Visit our <a href="contact.html">Contact page</a> to send us a message, or reach us directly at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a>.</p>
-
-    <blockquote>Can't find your answer here? We're just a message away — reach out and we'll get back to you within 24 hours.</blockquote>
-  `;
+  const DEFAULT_CONTENT = ``;
 
   async function loadContent() {
     const contentEl = document.getElementById('policy-content');
