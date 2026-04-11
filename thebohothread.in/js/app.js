@@ -215,7 +215,7 @@ function productCardHTML(p) {
       <img src="${(p.images&&p.images.length>0)?p.images[0]:(p.image||'https://via.placeholder.com/400x300/1a2a3a/c9a84c?text=No+Image')}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x300/1a2a3a/c9a84c?text=No+Image'"/>
       <div class="product-badges">${badge}</div>
       <button class="wish-btn ${wishlisted?'wishlisted':''}" onclick="event.stopPropagation();toggleWishlist('${p.id}')" aria-label="Wishlist">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path class="heart-icon" d="M12 21C12 21 3 14.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14.5 12 21 12 21Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg viewBox="0 0 24 24" fill="${wishlisted?'#e00b20':'none'}" stroke="${wishlisted?'#e00b20':'#666'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       </button>
     </div>
     <div class="product-card-body">
@@ -285,7 +285,7 @@ window.openProductModal = function(id) {
   const wishlisted=wishlist.map(String).includes(String(id));
   const wBtn=document.getElementById('modal-wish-btn');
   wBtn.className='modal-wish-btn '+(wishlisted?'wishlisted':'');
-  wBtn.innerHTML=`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path class="heart-icon" d="M12 21C12 21 3 14.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14.5 12 21 12 21Z" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  wBtn.innerHTML=`<svg viewBox="0 0 24 24" fill="${wishlisted?'#e00b20':'none'}" stroke="${wishlisted?'#e00b20':'#888'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
   wBtn.onclick=()=>toggleWishlist(id);
   document.getElementById('modal-add-cart').onclick=()=>{addToCartQty(id,modalQty);closeModal();};
   productModal.classList.add('open'); document.body.style.overflow='hidden';

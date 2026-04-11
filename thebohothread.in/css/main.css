@@ -510,12 +510,7 @@ a.nav-btn { text-decoration: none; display: flex; align-items: center; justify-c
   box-shadow: 0 1px 4px rgba(0,0,0,0.25);
 }
 .wish-btn:hover { transform: scale(1.12); background: #fff; }
-.wish-btn svg { width: 17px; height: 17px; display: block; }
-/* default: outline heart — grey */
-.wish-btn .heart-icon { stroke: #888; fill: none; stroke-width: 2; transition: stroke 0.15s, fill 0.15s; }
-/* wishlisted: filled red heart */
-.wish-btn.wishlisted .heart-icon { stroke: #e00b20; fill: #e00b20; }
-.wish-btn.wishlisted { background: #fff; }
+.wish-btn svg { width: 16px; height: 16px; display: block; }
 
 .product-card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
 .product-cat-tag {
@@ -790,11 +785,7 @@ a.nav-btn { text-decoration: none; display: flex; align-items: center; justify-c
   background: rgba(255,255,255,0.05);
 }
 .modal-wish-btn svg { width: 20px; height: 20px; display: block; }
-.modal-wish-btn .heart-icon { stroke: #aaa; fill: none; stroke-width: 2; transition: stroke 0.15s, fill 0.15s; }
 .modal-wish-btn:hover { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.08); }
-.modal-wish-btn:hover .heart-icon { stroke: #fff; }
-/* wishlisted — only heart turns red, button style stays same */
-.modal-wish-btn.wishlisted .heart-icon { stroke: #e00b20; fill: #e00b20; }
 
 /* Qty picker in modal */
 .qty-picker { display: flex; align-items: center; gap: 14px; }
