@@ -27,7 +27,9 @@ const db   = getFirestore(_app);
 async function fsGetAll(colName, orderField = 'createdAt', dir = 'desc') {
   // Never use orderBy() — requires Firestore indexes. Sort in JS instead.
   try {
+    console.log(`[Firebase] Fetching collection: ${colName}...`);
     const snap = await getDocs(collection(db, colName));
+    console.log(`[Firebase] ${colName}: got ${snap.docs.length} docs`);
     const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     docs.sort((a, b) => {
       let va = a[orderField], vb = b[orderField];
@@ -106,7 +108,18 @@ async function loadData() {
     renderProducts(); renderScroller(trendingIds); renderCategories();
   } catch(e) {
     console.error('Firebase load error:', e);
-    loadDemoData();
+    const isPermission = e.code === 'permission-denied' || (e.message||'').toLowerCase().includes('permission');
+    productsGrid.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-muted);">
+        <p style="font-size:1.1rem;font-weight:600;color:var(--cream);margin-bottom:8px;">
+          ${isPermission ? 'Firestore Permission Denied' : 'Could not load products'}
+        </p>
+        <p style="font-size:0.88rem;max-width:460px;margin:0 auto;line-height:1.7;">
+          ${isPermission
+            ? 'Your Firestore Security Rules are blocking public reads. Go to Firebase Console → Firestore → Rules and allow reads.'
+            : 'Check your internet connection or Firebase config. Error: ' + (e.message || e.code || e)}
+        </p>
+      </div>`;
   }
 }
 

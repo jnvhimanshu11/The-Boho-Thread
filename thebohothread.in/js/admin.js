@@ -401,6 +401,15 @@ window.saveProduct = async function() {
       if (!price || isNaN(price) || price <= 0) { adminToast('Valid price is required.','error'); return; }
     }
 
+    // Check total payload size — Firestore limit is 1MB per document
+    const payloadCheck = JSON.stringify({ name, images: uploadedImages });
+    const sizeKB = Math.round(new Blob([payloadCheck]).size / 1024);
+    if (sizeKB > 900) {
+      if (saveBtn) { saveBtn.disabled=false; saveBtn.innerHTML='Save Product'; }
+      adminToast(`Images too large (${sizeKB}KB). Please use smaller images or paste URLs instead of uploading files. Max ~900KB total.`, 'error');
+      return;
+    }
+
     const payload = {
       name, category:cat, description:desc, price, original_price: orig || null,
       rating: rating || null, badge: badge||'', image: primaryImage,
