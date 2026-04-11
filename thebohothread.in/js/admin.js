@@ -93,6 +93,19 @@ let allReviews    = [];
 let trendingList  = [];   // array of product IDs in order
 let currentReviewFilter = 'pending';
 let confirmCallback     = null;
+
+// ── TOAST (defined early — used by loadAllData and all functions) ──
+window.adminToast = function(msg, type='') {
+  const el = document.createElement('div');
+  el.className = 'a-toast ' + type;
+  el.textContent = msg;
+  document.getElementById('admin-toast').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+};
+
+const _spinStyle = document.createElement('style');
+_spinStyle.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+document.head.appendChild(_spinStyle);
 // Multi-image state: array of {url:'', base64:''}
 let productImageSlots   = [];
 let usingSizePricing    = false;
@@ -742,16 +755,6 @@ window.closeConfirm = function() { document.getElementById('confirm-modal').clas
 document.getElementById('product-modal-backdrop').onclick=e=>{if(e.target===document.getElementById('product-modal-backdrop'))closeProductModal();};
 document.getElementById('excel-import-modal-backdrop').onclick=e=>{if(e.target===document.getElementById('excel-import-modal-backdrop'))closeExcelImportModal();};
 document.getElementById('confirm-modal').onclick=e=>{if(e.target===document.getElementById('confirm-modal'))closeConfirm();};
-
-// ═════════════════════════════════════════════════════════════
-//  TOAST
-// ═════════════════════════════════════════════════════════════
-window.adminToast = function(msg,type='') {
-  const el=document.createElement('div'); el.className='a-toast '+type; el.textContent=msg;
-  document.getElementById('admin-toast').appendChild(el); setTimeout(()=>el.remove(),3500);
-};
-
-const s=document.createElement('style'); s.textContent='@keyframes spin{to{transform:rotate(360deg)}}'; document.head.appendChild(s);
 
 // ═════════════════════════════════════════════════════════════
 //  TRENDING PRODUCTS MANAGEMENT
