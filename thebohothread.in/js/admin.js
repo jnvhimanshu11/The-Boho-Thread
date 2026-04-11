@@ -740,6 +740,7 @@ window.confirmDelete = function(type,id,name) {
 window.closeConfirm = function() { document.getElementById('confirm-modal').classList.remove('open'); confirmCallback=null; };
 
 document.getElementById('product-modal-backdrop').onclick=e=>{if(e.target===document.getElementById('product-modal-backdrop'))closeProductModal();};
+document.getElementById('excel-import-modal-backdrop').onclick=e=>{if(e.target===document.getElementById('excel-import-modal-backdrop'))closeExcelImportModal();};
 document.getElementById('confirm-modal').onclick=e=>{if(e.target===document.getElementById('confirm-modal'))closeConfirm();};
 
 // ═════════════════════════════════════════════════════════════
@@ -834,4 +835,280 @@ window.clearTrending = function() {
   trendingList = [];
   renderTrendingList();
   adminToast('Trending list cleared. Click "Save Order" to apply.','');
+};
+
+// ═════════════════════════════════════════════════════════════
+// EXCEL BULK IMPORT
+// ═════════════════════════════════════════════════════════════
+
+let excelImportRows = []; // parsed & validated rows ready to import
+
+// ── Template download ─────────────────────────────────────────
+window.downloadExcelTemplate = function() {
+  const XLSX = window.XLSX;
+  if (!XLSX) { adminToast('SheetJS not loaded yet, please try again.', 'error'); return; }
+
+  const header = ['name','category','description','price','original_price','badge','rating','image_url','extra_images','sizes'];
+  const sample = [
+    'Floral Boho Kurti',
+    'Kurtis',
+    'Beautiful floral print kurti for everyday wear',
+    '999',
+    '1299',
+    'new',
+    '4.5',
+    'https://example.com/image1.jpg',
+    'https://example.com/image2.jpg|https://example.com/image3.jpg',
+    'S:899|M:999|L:1099|XL:1199'
+  ];
+  const notes = [
+    '* Required',
+    '* Required — must match an existing category name',
+    'Optional',
+    '* Required if no sizes; base/fallback price',
+    'Optional — crossed-out original price',
+    'Optional — new / sale / hot / trending / limited / bestseller',
+    'Optional — 0 to 5',
+    '* Required — direct image URL',
+    'Optional — extra image URLs separated by |',
+    'Optional — size:price pairs separated by | e.g. S:499|M:599'
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet([header, sample, notes]);
+
+  // Column widths
+  ws['!cols'] = header.map((_, i) => ({ wch: [22,20,32,10,16,12,8,40,50,35][i] }));
+
+  // Style header row (best-effort — SheetJS CE does not do rich styling, just note color)
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Products');
+  XLSX.writeFile(wb, 'thebohothread_product_import_template.xlsx');
+  adminToast('Template downloaded!', 'success');
+};
+
+// ── Modal open / close ────────────────────────────────────────
+window.openExcelImportModal = function() {
+  excelImportRows = [];
+  document.getElementById('excel-import-modal-backdrop').classList.add('open');
+  document.getElementById('excel-preview-wrap').style.display = 'none';
+  document.getElementById('excel-import-progress').style.display = 'none';
+  document.getElementById('excel-file-name').style.display = 'none';
+  document.getElementById('excel-file-input').value = '';
+  document.getElementById('excel-import-btn').disabled = true;
+  document.getElementById('excel-import-btn').style.opacity = '0.5';
+  resetDropZone();
+};
+
+window.closeExcelImportModal = function() {
+  document.getElementById('excel-import-modal-backdrop').classList.remove('open');
+  excelImportRows = [];
+};
+
+function resetDropZone() {
+  const dz = document.getElementById('excel-drop-zone');
+  dz.style.borderColor = 'rgba(201,168,76,0.4)';
+  dz.style.background = 'transparent';
+}
+
+window.excelDragOver = function(e) {
+  e.preventDefault();
+  const dz = document.getElementById('excel-drop-zone');
+  dz.style.borderColor = 'var(--gold)';
+  dz.style.background = 'rgba(201,168,76,0.06)';
+};
+
+window.excelDragLeave = function(e) { resetDropZone(); };
+
+window.excelDrop = function(e) {
+  e.preventDefault();
+  resetDropZone();
+  const file = e.dataTransfer.files[0];
+  if (file) handleExcelFile(file);
+};
+
+// ── Parse uploaded file ───────────────────────────────────────
+window.handleExcelFile = function(file) {
+  if (!file) return;
+  const XLSX = window.XLSX;
+  if (!XLSX) { adminToast('SheetJS library not ready. Refresh and try again.', 'error'); return; }
+
+  const allowed = ['xlsx','xls','csv'];
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!allowed.includes(ext)) { adminToast('Please upload a .xlsx, .xls, or .csv file.', 'error'); return; }
+
+  const fnEl = document.getElementById('excel-file-name');
+  fnEl.textContent = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+  fnEl.style.display = 'block';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      parseAndPreview(rows);
+    } catch(err) {
+      adminToast('Failed to read file: ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+function parseAndPreview(rawRows) {
+  excelImportRows = [];
+  const tbody = document.getElementById('excel-preview-tbody');
+  tbody.innerHTML = '';
+
+  let errorCount = 0;
+  const validRows = [];
+
+  rawRows.forEach((row, i) => {
+    // Normalise keys to lowercase
+    const r = {};
+    Object.keys(row).forEach(k => { r[k.toLowerCase().trim().replace(/\s+/g,'_')] = String(row[k]).trim(); });
+
+    const name     = r.name || '';
+    const category = r.category || '';
+    const price    = parseFloat(r.price) || 0;
+    const origPrice= parseFloat(r.original_price) || null;
+    const desc     = r.description || '';
+    const badge    = r.badge || '';
+    const rating   = parseFloat(r.rating) || null;
+    const imageUrl = r.image_url || '';
+    const extraImgs= r.extra_images ? r.extra_images.split('|').map(u=>u.trim()).filter(Boolean) : [];
+    const sizesRaw = r.sizes || '';
+
+    const errors = [];
+    if (!name) errors.push('Name missing');
+    if (!category) errors.push('Category missing');
+    if (!imageUrl) errors.push('Image URL missing');
+    if (!price && !sizesRaw) errors.push('Price missing');
+
+    // Parse sizes
+    let sizes = [];
+    if (sizesRaw) {
+      sizesRaw.split('|').forEach(pair => {
+        const [sz, sp] = pair.split(':');
+        if (sz && sp) sizes.push({ size: sz.trim(), price: parseFloat(sp), original_price: origPrice });
+      });
+    }
+
+    const allImages = imageUrl ? [imageUrl, ...extraImgs] : extraImgs;
+    const effectivePrice = sizes.length ? sizes[0].price : price;
+
+    const statusHtml = errors.length
+      ? `<span style="color:#e05c5c;font-size:0.78rem;">❌ ${errors.join(', ')}</span>`
+      : `<span style="color:#4caf7d;font-size:0.78rem;">✓ Ready</span>`;
+
+    if (errors.length) errorCount++;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:var(--text-muted)">${i+1}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${name}">${name || '<em style="color:var(--text-muted)">—</em>'}</td>
+      <td>${category || '<em style="color:var(--text-muted)">—</em>'}</td>
+      <td>₹${effectivePrice || '—'}</td>
+      <td>${badge || '—'}</td>
+      <td style="font-size:0.78rem;color:var(--text-muted);">${allImages.length} image${allImages.length!==1?'s':''}</td>
+      <td>${statusHtml}</td>
+    `;
+    tbody.appendChild(tr);
+
+    if (!errors.length) {
+      validRows.push({ name, category, description:desc, price:effectivePrice, original_price:origPrice, badge, rating, image:imageUrl, images:allImages, sizes });
+    }
+  });
+
+  excelImportRows = validRows;
+  document.getElementById('excel-preview-wrap').style.display = 'block';
+  document.getElementById('excel-preview-count').textContent = rawRows.length;
+
+  const errEl = document.getElementById('excel-preview-errors');
+  errEl.textContent = errorCount ? `⚠ ${errorCount} row(s) have errors and will be skipped` : '';
+
+  const importBtn = document.getElementById('excel-import-btn');
+  if (validRows.length > 0) {
+    importBtn.disabled = false;
+    importBtn.style.opacity = '1';
+    importBtn.innerHTML = `<i class="ph ph-upload-simple"></i> Import ${validRows.length} Product${validRows.length!==1?'s':''}`;
+  } else {
+    importBtn.disabled = true;
+    importBtn.style.opacity = '0.5';
+    importBtn.innerHTML = `<i class="ph ph-upload-simple"></i> Import Products`;
+  }
+
+  if (rawRows.length === 0) {
+    adminToast('No data rows found in the file.', 'error');
+  } else {
+    adminToast(`Parsed ${rawRows.length} row(s) — ${validRows.length} valid, ${errorCount} skipped.`, validRows.length ? 'success' : 'error');
+  }
+}
+
+// ── Run the actual import ─────────────────────────────────────
+window.runExcelImport = async function() {
+  if (!excelImportRows.length) return;
+
+  const btn = document.getElementById('excel-import-btn');
+  const progressWrap = document.getElementById('excel-import-progress');
+  const progressBar  = document.getElementById('excel-progress-bar');
+  const progressLabel= document.getElementById('excel-progress-label');
+
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+  progressWrap.style.display = 'block';
+
+  let done = 0;
+  const total = excelImportRows.length;
+  const imported = [];
+  const failed = [];
+
+  for (const row of excelImportRows) {
+    progressLabel.textContent = `Importing ${done + 1} of ${total}: "${row.name}"…`;
+    progressBar.style.width = `${Math.round((done / total) * 100)}%`;
+
+    try {
+      const payload = {
+        name:           row.name,
+        category:       row.category,
+        description:    row.description || '',
+        price:          row.price,
+        original_price: row.original_price || null,
+        badge:          row.badge || '',
+        rating:         row.rating || null,
+        image:          row.image,
+        images:         row.images || [],
+        sizes:          row.sizes  || [],
+      };
+
+      const saved = await fsAdd(COL.products, payload);
+      products.unshift(saved);
+      imported.push(row.name);
+    } catch(e) {
+      console.error('Import row failed:', row.name, e);
+      failed.push(row.name);
+    }
+
+    done++;
+  }
+
+  progressBar.style.width = '100%';
+  progressLabel.textContent = `Done! ${imported.length} imported${failed.length ? `, ${failed.length} failed` : ''}.`;
+
+  renderProductsTable();
+  renderRecentTable();
+  updateStats();
+  populateTrendingSelect();
+
+  if (failed.length) {
+    adminToast(`Imported ${imported.length} products. ${failed.length} failed — check console.`, 'error');
+  } else {
+    adminToast(`🎉 ${imported.length} product${imported.length!==1?'s':''} imported successfully!`, 'success');
+    setTimeout(() => closeExcelImportModal(), 1800);
+  }
+
+  btn.disabled = false;
+  btn.style.opacity = '1';
+  excelImportRows = [];
 };

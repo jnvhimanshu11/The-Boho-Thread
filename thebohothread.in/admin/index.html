@@ -6,6 +6,7 @@
   <title>TheBohoThread — Admin Panel</title>
   <link rel="stylesheet" href="../css/admin.css" />
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <style>
     .rte-btn {
       background: var(--navy-card);
@@ -259,6 +260,9 @@
           <h3>All Products</h3>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <input class="form-control" id="product-search" placeholder="Search…" style="width:200px;height:36px;" oninput="filterProductTable(this.value)" />
+            <button class="btn btn-outline-gold" onclick="openExcelImportModal()" title="Bulk import products via Excel">
+              <i class="ph ph-microsoft-excel-logo"></i> Import Excel
+            </button>
             <button class="btn btn-gold" onclick="openProductModal()">
               <i class="ph ph-plus"></i> Add Product
             </button>
@@ -1106,6 +1110,71 @@
       <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
         <button class="btn btn-outline-gold" onclick="closeProductModal()">Cancel</button>
         <button class="btn btn-gold" id="save-product-btn" onclick="saveProduct()"><i class="ph ph-floppy-disk"></i> Save Product</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── EXCEL IMPORT MODAL ── -->
+<div class="modal-backdrop" id="excel-import-modal-backdrop">
+  <div class="admin-modal" style="max-width:720px;">
+    <div class="admin-modal-header">
+      <h3><i class="ph ph-microsoft-excel-logo" style="color:#1d6f42;margin-right:8px;"></i> Bulk Import Products via Excel</h3>
+      <button class="modal-x" onclick="closeExcelImportModal()"><i class="ph ph-x"></i></button>
+    </div>
+    <div class="admin-modal-body">
+
+      <!-- Step 1: Download Template -->
+      <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:10px;padding:16px;margin-bottom:20px;">
+        <p style="font-weight:600;margin-bottom:8px;"><i class="ph ph-info" style="color:var(--gold);"></i> Step 1 — Download the template</p>
+        <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:12px;">Fill in the Excel template with your product data. Image URLs must be direct links (e.g. <code>https://…/image.jpg</code>). For multiple images, separate with <code>|</code>. For sizes, use format <code>S:499|M:599|L:699</code>.</p>
+        <button class="btn btn-outline-gold btn-sm" onclick="downloadExcelTemplate()">
+          <i class="ph ph-download-simple"></i> Download Template (.xlsx)
+        </button>
+      </div>
+
+      <!-- Step 2: Upload File -->
+      <div style="margin-bottom:20px;">
+        <p style="font-weight:600;margin-bottom:10px;"><i class="ph ph-upload-simple" style="color:var(--gold);"></i> Step 2 — Upload your filled Excel file</p>
+        <div id="excel-drop-zone" style="border:2px dashed rgba(201,168,76,0.4);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s;" onclick="document.getElementById('excel-file-input').click()" ondragover="excelDragOver(event)" ondrop="excelDrop(event)" ondragleave="excelDragLeave(event)">
+          <i class="ph ph-file-xls" style="font-size:2.4rem;color:var(--gold);display:block;margin-bottom:10px;"></i>
+          <p style="color:var(--text-muted);font-size:0.9rem;">Drag & drop your .xlsx / .xls file here, or <span style="color:var(--gold);text-decoration:underline;">click to browse</span></p>
+          <p id="excel-file-name" style="margin-top:8px;font-size:0.84rem;color:var(--gold);display:none;"></p>
+        </div>
+        <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelFile(this.files[0])" />
+      </div>
+
+      <!-- Preview Table -->
+      <div id="excel-preview-wrap" style="display:none;margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <p style="font-weight:600;"><i class="ph ph-table" style="color:var(--gold);"></i> Preview — <span id="excel-preview-count">0</span> product(s) found</p>
+          <span id="excel-preview-errors" style="font-size:0.82rem;color:#e05c5c;"></span>
+        </div>
+        <div style="overflow-x:auto;max-height:240px;border-radius:8px;border:1px solid rgba(255,255,255,0.07);">
+          <table class="admin-table" id="excel-preview-table">
+            <thead>
+              <tr>
+                <th>#</th><th>Name</th><th>Category</th><th>Price</th><th>Badge</th><th>Images</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="excel-preview-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div id="excel-import-progress" style="display:none;margin-bottom:16px;">
+        <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:6px;" id="excel-progress-label">Importing…</p>
+        <div style="background:rgba(255,255,255,0.07);border-radius:20px;height:8px;overflow:hidden;">
+          <div id="excel-progress-bar" style="height:100%;background:var(--gold);border-radius:20px;width:0%;transition:width 0.3s;"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;justify-content:flex-end;">
+        <button class="btn btn-outline-gold" onclick="closeExcelImportModal()">Cancel</button>
+        <button class="btn btn-gold" id="excel-import-btn" onclick="runExcelImport()" disabled style="opacity:0.5;">
+          <i class="ph ph-upload-simple"></i> Import Products
+        </button>
       </div>
     </div>
   </div>
