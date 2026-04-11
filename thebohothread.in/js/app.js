@@ -132,13 +132,9 @@ function normaliseProduct(r) {
 }
 
 function loadDemoData() {
-  allProducts = [
-    {id:1,name:'Ivory Ceramic Vase',category:'Decor',price:1299,originalPrice:1799,description:'Handcrafted ceramic vase with matte ivory finish.',image:'https://images.unsplash.com/photo-1578500351865-d6c3706f46bc?w=600&q=80',badge:'New',rating:4.5,createdAt:{toMillis:()=>Date.now()-1000}},
-    {id:2,name:'Linen Throw Blanket',category:'Textiles',price:2499,description:'Premium linen blend throw.',image:'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?w=600&q=80',badge:'Bestseller',rating:5,createdAt:{toMillis:()=>Date.now()-2000}},
-    {id:3,name:'Oak Side Table',category:'Furniture',price:5999,originalPrice:7499,description:'Solid oak with clean geometric lines.',image:'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80',badge:'Sale',rating:4,createdAt:{toMillis:()=>Date.now()-3000}},
-    {id:4,name:'Artisan Coffee Mug',category:'Kitchen',price:649,description:'Hand-thrown stoneware mug.',image:'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80',badge:'Hot',rating:4.5,createdAt:{toMillis:()=>Date.now()-4000}},
-  ];
-  allCategories = [{id:1,name:'Decor',icon:'🏺'},{id:2,name:'Textiles',icon:'🧶'},{id:3,name:'Furniture',icon:'🪑'},{id:4,name:'Kitchen',icon:'🍳'}];
+  // No demo products — only show real products added via admin panel
+  allProducts = [];
+  allCategories = [];
   renderProducts(); renderScroller(); renderCategories();
 }
 
