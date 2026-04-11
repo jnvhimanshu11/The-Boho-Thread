@@ -519,9 +519,9 @@ a.nav-btn { text-decoration: none; display: flex; align-items: center; justify-c
 .wish-btn.wishlisted,
 .wish-btn.wishlisted:hover {
   background: rgba(0,0,0,0.45);
-  color: #c0001a;
+  color: #ff0000;
   transform: scale(1.1);
-  filter: drop-shadow(0 0 5px rgba(192,0,26,0.6));
+  filter: drop-shadow(0 0 5px rgb(255, 0, 0));
 }
 
 .product-card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
@@ -799,8 +799,8 @@ a.nav-btn { text-decoration: none; display: flex; align-items: center; justify-c
   background: transparent;
 }
 .modal-wish-btn:hover { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.7); background: transparent; }
-.modal-wish-btn.wishlisted { color: #c0001a; border-color: rgba(201,168,76,0.3); background: transparent; }
-.modal-wish-btn.wishlisted i { filter: drop-shadow(0 0 4px rgba(192,0,26,0.5)); }
+.modal-wish-btn.wishlisted { color: #ff0505; border-color: rgba(201,168,76,0.3); background: transparent; }
+.modal-wish-btn.wishlisted i { filter: drop-shadow(0 0 4px rgb(255, 0, 0)); }
 
 /* Qty picker in modal */
 .qty-picker { display: flex; align-items: center; gap: 14px; }
