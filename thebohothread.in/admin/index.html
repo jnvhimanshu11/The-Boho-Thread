@@ -31,6 +31,75 @@
     #rte-editor ul, #rte-editor ol { padding-left:1.5em; margin-bottom:0.9em; }
     #rte-editor blockquote { border-left:3px solid var(--gold); margin:1em 0; padding:10px 16px; background:rgba(201,168,76,0.06); border-radius:0 6px 6px 0; font-style:italic; }
     #rte-editor a { color:var(--gold); text-decoration:underline; }
+
+    /* ── Page Editor Layout: frozen header+toolbar, scrollable editor, frozen footer ── */
+    .page-editor-panel {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .page-editor-panel .panel-header {
+      flex-shrink: 0;
+      background: var(--navy-card);
+    }
+    .page-editor-panel .panel-body {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+      padding: 24px 24px 0 24px;
+    }
+    .page-editor-toolbar {
+      flex-shrink: 0;
+    }
+    .page-editor-content {
+      flex: 1 1 0 !important;
+      overflow-y: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+    }
+    .page-editor-footer {
+      flex-shrink: 0;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 0 16px 0;
+      flex-wrap: wrap;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      background: var(--navy-card);
+    }
+    /* Editor pages fill full available height, no outer scroll */
+    #page-data-policy,
+    #page-faq,
+    #page-shipping,
+    #page-returns {
+      height: calc(100vh - 64px);
+      overflow: hidden !important;
+      box-sizing: border-box;
+      padding: 32px;
+    }
+    #page-data-policy.active,
+    #page-faq.active,
+    #page-shipping.active,
+    #page-returns.active {
+      display: flex !important;
+      flex-direction: column;
+    }
+    #page-data-policy > div,
+    #page-faq > div,
+    #page-shipping > div,
+    #page-returns > div {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+      width: 100%;
+      max-width: 900px;
+    }
   </style>
 </head>
 <body>
@@ -447,7 +516,7 @@
     <div class="admin-page" id="page-data-policy">
       <div style="max-width:900px;">
 
-        <div class="admin-panel">
+        <div class="admin-panel page-editor-panel">
           <div class="panel-header">
             <h3><i class="ph ph-file-text" style="color:var(--gold);"></i> &nbsp;Data Collection &amp; Privacy Policy Page</h3>
             <span style="font-size:0.8rem;color:var(--text-muted);">Edits go live instantly on <a href="../data-policy.html" target="_blank" style="color:var(--gold);">data-policy.html</a></span>
@@ -455,7 +524,7 @@
           <div class="panel-body">
 
             <!-- Rich Text Toolbar -->
-            <div id="rte-toolbar" style="
+            <div id="rte-toolbar" class="page-editor-toolbar" style="
               display:flex;flex-wrap:wrap;gap:4px;
               background:var(--navy);border:1px solid rgba(255,255,255,0.1);
               border-radius:8px 8px 0 0;padding:10px 12px;
@@ -546,8 +615,7 @@
             </div>
 
             <!-- Editor Area -->
-            <div id="rte-editor" contenteditable="true" spellcheck="true" style="
-              min-height:420px;
+            <div id="rte-editor" class="page-editor-content" contenteditable="true" spellcheck="true" style="
               background:var(--navy-card);
               border:1px solid rgba(255,255,255,0.1);
               border-radius:0 0 8px 8px;
@@ -561,7 +629,7 @@
               <p style="color:var(--text-muted);">Loading content…</p>
             </div>
 
-            <div style="display:flex;gap:12px;align-items:center;margin-top:20px;flex-wrap:wrap;">
+            <div class="page-editor-footer">
               <button class="btn btn-gold" onclick="savePolicyContent()" id="policy-save-btn">
                 <i class="ph ph-floppy-disk"></i> Save &amp; Publish
               </button>
@@ -584,14 +652,14 @@
   <!-- ════ FAQ PAGE ════ -->
     <div class="admin-page" id="page-faq">
       <div style="max-width:900px;">
-        <div class="admin-panel">
+        <div class="admin-panel page-editor-panel">
           <div class="panel-header">
             <h3><i class="ph ph-question" style="color:var(--gold);"></i> &nbsp;FAQ Page</h3>
             <span style="font-size:0.8rem;color:var(--text-muted);">Edits go live instantly on <a href="../faq.html" target="_blank" style="color:var(--gold);">faq.html</a></span>
           </div>
           <div class="panel-body">
             <!-- Rich Text Toolbar (reused) -->
-            <div id="rte-toolbar-faq" style="display:flex;flex-wrap:wrap;gap:4px;background:var(--navy);border:1px solid rgba(255,255,255,0.1);border-radius:8px 8px 0 0;padding:10px 12px;border-bottom:none;">
+            <div id="rte-toolbar-faq" class="page-editor-toolbar" style="display:flex;flex-wrap:wrap;gap:4px;background:var(--navy);border:1px solid rgba(255,255,255,0.1);border-radius:8px 8px 0 0;padding:10px 12px;border-bottom:none;">
               <select onchange="rteExecFor('rte-editor-faq','fontName',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
                 <option value="">Font Family</option>
                 <option value="'Cormorant Garamond',serif">Cormorant (Serif)</option>
@@ -624,10 +692,10 @@
               <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','redo')"><i class="ph ph-arrow-clockwise"></i></button>
               <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','removeFormat')" style="margin-left:auto;"><i class="ph ph-eraser"></i></button>
             </div>
-            <div id="rte-editor-faq" contenteditable="true" spellcheck="true" style="min-height:420px;background:var(--navy-card);border:1px solid rgba(255,255,255,0.1);border-radius:0 0 8px 8px;padding:24px 28px;color:var(--text-main);font-size:0.95rem;line-height:1.85;outline:none;overflow-y:auto;">
+            <div id="rte-editor-faq" class="page-editor-content" contenteditable="true" spellcheck="true" style="background:var(--navy-card);border:1px solid rgba(255,255,255,0.1);border-radius:0 0 8px 8px;padding:24px 28px;color:var(--text-main);font-size:0.95rem;line-height:1.85;outline:none;overflow-y:auto;">
               <p style="color:var(--text-muted);">Loading content…</p>
             </div>
-            <div style="display:flex;gap:12px;align-items:center;margin-top:20px;flex-wrap:wrap;">
+            <div class="page-editor-footer">
               <button class="btn btn-gold" onclick="savePageContent('faq')" id="faq-save-btn">
                 <i class="ph ph-floppy-disk"></i> Save &amp; Publish
               </button>
@@ -649,13 +717,13 @@
     <!-- ════ SHIPPING PAGE ════ -->
     <div class="admin-page" id="page-shipping">
       <div style="max-width:900px;">
-        <div class="admin-panel">
+        <div class="admin-panel page-editor-panel">
           <div class="panel-header">
             <h3><i class="ph ph-truck" style="color:var(--gold);"></i> &nbsp;Shipping &amp; Delivery Policy Page</h3>
             <span style="font-size:0.8rem;color:var(--text-muted);">Edits go live instantly on <a href="../shipping.html" target="_blank" style="color:var(--gold);">shipping.html</a></span>
           </div>
           <div class="panel-body">
-            <div id="rte-toolbar-shipping" style="display:flex;flex-wrap:wrap;gap:4px;background:var(--navy);border:1px solid rgba(255,255,255,0.1);border-radius:8px 8px 0 0;padding:10px 12px;border-bottom:none;">
+            <div id="rte-toolbar-shipping" class="page-editor-toolbar" style="display:flex;flex-wrap:wrap;gap:4px;background:var(--navy);border:1px solid rgba(255,255,255,0.1);border-radius:8px 8px 0 0;padding:10px 12px;border-bottom:none;">
               <select onchange="rteExecFor('rte-editor-shipping','fontName',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
                 <option value="">Font Family</option>
                 <option value="'Cormorant Garamond',serif">Cormorant (Serif)</option>
@@ -688,10 +756,10 @@
               <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','redo')"><i class="ph ph-arrow-clockwise"></i></button>
               <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','removeFormat')" style="margin-left:auto;"><i class="ph ph-eraser"></i></button>
             </div>
-            <div id="rte-editor-shipping" contenteditable="true" spellcheck="true" style="min-height:420px;background:var(--navy-card);border:1px solid rgba(255,255,255,0.1);border-radius:0 0 8px 8px;padding:24px 28px;color:var(--text-main);font-size:0.95rem;line-height:1.85;outline:none;overflow-y:auto;">
+            <div id="rte-editor-shipping" class="page-editor-content" contenteditable="true" spellcheck="true" style="background:var(--navy-card);border:1px solid rgba(255,255,255,0.1);border-radius:0 0 8px 8px;padding:24px 28px;color:var(--text-main);font-size:0.95rem;line-height:1.85;outline:none;overflow-y:auto;">
               <p style="color:var(--text-muted);">Loading content…</p>
             </div>
-            <div style="display:flex;gap:12px;align-items:center;margin-top:20px;flex-wrap:wrap;">
+            <div class="page-editor-footer">
               <button class="btn btn-gold" onclick="savePageContent('shipping')" id="shipping-save-btn">
                 <i class="ph ph-floppy-disk"></i> Save &amp; Publish
               </button>
@@ -713,13 +781,13 @@
     <!-- ════ RETURNS PAGE ════ -->
     <div class="admin-page" id="page-returns">
       <div style="max-width:900px;">
-        <div class="admin-panel">
+        <div class="admin-panel page-editor-panel">
           <div class="panel-header">
             <h3><i class="ph ph-arrow-u-up-left" style="color:var(--gold);"></i> &nbsp;Return &amp; Refund Policy Page</h3>
             <span style="font-size:0.8rem;color:var(--text-muted);">Edits go live instantly on <a href="../returns.html" target="_blank" style="color:var(--gold);">returns.html</a></span>
           </div>
           <div class="panel-body">
-            <div id="rte-toolbar-returns" style="display:flex;flex-wrap:wrap;gap:4px;background:var(--navy);border:1px solid rgba(255,255,255,0.1);border-radius:8px 8px 0 0;padding:10px 12px;border-bottom:none;">
+            <div id="rte-toolbar-returns" class="page-editor-toolbar" style="display:flex;flex-wrap:wrap;gap:4px;background:var(--navy);border:1px solid rgba(255,255,255,0.1);border-radius:8px 8px 0 0;padding:10px 12px;border-bottom:none;">
               <select onchange="rteExecFor('rte-editor-returns','fontName',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
                 <option value="">Font Family</option>
                 <option value="'Cormorant Garamond',serif">Cormorant (Serif)</option>
@@ -752,10 +820,10 @@
               <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','redo')"><i class="ph ph-arrow-clockwise"></i></button>
               <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','removeFormat')" style="margin-left:auto;"><i class="ph ph-eraser"></i></button>
             </div>
-            <div id="rte-editor-returns" contenteditable="true" spellcheck="true" style="min-height:420px;background:var(--navy-card);border:1px solid rgba(255,255,255,0.1);border-radius:0 0 8px 8px;padding:24px 28px;color:var(--text-main);font-size:0.95rem;line-height:1.85;outline:none;overflow-y:auto;">
+            <div id="rte-editor-returns" class="page-editor-content" contenteditable="true" spellcheck="true" style="background:var(--navy-card);border:1px solid rgba(255,255,255,0.1);border-radius:0 0 8px 8px;padding:24px 28px;color:var(--text-main);font-size:0.95rem;line-height:1.85;outline:none;overflow-y:auto;">
               <p style="color:var(--text-muted);">Loading content…</p>
             </div>
-            <div style="display:flex;gap:12px;align-items:center;margin-top:20px;flex-wrap:wrap;">
+            <div class="page-editor-footer">
               <button class="btn btn-gold" onclick="savePageContent('returns')" id="returns-save-btn">
                 <i class="ph ph-floppy-disk"></i> Save &amp; Publish
               </button>
