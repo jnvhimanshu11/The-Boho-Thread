@@ -272,11 +272,6 @@ function renderScroller(trendingIds) {
   const html = items.map(makeCard).join('');
   // Only duplicate for infinite loop if enough cards to fill the screen
   scrollerTrack.innerHTML = items.length >= 4 ? html + html : html;
-  // Disable auto-scroll animation if not enough cards
-  if (items.length < 4) {
-    scrollerTrack.style.animation = 'none';
-    wrapper && (wrapper.style.overflowX = 'auto');
-  }
 
   // ── Scrollbar & arrow controls ──────────────────────────────
   const wrapper   = scrollerTrack.parentElement;
@@ -286,6 +281,12 @@ function renderScroller(trendingIds) {
   const nextBtn   = document.getElementById('scroller-next');
   const CARD_W    = 234;
   let manualMode  = false;
+
+  // Disable auto-scroll animation if not enough cards
+  if (items.length < 4) {
+    scrollerTrack.style.animation = 'none';
+    wrapper.style.overflowX = 'auto';
+  }
 
   function enterManual() {
     if (!manualMode) {
@@ -535,10 +536,12 @@ document.addEventListener('click',e=>{if(!mobileDrawer?.contains(e.target)&&!ham
 window.toast = function(msg,type='') { const el=document.createElement('div'); el.className=`toast ${type}`; el.textContent=msg; toastContainer.appendChild(el); setTimeout(()=>el.remove(),3200); };
 
 // ── INIT ─────────────────────────────────────────────────────
-buildHeroDots();
-heroTimer=setInterval(()=>goHeroSlide(heroIndex+1),5000);
-updateCartUI(); updateWishlistUI();
-loadData();
+document.addEventListener('DOMContentLoaded', () => {
+  buildHeroDots();
+  heroTimer=setInterval(()=>goHeroSlide(heroIndex+1),5000);
+  updateCartUI(); updateWishlistUI();
+  loadData();
+});
 const s=document.createElement('style'); s.textContent='@keyframes spin{to{transform:rotate(360deg)}}'; document.head.appendChild(s);
 
 // ── MODAL IMAGE CAROUSEL ─────────────────────────────────────
