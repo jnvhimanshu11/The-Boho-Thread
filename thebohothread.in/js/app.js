@@ -222,7 +222,7 @@ function productCardHTML(p) {
       <div class="product-cat-tag">${p.category||''}</div>
       <h3>${p.name}</h3>
       <div class="star-rating">${stars}</div>
-      <p class="product-desc">${p.description||''}</p>
+
       <div class="product-footer">
         <div class="product-price">₹${p.price.toLocaleString()}${origPrice}</div>
         <button class="add-cart-btn" onclick="event.stopPropagation();addToCart('${p.id}')">Add</button>
@@ -261,7 +261,13 @@ function renderScroller(trendingIds) {
   };
 
   const html = items.map(makeCard).join('');
-  scrollerTrack.innerHTML = html + html;
+  // Only duplicate for infinite loop if enough cards to fill the screen
+  scrollerTrack.innerHTML = items.length >= 4 ? html + html : html;
+  // Disable auto-scroll animation if not enough cards
+  if (items.length < 4) {
+    scrollerTrack.style.animation = 'none';
+    wrapper && (wrapper.style.overflowX = 'auto');
+  }
 
   // ── Scrollbar & arrow controls ──────────────────────────────
   const wrapper   = scrollerTrack.parentElement;
