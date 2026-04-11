@@ -413,6 +413,13 @@ window.toggleWishlist = function(id) {
   if(idx===-1){wishlist.push(sid);toast(`${p.name} added to wishlist ♡`,'success');}
   else{wishlist.splice(idx,1);toast(`${p.name} removed from wishlist`);}
   saveWishlist(); updateWishlistUI(); renderProducts();
+  // Instantly update modal heart if this product's modal is open
+  const wBtn = document.getElementById('modal-wish-btn');
+  if (wBtn) {
+    const nowWishlisted = wishlist.includes(sid);
+    wBtn.className = 'modal-wish-btn ' + (nowWishlisted ? 'wishlisted' : '');
+    wBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="${nowWishlisted?'#e00b20':'none'}" stroke="${nowWishlisted?'#e00b20':'#888'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+  }
 };
 function updateWishlistUI() { wishCountEl.textContent=wishlist.length; wishCountEl.classList.toggle('show',wishlist.length>0); renderWishlist(); }
 function renderWishlist() {
