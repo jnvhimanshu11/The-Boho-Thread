@@ -37,6 +37,7 @@ async function fsGetAll(colName, orderField = 'createdAt', dir = 'desc') {
 
 let allProducts    = [];
 let allCategories  = [];
+let allBadges      = [];
 let activeCategory = 'all';
 let searchQuery    = '';
 let sortMode       = 'default';
@@ -72,12 +73,14 @@ const toastContainer  = document.getElementById('toast-container');
 async function loadData() {
   productsGrid.innerHTML = '<div class="loader-wrap"><div class="spinner"></div></div>';
   try {
-    const [prods, cats] = await Promise.all([
+    const [prods, cats, bdgs] = await Promise.all([
       fsGetAll('products', 'createdAt', 'desc'),
       fsGetAll('categories', 'name', 'asc'),
+      fsGetAll('badges', 'name', 'asc'),
     ]);
     allProducts   = prods.map(normaliseProduct);
     allCategories = cats;
+    allBadges     = bdgs;
 
     // Load trending list from Firestore
     let trendingIds = null;
@@ -169,10 +172,31 @@ function renderProducts() {
   productsGrid.innerHTML = list.map(productCardHTML).join('');
 }
 
+// ── BADGE HELPER (Bug fix #1) ────────────────────────────────
+// Use colors from the badges collection fetched from Firestore.
+// Falls back to hardcoded defaults if the badge isn't in the DB yet.
+const BADGE_DEFAULTS = {
+  'new':        { bg: '#4caf7d', text: '#fff' },
+  'sale':       { bg: '#e05c5c', text: '#fff' },
+  'hot':        { bg: '#f5a623', text: '#fff' },
+  'trending':   { bg: '#9c6ade', text: '#fff' },
+  'limited':    { bg: '#e07b5c', text: '#fff' },
+  'bestseller': { bg: '#c9a84c', text: '#0d1b2a' },
+};
+function getBadgeStyle(name) {
+  const b = allBadges.find(x => x.name?.toLowerCase() === name?.toLowerCase());
+  if (b && b.color) {
+    return `background:${b.color};color:${b.text_color||'#fff'};`;
+  }
+  const d = BADGE_DEFAULTS[name?.toLowerCase()];
+  return d ? `background:${d.bg};color:${d.text};` : `background:var(--gold);color:var(--navy);`;
+}
+
 function productCardHTML(p) {
-  const wishlisted = wishlist.includes(p.id);
+  // Bug fix #2: normalise both sides to string for wishlist check
+  const wishlisted = wishlist.map(String).includes(String(p.id));
   const stars = starsHTML(p.rating||0);
-  const badge = p.badge?`<span class="product-badge badge-${p.badge.toLowerCase().replace(/\s/g,'-')}">${p.badge}</span>`:'';
+  const badge = p.badge ? `<span class="product-badge" style="${getBadgeStyle(p.badge)}">${p.badge}</span>` : '';
   const origPrice = p.originalPrice?`<span class="original">₹${p.originalPrice.toLocaleString()}</span>`:'';
   return `<article class="product-card" onclick="openProductModal(${p.id})">
     <div class="product-card-img-wrap">
@@ -199,14 +223,17 @@ function starsHTML(rating) { return Array.from({length:5},(_,i)=>`<span class="s
 
 // ── SCROLLER ─────────────────────────────────────────────────
 function renderScroller(trendingIds) {
-  let items;
-  if (trendingIds && trendingIds.length > 0) {
-    // Use admin-curated order
-    items = trendingIds.map(id => allProducts.find(p => p.id === id)).filter(Boolean);
-  } else {
-    items = allProducts.slice(0,12);
+  // Bug fix #4: Only show scroller when admin has curated trending products.
+  // Hide the entire section if trending list is empty/null.
+  const scrollerSection = document.querySelector('.scroller-section');
+  if (!trendingIds || trendingIds.length === 0) {
+    if (scrollerSection) scrollerSection.style.display = 'none';
+    return;
   }
-  if (!items.length) return;
+  if (scrollerSection) scrollerSection.style.display = '';
+  // Bug fix #3: Firestore IDs are strings — compare with String() to avoid type mismatch
+  const items = trendingIds.map(id => allProducts.find(p => String(p.id) === String(id))).filter(Boolean);
+  if (!items.length) { if (scrollerSection) scrollerSection.style.display = 'none'; return; }
   const html = items.map(p=>{
     const imgSrc = (p.images && p.images.length > 0) ? p.images[0] : (p.image || 'https://via.placeholder.com/200x140/1a2a3a/c9a84c?text=No+Image');
     return `<div class="scroll-card" onclick="openProductModal(${p.id})">
@@ -219,7 +246,8 @@ function renderScroller(trendingIds) {
 
 // ── MODAL ────────────────────────────────────────────────────
 window.openProductModal = function(id) {
-  const p = allProducts.find(x=>x.id===id); if (!p) return;
+  // Bug fix #3: Firestore IDs are strings. Always compare with String() to match regardless of how id was passed.
+  const p = allProducts.find(x => String(x.id) === String(id)); if (!p) return;
   modalProduct=p; modalQty=1; currentReviewProductId=id;
   // Image carousel
   const allImgs = (p.images && p.images.length > 0) ? p.images : (p.image ? [p.image] : ['https://via.placeholder.com/400x600/1a2a3a/c9a84c?text=No+Image']);
@@ -242,7 +270,7 @@ window.openProductModal = function(id) {
     const origStr = p.originalPrice ? ` <span style="font-size:0.9rem;text-decoration:line-through;color:var(--text-muted);">₹${p.originalPrice.toLocaleString()}</span>` : '';
     if (priceCont) priceCont.innerHTML = `₹${p.price.toLocaleString()}${origStr}`;
   }
-  const wishlisted=wishlist.includes(id);
+  const wishlisted=wishlist.map(String).includes(String(id));
   const wBtn=document.getElementById('modal-wish-btn');
   wBtn.className='modal-wish-btn '+(wishlisted?'wishlisted':'');
   wBtn.innerHTML=`<i class="ph ph-heart${wishlisted?'-fill':''}"></i>`;
@@ -363,9 +391,11 @@ window.checkout = function() { if(!cart.length){toast('Your cart is empty!','err
 // ── WISHLIST ─────────────────────────────────────────────────
 function saveWishlist() { localStorage.setItem('tbt_wishlist',JSON.stringify(wishlist)); }
 window.toggleWishlist = function(id) {
-  const p=allProducts.find(x=>x.id===id); if(!p) return;
-  const idx=wishlist.indexOf(id);
-  if(idx===-1){wishlist.push(id);toast(`${p.name} added to wishlist ♡`,'success');}
+  // Bug fix #2: Normalise id to string so includes() works regardless of how id arrives
+  const sid = String(id);
+  const p=allProducts.find(x=>String(x.id)===sid); if(!p) return;
+  const idx=wishlist.indexOf(sid);
+  if(idx===-1){wishlist.push(sid);toast(`${p.name} added to wishlist ♡`,'success');}
   else{wishlist.splice(idx,1);toast(`${p.name} removed from wishlist`);}
   saveWishlist(); updateWishlistUI(); renderProducts();
 };
@@ -373,7 +403,7 @@ function updateWishlistUI() { wishCountEl.textContent=wishlist.length; wishCount
 function renderWishlist() {
   if (!wishlist.length) { wishlistBody.innerHTML=`<div style="text-align:center;padding:60px 0;color:var(--text-muted);"><i class="ph ph-heart" style="font-size:3rem;opacity:0.3;display:block;margin-bottom:12px;"></i><p>Your wishlist is empty</p></div>`; return; }
   wishlistBody.innerHTML=wishlist.map(id=>{
-    const p=allProducts.find(x=>x.id===id); if(!p) return '';
+    const p=allProducts.find(x=>String(x.id)===String(id)); if(!p) return '';
     return `<div class="cart-item"><img src="${p.image||'https://via.placeholder.com/80x80/1a2a3a/c9a84c?text=?'}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/80x80/1a2a3a/c9a84c?text=?'"/><div class="cart-item-info"><h4>${p.name}</h4><p>₹${p.price.toLocaleString()}</p><button class="btn-primary" style="margin-top:8px;font-size:0.8rem;padding:6px 14px;" onclick="addToCart(${id});closeSidebars()">Move to Cart</button></div><button class="remove-item" onclick="toggleWishlist(${id})"><i class="ph ph-trash"></i></button></div>`;
   }).join('');
 }
