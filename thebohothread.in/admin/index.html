@@ -92,6 +92,15 @@
       <a href="#" data-page="data-policy" onclick="navigate('data-policy',this)">
         <i class="ph ph-file-text"></i> Data Policy Page
       </a>
+      <a href="#" data-page="faq" onclick="navigate('faq',this)">
+        <i class="ph ph-question"></i> FAQ Page
+      </a>
+      <a href="#" data-page="shipping" onclick="navigate('shipping',this)">
+        <i class="ph ph-truck"></i> Shipping Policy
+      </a>
+      <a href="#" data-page="returns" onclick="navigate('returns',this)">
+        <i class="ph ph-arrow-u-up-left"></i> Return &amp; Refund
+      </a>
       
     
       <a href="../shop.html" target="_blank">
@@ -210,7 +219,7 @@
           <div class="panel-body">
             <div class="form-group">
               <label>Category Name</label>
-              <input class="form-control" id="new-cat-name" placeholder="e.g." />
+              <input class="form-control" id="new-cat-name" placeholder="e.g. Electronics" />
             </div>
             <div class="form-group">
               <label>Icon (emoji or text)</label>
@@ -572,6 +581,199 @@
       </div>
     </div>
 
+  <!-- ════ FAQ PAGE ════ -->
+    <div class="admin-page" id="page-faq">
+      <div style="max-width:900px;">
+        <div class="admin-panel">
+          <div class="panel-header">
+            <h3><i class="ph ph-question" style="color:var(--gold);"></i> &nbsp;FAQ Page</h3>
+            <span style="font-size:0.8rem;color:var(--text-muted);">Edits go live instantly on <a href="../faq.html" target="_blank" style="color:var(--gold);">faq.html</a></span>
+          </div>
+          <div class="panel-body">
+            <!-- Rich Text Toolbar (reused) -->
+            <div id="rte-toolbar-faq" style="display:flex;flex-wrap:wrap;gap:4px;background:var(--navy);border:1px solid rgba(255,255,255,0.1);border-radius:8px 8px 0 0;padding:10px 12px;border-bottom:none;">
+              <select onchange="rteExecFor('rte-editor-faq','fontName',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
+                <option value="">Font Family</option>
+                <option value="'Cormorant Garamond',serif">Cormorant (Serif)</option>
+                <option value="'DM Sans',sans-serif">DM Sans</option>
+                <option value="Georgia,serif">Georgia</option>
+                <option value="Arial,sans-serif">Arial</option>
+              </select>
+              <select onchange="rteExecFor('rte-editor-faq','fontSize',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
+                <option value="">Size</option>
+                <option value="2">13px</option><option value="3">16px</option><option value="4">18px</option><option value="5">24px</option><option value="6">32px</option>
+              </select>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <select onchange="rteBlockFor('rte-editor-faq',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
+                <option value="">Heading</option>
+                <option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option><option value="p">Paragraph</option><option value="blockquote">Blockquote</option>
+              </select>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','bold')" title="Bold"><b>B</b></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','italic')" title="Italic"><i>I</i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','underline')" title="Underline"><u>U</u></button>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','justifyLeft')"><i class="ph ph-text-align-left"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','justifyCenter')"><i class="ph ph-text-align-center"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','justifyRight')"><i class="ph ph-text-align-right"></i></button>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','insertUnorderedList')"><i class="ph ph-list-bullets"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','insertOrderedList')"><i class="ph ph-list-numbers"></i></button>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','undo')"><i class="ph ph-arrow-counter-clockwise"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','redo')"><i class="ph ph-arrow-clockwise"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-faq','removeFormat')" style="margin-left:auto;"><i class="ph ph-eraser"></i></button>
+            </div>
+            <div id="rte-editor-faq" contenteditable="true" spellcheck="true" style="min-height:420px;background:var(--navy-card);border:1px solid rgba(255,255,255,0.1);border-radius:0 0 8px 8px;padding:24px 28px;color:var(--text-main);font-size:0.95rem;line-height:1.85;outline:none;overflow-y:auto;">
+              <p style="color:var(--text-muted);">Loading content…</p>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;margin-top:20px;flex-wrap:wrap;">
+              <button class="btn btn-gold" onclick="savePageContent('faq')" id="faq-save-btn">
+                <i class="ph ph-floppy-disk"></i> Save &amp; Publish
+              </button>
+              <button class="btn btn-outline-gold" onclick="resetPageContent('faq')">
+                <i class="ph ph-arrow-counter-clockwise"></i> Reset to Default
+              </button>
+              <a href="../faq.html" target="_blank" class="btn" style="background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid rgba(255,255,255,0.1);">
+                <i class="ph ph-arrow-square-out"></i> Preview Page
+              </a>
+              <span id="faq-save-status" style="font-size:0.85rem;color:var(--success);display:none;">
+                <i class="ph ph-check-circle"></i> Published successfully!
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ SHIPPING PAGE ════ -->
+    <div class="admin-page" id="page-shipping">
+      <div style="max-width:900px;">
+        <div class="admin-panel">
+          <div class="panel-header">
+            <h3><i class="ph ph-truck" style="color:var(--gold);"></i> &nbsp;Shipping &amp; Delivery Policy Page</h3>
+            <span style="font-size:0.8rem;color:var(--text-muted);">Edits go live instantly on <a href="../shipping.html" target="_blank" style="color:var(--gold);">shipping.html</a></span>
+          </div>
+          <div class="panel-body">
+            <div id="rte-toolbar-shipping" style="display:flex;flex-wrap:wrap;gap:4px;background:var(--navy);border:1px solid rgba(255,255,255,0.1);border-radius:8px 8px 0 0;padding:10px 12px;border-bottom:none;">
+              <select onchange="rteExecFor('rte-editor-shipping','fontName',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
+                <option value="">Font Family</option>
+                <option value="'Cormorant Garamond',serif">Cormorant (Serif)</option>
+                <option value="'DM Sans',sans-serif">DM Sans</option>
+                <option value="Georgia,serif">Georgia</option>
+                <option value="Arial,sans-serif">Arial</option>
+              </select>
+              <select onchange="rteExecFor('rte-editor-shipping','fontSize',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
+                <option value="">Size</option>
+                <option value="2">13px</option><option value="3">16px</option><option value="4">18px</option><option value="5">24px</option><option value="6">32px</option>
+              </select>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <select onchange="rteBlockFor('rte-editor-shipping',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
+                <option value="">Heading</option>
+                <option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option><option value="p">Paragraph</option><option value="blockquote">Blockquote</option>
+              </select>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','bold')" title="Bold"><b>B</b></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','italic')" title="Italic"><i>I</i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','underline')" title="Underline"><u>U</u></button>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','justifyLeft')"><i class="ph ph-text-align-left"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','justifyCenter')"><i class="ph ph-text-align-center"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','justifyRight')"><i class="ph ph-text-align-right"></i></button>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','insertUnorderedList')"><i class="ph ph-list-bullets"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','insertOrderedList')"><i class="ph ph-list-numbers"></i></button>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','undo')"><i class="ph ph-arrow-counter-clockwise"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','redo')"><i class="ph ph-arrow-clockwise"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-shipping','removeFormat')" style="margin-left:auto;"><i class="ph ph-eraser"></i></button>
+            </div>
+            <div id="rte-editor-shipping" contenteditable="true" spellcheck="true" style="min-height:420px;background:var(--navy-card);border:1px solid rgba(255,255,255,0.1);border-radius:0 0 8px 8px;padding:24px 28px;color:var(--text-main);font-size:0.95rem;line-height:1.85;outline:none;overflow-y:auto;">
+              <p style="color:var(--text-muted);">Loading content…</p>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;margin-top:20px;flex-wrap:wrap;">
+              <button class="btn btn-gold" onclick="savePageContent('shipping')" id="shipping-save-btn">
+                <i class="ph ph-floppy-disk"></i> Save &amp; Publish
+              </button>
+              <button class="btn btn-outline-gold" onclick="resetPageContent('shipping')">
+                <i class="ph ph-arrow-counter-clockwise"></i> Reset to Default
+              </button>
+              <a href="../shipping.html" target="_blank" class="btn" style="background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid rgba(255,255,255,0.1);">
+                <i class="ph ph-arrow-square-out"></i> Preview Page
+              </a>
+              <span id="shipping-save-status" style="font-size:0.85rem;color:var(--success);display:none;">
+                <i class="ph ph-check-circle"></i> Published successfully!
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ RETURNS PAGE ════ -->
+    <div class="admin-page" id="page-returns">
+      <div style="max-width:900px;">
+        <div class="admin-panel">
+          <div class="panel-header">
+            <h3><i class="ph ph-arrow-u-up-left" style="color:var(--gold);"></i> &nbsp;Return &amp; Refund Policy Page</h3>
+            <span style="font-size:0.8rem;color:var(--text-muted);">Edits go live instantly on <a href="../returns.html" target="_blank" style="color:var(--gold);">returns.html</a></span>
+          </div>
+          <div class="panel-body">
+            <div id="rte-toolbar-returns" style="display:flex;flex-wrap:wrap;gap:4px;background:var(--navy);border:1px solid rgba(255,255,255,0.1);border-radius:8px 8px 0 0;padding:10px 12px;border-bottom:none;">
+              <select onchange="rteExecFor('rte-editor-returns','fontName',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
+                <option value="">Font Family</option>
+                <option value="'Cormorant Garamond',serif">Cormorant (Serif)</option>
+                <option value="'DM Sans',sans-serif">DM Sans</option>
+                <option value="Georgia,serif">Georgia</option>
+                <option value="Arial,sans-serif">Arial</option>
+              </select>
+              <select onchange="rteExecFor('rte-editor-returns','fontSize',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
+                <option value="">Size</option>
+                <option value="2">13px</option><option value="3">16px</option><option value="4">18px</option><option value="5">24px</option><option value="6">32px</option>
+              </select>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <select onchange="rteBlockFor('rte-editor-returns',this.value);this.value=''" style="background:var(--navy-card);color:var(--text-main);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:4px 8px;font-size:0.8rem;cursor:pointer;">
+                <option value="">Heading</option>
+                <option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option><option value="p">Paragraph</option><option value="blockquote">Blockquote</option>
+              </select>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','bold')" title="Bold"><b>B</b></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','italic')" title="Italic"><i>I</i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','underline')" title="Underline"><u>U</u></button>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','justifyLeft')"><i class="ph ph-text-align-left"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','justifyCenter')"><i class="ph ph-text-align-center"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','justifyRight')"><i class="ph ph-text-align-right"></i></button>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','insertUnorderedList')"><i class="ph ph-list-bullets"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','insertOrderedList')"><i class="ph ph-list-numbers"></i></button>
+              <div style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','undo')"><i class="ph ph-arrow-counter-clockwise"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','redo')"><i class="ph ph-arrow-clockwise"></i></button>
+              <button class="rte-btn" onclick="rteExecFor('rte-editor-returns','removeFormat')" style="margin-left:auto;"><i class="ph ph-eraser"></i></button>
+            </div>
+            <div id="rte-editor-returns" contenteditable="true" spellcheck="true" style="min-height:420px;background:var(--navy-card);border:1px solid rgba(255,255,255,0.1);border-radius:0 0 8px 8px;padding:24px 28px;color:var(--text-main);font-size:0.95rem;line-height:1.85;outline:none;overflow-y:auto;">
+              <p style="color:var(--text-muted);">Loading content…</p>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;margin-top:20px;flex-wrap:wrap;">
+              <button class="btn btn-gold" onclick="savePageContent('returns')" id="returns-save-btn">
+                <i class="ph ph-floppy-disk"></i> Save &amp; Publish
+              </button>
+              <button class="btn btn-outline-gold" onclick="resetPageContent('returns')">
+                <i class="ph ph-arrow-counter-clockwise"></i> Reset to Default
+              </button>
+              <a href="../returns.html" target="_blank" class="btn" style="background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid rgba(255,255,255,0.1);">
+                <i class="ph ph-arrow-square-out"></i> Preview Page
+              </a>
+              <span id="returns-save-status" style="font-size:0.85rem;color:var(--success);display:none;">
+                <i class="ph ph-check-circle"></i> Published successfully!
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /admin-main -->
 </div><!-- /admin-app -->
 
@@ -744,6 +946,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const CONTACT_DOC = doc(db, 'store_settings', 'contact');
   const POLICY_DOC  = doc(db, 'store_settings', 'data_policy');
 
+  // ─── GENERIC RTE HELPERS FOR MULTI-EDITOR ─────────────────
+  window.rteExecFor = function(editorId, cmd, val) {
+    const el = document.getElementById(editorId);
+    if (!el) return;
+    el.focus();
+    document.execCommand(cmd, false, val || null);
+  };
+
+  window.rteBlockFor = function(editorId, tag) {
+    const el = document.getElementById(editorId);
+    if (!el) return;
+    el.focus();
+    document.execCommand('formatBlock', false, tag);
+  };
+
   // ─── STORE SETTINGS ───────────────────────────────────────
   async function loadStoreSettings() {
     try {
@@ -844,6 +1061,133 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('rte-editor').innerHTML = DEFAULT_HTML;
   };
 
+  // ─── GENERIC PAGE EDITORS (FAQ / SHIPPING / RETURNS) ──────
+  const PAGE_CONFIG = {
+    faq: {
+      docId: 'faq',
+      editorId: 'rte-editor-faq',
+      saveBtnId: 'faq-save-btn',
+      statusId: 'faq-save-status',
+      default: `
+        <h2>Ordering & Payment</h2>
+        <p><strong>How do I place an order?</strong><br>Browse our shop, select your items, and reach out to us via the <a href="../contact.html">Contact page</a> or WhatsApp to confirm your order and arrange payment.</p>
+        <p><strong>What payment methods do you accept?</strong><br>We accept UPI, bank transfer, and cash on delivery (available in select areas).</p>
+        <p><strong>Is it safe to shop with TheBohoThread?</strong><br>Yes. We take your privacy and security seriously. See our <a href="../data-policy.html">Privacy Policy</a> for details.</p>
+        <h2>Products</h2>
+        <p><strong>Are the product images accurate?</strong><br>We do our best to represent every product accurately. Slight colour variations may occur due to screen settings and lighting conditions.</p>
+        <p><strong>Can I request a product not listed on the site?</strong><br>Absolutely! Contact us and we'll do our best to source it for you.</p>
+        <h2>Shipping</h2>
+        <p><strong>How long does delivery take?</strong><br>Standard delivery takes 5–7 business days. See our <a href="../shipping.html">Shipping & Delivery Policy</a> for full details.</p>
+        <p><strong>Do you ship pan-India?</strong><br>Yes, we ship across India. International shipping is not currently available.</p>
+        <h2>Returns & Refunds</h2>
+        <p><strong>What is your return policy?</strong><br>We offer a 7-day return window on most items. See our <a href="../returns.html">Return & Refund Policy</a> for full details.</p>
+        <p><strong>How do I initiate a return?</strong><br>Contact us at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a> with your order details and reason for return.</p>
+        <h2>Contact & Support</h2>
+        <p><strong>How can I reach you?</strong><br>Visit our <a href="../contact.html">Contact page</a> or email <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a>.</p>
+        <blockquote>Can't find your answer here? We're just a message away — we'll get back to you within 24 hours.</blockquote>
+      `
+    },
+    shipping: {
+      docId: 'shipping',
+      editorId: 'rte-editor-shipping',
+      saveBtnId: 'shipping-save-btn',
+      statusId: 'shipping-save-status',
+      default: `
+        <h2>Processing Time</h2>
+        <p>All orders are processed within <strong>1–2 business days</strong> after payment confirmation. Orders placed on weekends or public holidays will be processed the next business day.</p>
+        <h2>Delivery Timelines</h2>
+        <ul>
+          <li><strong>Standard Delivery</strong> — 5–7 business days</li>
+          <li><strong>Express Delivery</strong> — 2–3 business days (select pin codes, additional charges apply)</li>
+          <li><strong>Same-day / Next-day</strong> — Available in Meerut city on request.</li>
+        </ul>
+        <h2>Shipping Coverage</h2>
+        <p>We ship <strong>pan-India</strong> to all major cities and most pin codes. International shipping is <strong>not available</strong> at this time.</p>
+        <h2>Shipping Charges</h2>
+        <ul>
+          <li>Orders above <strong>₹999</strong> — Free standard shipping</li>
+          <li>Orders below ₹999 — Flat ₹60 shipping fee</li>
+        </ul>
+        <h2>Tracking Your Order</h2>
+        <p>Once dispatched, you will receive a tracking number via WhatsApp or email.</p>
+        <h2>Damaged or Lost Shipments</h2>
+        <p>If your order arrives damaged or does not arrive within the estimated timeframe, please contact us immediately at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a>.</p>
+        <blockquote>We partner with trusted courier services to ensure your orders arrive safely and on time.</blockquote>
+      `
+    },
+    returns: {
+      docId: 'returns',
+      editorId: 'rte-editor-returns',
+      saveBtnId: 'returns-save-btn',
+      statusId: 'returns-save-status',
+      default: `
+        <h2>Return Eligibility</h2>
+        <p>We accept returns within <strong>7 days</strong> of the delivery date. To be eligible:</p>
+        <ul>
+          <li>The item must be unused and in its original condition</li>
+          <li>All original packaging, tags, and accessories must be intact</li>
+          <li>A valid proof of purchase must be provided</li>
+        </ul>
+        <h2>Non-Returnable Items</h2>
+        <ul>
+          <li>Items marked as <strong>Final Sale</strong> or purchased during special promotions</li>
+          <li>Personalised or customised products</li>
+          <li>Items that have been used, washed, or altered</li>
+        </ul>
+        <h2>How to Initiate a Return</h2>
+        <ol>
+          <li>Email us at <a href="mailto:jnvhimanshu11@gmail.com">jnvhimanshu11@gmail.com</a> with your order details and reason for return</li>
+          <li>Our team will respond within <strong>2 business days</strong></li>
+          <li>Ship the item back using a trackable courier and share tracking details</li>
+        </ol>
+        <h2>Refunds</h2>
+        <p>Approved refunds are processed within <strong>5–7 business days</strong>. Shipping charges are non-refundable unless the return is due to our error.</p>
+        <h2>Damaged or Incorrect Items</h2>
+        <p>Contact us within <strong>48 hours</strong> of delivery with photos. We will arrange a replacement or full refund at no extra cost.</p>
+        <blockquote>Your satisfaction is our priority. If something isn't right, just let us know and we'll make it right.</blockquote>
+      `
+    }
+  };
+
+  async function loadPageEditor(pageKey) {
+    const cfg = PAGE_CONFIG[pageKey];
+    if (!cfg) return;
+    const editor = document.getElementById(cfg.editorId);
+    if (!editor) return;
+    try {
+      const snap = await getDoc(doc(db, 'store_settings', cfg.docId));
+      editor.innerHTML = (snap.exists() && snap.data().content) ? snap.data().content : cfg.default;
+    } catch(e) { editor.innerHTML = cfg.default; }
+  }
+
+  window.savePageContent = async function(pageKey) {
+    const cfg = PAGE_CONFIG[pageKey];
+    if (!cfg) return;
+    const editor = document.getElementById(cfg.editorId);
+    const btn    = document.getElementById(cfg.saveBtnId);
+    const status = document.getElementById(cfg.statusId);
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;display:inline-block;"></i> Publishing…';
+    status.style.display = 'none';
+    try {
+      await setDoc(doc(db, 'store_settings', cfg.docId), { content: editor.innerHTML, updated_at: new Date().toISOString() }, { merge: true });
+      status.style.display = 'inline-flex';
+      setTimeout(() => { status.style.display = 'none'; }, 4000);
+    } catch(e) {
+      alert('Error publishing: ' + e.message);
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Save & Publish';
+  };
+
+  window.resetPageContent = function(pageKey) {
+    const cfg = PAGE_CONFIG[pageKey];
+    if (!cfg) return;
+    if (!confirm('Reset to default content? This will overwrite your current edits.')) return;
+    const editor = document.getElementById(cfg.editorId);
+    if (editor) editor.innerHTML = cfg.default;
+  };
+
   // ─── NAVIGATE HOOK ────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
     const _nav = window.navigate;
@@ -851,6 +1195,9 @@ document.addEventListener("DOMContentLoaded", () => {
       _nav(page, linkEl);
       if (page === 'store-settings') loadStoreSettings();
       if (page === 'data-policy')    loadPolicyEditor();
+      if (page === 'faq')            loadPageEditor('faq');
+      if (page === 'shipping')       loadPageEditor('shipping');
+      if (page === 'returns')        loadPageEditor('returns');
     };
     setTimeout(loadStoreSettings, 600);
   });

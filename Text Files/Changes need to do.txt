@@ -1,0 +1,5 @@
+Changes need to do
+
+
+1. To Create FAQ page same as Query Form Policies and need manage from admin same as Query Form Policies.
+2. 

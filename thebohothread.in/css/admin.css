@@ -92,6 +92,13 @@ input, select, textarea { font-family: inherit; }
 textarea.form-control { resize: vertical; min-height: 90px; }
 select.form-control { cursor: pointer; appearance: auto; }
 
+/* Force dark background on all selects & their options in the admin */
+select,
+select option {
+  background-color: var(--navy-card);
+  color: var(--text-main);
+}
+
 .password-wrapper {
   position: relative;
   display: flex;

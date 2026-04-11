@@ -509,12 +509,13 @@ a.nav-btn { text-decoration: none; display: flex; align-items: center; justify-c
   transition: var(--trans);
   z-index: 2;
 }
-.wish-btn:hover, .wish-btn.wishlisted {
+.wish-btn:hover {
   background: rgba(201,168,76,0.15);
   border-color: var(--gold);
   color: var(--gold);
 }
-.wish-btn.wishlisted { color: #e05c5c; border-color: #e05c5c; background: rgba(224,92,92,0.1); }
+.wish-btn.wishlisted,
+.wish-btn.wishlisted:hover { color: #e05c5c; border-color: #e05c5c; background: rgba(224,92,92,0.15); }
 
 .product-card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
 .product-cat-tag {
