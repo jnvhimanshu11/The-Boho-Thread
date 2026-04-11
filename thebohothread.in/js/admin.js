@@ -35,14 +35,25 @@ const COL = {
 };
 
 async function fsGetAll(colName, orderField = 'createdAt', dir = 'desc') {
+  // Never use orderBy() — it requires Firestore indexes that may not exist.
+  // Always do a plain getDocs and sort in JS instead.
   try {
-    const q = query(collection(db, colName), orderBy(orderField, dir));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch (e) {
-    // fallback: unordered get (if index not yet ready)
     const snap = await getDocs(collection(db, colName));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    docs.sort((a, b) => {
+      let va = a[orderField], vb = b[orderField];
+      if (va?.toMillis) va = va.toMillis();
+      if (vb?.toMillis) vb = vb.toMillis();
+      if (typeof va === 'string' && typeof vb === 'string') {
+        return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      }
+      va = va ?? 0; vb = vb ?? 0;
+      return dir === 'asc' ? (va > vb ? 1 : -1) : (vb > va ? 1 : -1);
+    });
+    return docs;
+  } catch (e) {
+    console.error(`fsGetAll(${colName}) error:`, e);
+    return [];
   }
 }
 
@@ -157,27 +168,13 @@ async function loadAllData() {
   try {
     adminToast('Loading data from Firebase…', '');
 
-    const [prods, cats, bdgs] = await Promise.all([
-      fsGetAll(COL.products, 'createdAt', 'desc'),
-      fsGetAll(COL.categories, 'name', 'asc'),
-      fsGetAll(COL.badges, 'name', 'asc'),
+    // fsGetAll now uses plain getDocs + JS sort — no Firestore indexes needed
+    const [prods, cats, bdgs, revs] = await Promise.all([
+      fsGetAll(COL.products,  'createdAt', 'desc'),
+      fsGetAll(COL.categories,'name',      'asc'),
+      fsGetAll(COL.badges,    'name',      'asc'),
+      fsGetAll(COL.reviews,   'createdAt', 'desc'),
     ]);
-
-    // Load reviews without orderBy to avoid Firestore composite index requirement.
-    // Sort by createdAt in JS instead.
-    let revs = [];
-    try {
-      const revSnap = await getDocs(collection(db, COL.reviews));
-      revs = revSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      revs.sort((a, b) => {
-        const ta = a.createdAt?.toMillis?.() ?? (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-        const tb = b.createdAt?.toMillis?.() ?? (b.createdAt ? new Date(b.createdAt).getTime() : 0);
-        return tb - ta;
-      });
-    } catch(e) {
-      console.error('Reviews load error:', e);
-      adminToast('Could not load reviews: ' + e.message, 'error');
-    }
 
     products    = prods;
     categories  = cats;

@@ -25,13 +25,24 @@ const db   = getFirestore(_app);
 
 // ── Firestore helpers ─────────────────────────────────────────
 async function fsGetAll(colName, orderField = 'createdAt', dir = 'desc') {
+  // Never use orderBy() — requires Firestore indexes. Sort in JS instead.
   try {
-    const q = query(collection(db, colName), orderBy(orderField, dir));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch(e) {
     const snap = await getDocs(collection(db, colName));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    docs.sort((a, b) => {
+      let va = a[orderField], vb = b[orderField];
+      if (va?.toMillis) va = va.toMillis();
+      if (vb?.toMillis) vb = vb.toMillis();
+      if (typeof va === 'string' && typeof vb === 'string') {
+        return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      }
+      va = va ?? 0; vb = vb ?? 0;
+      return dir === 'asc' ? (va > vb ? 1 : -1) : (vb > va ? 1 : -1);
+    });
+    return docs;
+  } catch(e) {
+    console.error(`fsGetAll(${colName}) error:`, e);
+    return [];
   }
 }
 
@@ -73,18 +84,15 @@ const toastContainer  = document.getElementById('toast-container');
 async function loadData() {
   productsGrid.innerHTML = '<div class="loader-wrap"><div class="spinner"></div></div>';
   try {
-    const [prods, cats] = await Promise.all([
-      fsGetAll('products', 'createdAt', 'desc'),
-      fsGetAll('categories', 'name', 'asc'),
+    // fsGetAll now uses plain getDocs + JS sort — no Firestore indexes needed
+    const [prods, cats, bdgs] = await Promise.all([
+      fsGetAll('products',   'createdAt', 'desc'),
+      fsGetAll('categories', 'name',      'asc'),
+      fsGetAll('badges',     'name',      'asc'),
     ]);
     allProducts   = prods.map(normaliseProduct);
     allCategories = cats;
-
-    // Load badges without orderBy to avoid Firestore index requirement
-    try {
-      const bSnap = await getDocs(collection(db, 'badges'));
-      allBadges = bSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch(e) { allBadges = []; }
+    allBadges     = bdgs;
 
     // Load trending list from Firestore
     let trendingIds = null;
@@ -306,14 +314,15 @@ async function loadProductReviews(productId) {
   if (!listEl) return;
   listEl.innerHTML=`<div style="padding:12px 0;color:var(--text-muted);font-size:0.84rem;font-style:italic;">Loading reviews…</div>`;
   try {
-    const q = query(
-      collection(db, 'reviews'),
-      where('product_id', '==', productId),
-      where('status', '==', 'approved'),
-      orderBy('createdAt', 'desc')
-    );
-    const snap = await getDocs(q);
-    const reviews = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Use plain getDocs + JS filter/sort to avoid Firestore composite index requirement
+    const snap = await getDocs(collection(db, 'reviews'));
+    let reviews = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    reviews = reviews.filter(r => String(r.product_id) === String(productId) && r.status === 'approved');
+    reviews.sort((a, b) => {
+      const ta = a.createdAt?.toMillis?.() ?? 0;
+      const tb = b.createdAt?.toMillis?.() ?? 0;
+      return tb - ta;
+    });
     renderApprovedReviews(reviews, listEl, summaryEl);
   } catch(e) {
     console.error('Load reviews error:', e);
