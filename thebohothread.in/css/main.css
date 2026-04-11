@@ -337,7 +337,7 @@ a.nav-btn { text-decoration: none; display: flex; align-items: center; justify-c
    PRODUCT SCROLLER (auto left-to-right)
    ================================================================ */
 .scroller-section {
-  padding: 48px 0 16px;
+  padding: 48px 0 32px;
   overflow: hidden;
 }
 .scroller-section h2 {
@@ -347,48 +347,125 @@ a.nav-btn { text-decoration: none; display: flex; align-items: center; justify-c
   margin-bottom: 24px;
 }
 .scroller-section h2 span { color: var(--gold); }
-.scroller-track-wrapper { overflow: hidden; position: relative; }
-.scroller-track-wrapper::before,
-.scroller-track-wrapper::after {
-  content: '';
-  position: absolute;
-  top: 0; bottom: 0;
-  width: 80px;
-  z-index: 2;
-  pointer-events: none;
+
+.scroller-track-wrapper {
+  position: relative;
+  overflow: hidden;
 }
-.scroller-track-wrapper::before { left: 0; background: linear-gradient(90deg, var(--navy), transparent); }
-.scroller-track-wrapper::after  { right: 0; background: linear-gradient(-90deg, var(--navy), transparent); }
 
 .scroller-track {
   display: flex;
-  gap: 20px;
-  padding: 8px 40px;
-  animation: scroll-left 30s linear infinite;
+  gap: 14px;
+  padding: 8px 32px 16px;
+  animation: scroll-left 28s linear infinite;
   width: max-content;
+  cursor: grab;
 }
-.scroller-track:hover { animation-play-state: paused; }
+.scroller-track:active { cursor: grabbing; }
+.scroller-track.paused { animation-play-state: paused; }
 @keyframes scroll-left {
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
-.scroll-card {
-  width: 200px;
-  flex-shrink: 0;
-  background: var(--navy-card);
-  border-radius: var(--radius);
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.06);
+
+.scroller-scrollbar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 32px 0;
+}
+.scroller-arrow {
+  background: none;
+  border: none;
+  color: var(--gold);
   cursor: pointer;
-  transition: var(--trans);
+  font-size: 1.2rem;
+  padding: 4px 8px;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
 }
-.scroll-card:hover { transform: translateY(-4px); border-color: rgba(201,168,76,0.3); }
-.scroll-card img {
-  width: 100%; height: 140px; object-fit: cover;
+.scroller-arrow:hover { opacity: 1; }
+.scroller-scrollbar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
 }
-.scroll-card-info { padding: 10px 12px; }
-.scroll-card-info h4 { font-family: 'DM Sans',sans-serif; font-size: 0.82rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.scroll-card-info p { font-size: 0.78rem; color: var(--gold); margin-top: 2px; font-weight: 600; }
+.scroller-scrollbar-thumb {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  width: 30%;
+  background: var(--gold);
+  border-radius: 4px;
+  transition: left 0.15s;
+}
+
+.scroll-card {
+  width: 220px;
+  height: 360px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.scroll-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
+
+.scroll-card img,
+.scroll-card video {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+.scroll-card .play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.18);
+  transition: background 0.2s;
+}
+.scroll-card:hover .play-overlay { background: rgba(0,0,0,0.28); }
+.scroll-card .play-btn {
+  width: 52px; height: 52px;
+  background: rgba(255,255,255,0.88);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.35);
+}
+.scroll-card .play-btn svg {
+  width: 22px; height: 22px;
+  fill: #111;
+  margin-left: 3px;
+}
+
+.scroll-card-label {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 32px 12px 12px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.72));
+  color: #fff;
+}
+.scroll-card-label h4 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scroll-card-label p {
+  font-size: 0.78rem;
+  color: var(--gold);
+  margin-top: 3px;
+  font-weight: 700;
+}
 
 /* ================================================================
    MAIN PRODUCT GRID
@@ -462,7 +539,7 @@ a.nav-btn { text-decoration: none; display: flex; align-items: center; justify-c
 }
 .product-card-img-wrap {
   position: relative;
-  height: 220px;
+  height: 300px;
   overflow: hidden;
   background: var(--navy-mid);
 }

@@ -235,25 +235,75 @@ function starsHTML(rating) { return Array.from({length:5},(_,i)=>`<span class="s
 
 // ── SCROLLER ─────────────────────────────────────────────────
 function renderScroller(trendingIds) {
-  // Bug fix #4: Only show scroller when admin has curated trending products.
-  // Hide the entire section if trending list is empty/null.
   const scrollerSection = document.querySelector('.scroller-section');
   if (!trendingIds || trendingIds.length === 0) {
     if (scrollerSection) scrollerSection.style.display = 'none';
     return;
   }
   if (scrollerSection) scrollerSection.style.display = '';
-  // Bug fix #3: Firestore IDs are strings — compare with String() to avoid type mismatch
   const items = trendingIds.map(id => allProducts.find(p => String(p.id) === String(id))).filter(Boolean);
   if (!items.length) { if (scrollerSection) scrollerSection.style.display = 'none'; return; }
-  const html = items.map(p=>{
-    const imgSrc = (p.images && p.images.length > 0) ? p.images[0] : (p.image || 'https://via.placeholder.com/200x140/1a2a3a/c9a84c?text=No+Image');
+
+  const playIcon = `<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>`;
+  const fallback = 'https://via.placeholder.com/220x360/1a2a3a/c9a84c?text=No+Image';
+
+  const makeCard = p => {
+    const src = (p.images && p.images.length > 0) ? p.images[0] : (p.image || '');
+    const isVideo = src && /\.(mp4|webm|mov)(\?|$)/i.test(src);
+    const media = isVideo
+      ? `<video src="${src}" muted playsinline preload="none"></video>
+         <div class="play-overlay"><div class="play-btn">${playIcon}</div></div>`
+      : `<img src="${src || fallback}" alt="${p.name}" loading="lazy" onerror="this.src='${fallback}'"/>`;
     return `<div class="scroll-card" onclick="openProductModal('${p.id}')">
-    <img src="${imgSrc}" alt="${p.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/200x140/1a2a3a/c9a84c?text=N/A'"/>
-    <div class="scroll-card-info"><h4>${p.name}</h4><p>₹${p.price.toLocaleString()}</p></div>
-  </div>`;
-  }).join('');
+      ${media}
+      <div class="scroll-card-label"><h4>${p.name}</h4><p>&#8377;${p.price.toLocaleString()}</p></div>
+    </div>`;
+  };
+
+  const html = items.map(makeCard).join('');
   scrollerTrack.innerHTML = html + html;
+
+  // ── Scrollbar & arrow controls ──────────────────────────────
+  const wrapper   = scrollerTrack.parentElement;
+  const thumb     = document.getElementById('scroller-thumb');
+  const scrollbar = document.getElementById('scroller-scrollbar');
+  const prevBtn   = document.getElementById('scroller-prev');
+  const nextBtn   = document.getElementById('scroller-next');
+  const CARD_W    = 234;
+  let manualMode  = false;
+
+  function enterManual() {
+    if (!manualMode) {
+      manualMode = true;
+      scrollerTrack.classList.add('paused');
+      scrollerTrack.style.animation = 'none';
+      scrollerTrack.style.transform = 'translateX(0)';
+      wrapper.style.overflowX = 'auto';
+      wrapper.style.scrollBehavior = 'smooth';
+    }
+  }
+
+  function updateThumb() {
+    if (!manualMode || !thumb) return;
+    const maxScroll = wrapper.scrollWidth - wrapper.clientWidth;
+    const pct = maxScroll > 0 ? (wrapper.scrollLeft / maxScroll) * 70 : 0;
+    thumb.style.left = pct + '%';
+  }
+
+  if (prevBtn) prevBtn.addEventListener('click', () => { enterManual(); wrapper.scrollLeft -= CARD_W; });
+  if (nextBtn) nextBtn.addEventListener('click', () => { enterManual(); wrapper.scrollLeft += CARD_W; });
+
+  if (scrollbar) {
+    scrollbar.addEventListener('click', e => {
+      enterManual();
+      const rect = scrollbar.getBoundingClientRect();
+      const pct = (e.clientX - rect.left) / rect.width;
+      wrapper.scrollLeft = pct * (wrapper.scrollWidth - wrapper.clientWidth);
+    });
+  }
+
+  wrapper.addEventListener('scroll', updateThumb);
+  scrollerTrack.addEventListener('pointerdown', () => enterManual());
 }
 
 // ── MODAL ────────────────────────────────────────────────────
