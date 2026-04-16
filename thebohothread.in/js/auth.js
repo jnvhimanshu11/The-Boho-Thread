@@ -41,19 +41,28 @@ onAuthStateChanged(auth, user => {
 function updateNavUser(user) {
   const btn = document.getElementById('user-auth-btn');
   const dot = document.getElementById('user-auth-dot');
+  const mobBtn = document.getElementById('mob-user-btn');
+  const mobDot = document.getElementById('mob-user-dot');
   if (!btn) return;
   if (user) {
     // Show avatar initial or photo
     if (user.photoURL) {
-      btn.innerHTML = `<img src="${user.photoURL}" alt="avatar" style="width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);">`;
+      const avatarHtml = `<img src="${user.photoURL}" alt="avatar" style="width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);">`;
+      btn.innerHTML = avatarHtml;
+      if (mobBtn) mobBtn.innerHTML = avatarHtml;
     } else {
       const init = (user.displayName || user.phoneNumber || 'U')[0].toUpperCase();
-      btn.innerHTML = `<span style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;">${init}</span>`;
+      const initHtml = `<span style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;">${init}</span>`;
+      btn.innerHTML = initHtml;
+      if (mobBtn) mobBtn.innerHTML = initHtml;
     }
     if (dot) dot.classList.add('show');
+    if (mobDot) mobDot.classList.add('show');
   } else {
     btn.innerHTML = `<i class="ph ph-user"></i>`;
+    if (mobBtn) mobBtn.innerHTML = `<i class="ph ph-user"></i>`;
     if (dot) dot.classList.remove('show');
+    if (mobDot) mobDot.classList.remove('show');
   }
 }
 

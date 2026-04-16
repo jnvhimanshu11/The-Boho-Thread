@@ -226,7 +226,8 @@ a.nav-btn { text-decoration: none; display: flex; align-items: center; justify-c
   overflow-y: auto;
 }
 .mobile-drawer.open { transform: translateX(0); }
-.mobile-drawer .nav-links { flex-direction: column; align-items: flex-start; width: 100%; }
+.mobile-drawer .nav-links { flex-direction: column; align-items: flex-start; width: 100%; display: flex; }
+.mobile-drawer .nav-search { display: flex !important; margin-top: 24px; width: 100%; max-width: 100%; }
 .mobile-drawer .nav-links a {
   width: 100%;
   padding: 12px 16px;
@@ -957,8 +958,37 @@ footer {
 
 @media (max-width: 768px) {
   :root { --nav-h: 60px; }
-  .nav-links, .nav-search { display: none; }
+  .nav-links, .nav-search, .nav-actions { display: none; }
   .nav-hamburger { display: flex; }
+
+  /* Mobile drawer action icons row */
+  .mobile-drawer-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 16px 0;
+    border-top: 1px solid rgba(201,168,76,0.12);
+    margin-top: 16px;
+  }
+  .mobile-drawer-actions .nav-btn {
+    width: 44px; height: 44px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    position: relative;
+    transition: var(--trans);
+  }
+  .mobile-drawer-actions .nav-btn:hover,
+  .mobile-drawer-actions .nav-btn:active { background: rgba(201,168,76,0.15); color: var(--gold); }
+  .mobile-drawer-actions a.nav-btn { text-decoration: none; }
+  .mobile-drawer-actions .user-auth-wrap { position: relative; }
+  .mobile-drawer-actions .user-menu-popup {
+    top: auto;
+    bottom: calc(100% + 8px);
+    right: 0; left: auto;
+  }
   .hero { height: 380px; }
   .hero-slide-content { padding: 0 28px; }
   .hero-slide-content h1 { font-size: 2rem; }

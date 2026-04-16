@@ -455,7 +455,11 @@ window.changeQty = function(id,delta) {
 };
 function updateCartUI() {
   const total=cart.reduce((s,c)=>s+c.qty,0);
-  cartCountEl.textContent=total; cartCountEl.classList.toggle('show',total>0); renderCart();
+  cartCountEl.textContent=total; cartCountEl.classList.toggle('show',total>0);
+  // Sync mobile badge
+  const mobCart=document.getElementById('mob-cart-count');
+  if(mobCart){mobCart.textContent=total;mobCart.classList.toggle('show',total>0);}
+  renderCart();
 }
 function renderCart() {
   if (!cart.length) { cartBody.innerHTML=`<div style="text-align:center;padding:60px 0;color:var(--text-muted);"><i class="ph ph-shopping-cart" style="font-size:3rem;opacity:0.3;display:block;margin-bottom:12px;"></i><p>Your cart is empty</p></div>`; cartTotalEl.textContent='₹0.00'; return; }
@@ -487,7 +491,13 @@ window.toggleWishlist = function(id) {
     wBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="${nowWishlisted?'#e00b20':'none'}" stroke="${nowWishlisted?'#e00b20':'#888'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
   }
 };
-function updateWishlistUI() { wishCountEl.textContent=wishlist.length; wishCountEl.classList.toggle('show',wishlist.length>0); renderWishlist(); }
+function updateWishlistUI() {
+  wishCountEl.textContent=wishlist.length; wishCountEl.classList.toggle('show',wishlist.length>0);
+  // Sync mobile badge
+  const mobWish=document.getElementById('mob-wish-count');
+  if(mobWish){mobWish.textContent=wishlist.length;mobWish.classList.toggle('show',wishlist.length>0);}
+  renderWishlist();
+}
 function renderWishlist() {
   if (!wishlist.length) { wishlistBody.innerHTML=`<div style="text-align:center;padding:60px 0;color:var(--text-muted);"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:48px;height:48px;opacity:0.3;display:block;margin:0 auto 12px;"><path d="M12 21C12 21 3 14.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14.5 12 21 12 21Z" stroke="#aaa" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><p>Your wishlist is empty</p></div>`; return; }
   wishlistBody.innerHTML=wishlist.map(id=>{
