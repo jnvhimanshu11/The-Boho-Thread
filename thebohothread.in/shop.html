@@ -79,7 +79,7 @@
   </div>
 
   <!-- Mobile hamburger -->
-  <div class="nav-hamburger" id="hamburger" role="button" aria-label="Open menu" onclick="document.getElementById('mobile-drawer').classList.toggle('open')">
+  <div class="nav-hamburger" id="hamburger" role="button" aria-label="Open menu">
     <span></span><span></span><span></span>
   </div>
 </nav>
@@ -108,22 +108,29 @@
     <button class="nav-btn" id="mob-wish-btn" title="Wishlist" aria-label="Open Wishlist" onclick="document.getElementById('mobile-drawer').classList.remove('open');document.getElementById('wishlist-sidebar').classList.add('open');">
       <i class="ph ph-heart"></i>
       <span class="badge-count" id="mob-wish-count">0</span>
+      <span class="icon-label">Wishlist</span>
     </button>
     <button class="nav-btn" id="mob-cart-btn" title="Cart" aria-label="Open Cart" onclick="document.getElementById('mobile-drawer').classList.remove('open');document.getElementById('cart-sidebar').classList.add('open');">
       <i class="ph ph-shopping-cart"></i>
       <span class="badge-count" id="mob-cart-count">0</span>
+      <span class="icon-label">Cart</span>
     </button>
     <div class="user-auth-wrap">
       <button class="nav-btn" id="mob-user-btn" onclick="document.getElementById('mobile-drawer').classList.remove('open');openAuthModal();" title="My Account" aria-label="My Account">
         <i class="ph ph-user"></i>
+        <span class="icon-label">Login</span>
       </button>
       <span class="auth-online-dot" id="mob-user-dot"></span>
     </div>
     <a href="admin/index.html" class="nav-btn" title="Admin Panel" aria-label="Admin Panel">
       <i class="ph ph-user-gear"></i>
+      <span class="icon-label">Admin</span>
     </a>
   </div>
 </div>
+
+<!-- Mobile drawer overlay -->
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
 
 <!-- ════════════════════════════════════════════════
      HERO BANNER (auto-scrolling)

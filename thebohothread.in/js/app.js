@@ -171,6 +171,8 @@ window.filterByCategory = function(cat) {
   document.querySelectorAll('.cat-pill').forEach(p=>p.classList.toggle('active',p.dataset.cat===cat));
   renderProducts();
   document.getElementById('mobile-drawer')?.classList.remove('open');
+  document.getElementById('mobile-drawer-overlay')?.classList.remove('open');
+  document.body.style.overflow='';
 };
 
 // ── PRODUCTS ─────────────────────────────────────────────────
@@ -539,8 +541,12 @@ sortSelect?.addEventListener('change',e=>{sortMode=e.target.value;renderProducts
 // ── HAMBURGER ────────────────────────────────────────────────
 const hamburger=document.getElementById('hamburger');
 const mobileDrawer=document.getElementById('mobile-drawer');
-hamburger?.addEventListener('click',()=>mobileDrawer.classList.toggle('open'));
-document.addEventListener('click',e=>{if(!mobileDrawer?.contains(e.target)&&!hamburger?.contains(e.target))mobileDrawer?.classList.remove('open');});
+const drawerOverlay=document.getElementById('mobile-drawer-overlay');
+function openDrawer(){mobileDrawer.classList.add('open');drawerOverlay.classList.add('open');document.body.style.overflow='hidden';}
+function closeDrawer(){mobileDrawer.classList.remove('open');drawerOverlay.classList.remove('open');document.body.style.overflow='';}
+hamburger?.addEventListener('click',(e)=>{e.stopPropagation();mobileDrawer.classList.contains('open')?closeDrawer():openDrawer();});
+drawerOverlay?.addEventListener('click',closeDrawer);
+document.addEventListener('click',e=>{if(mobileDrawer?.classList.contains('open')&&!mobileDrawer?.contains(e.target)&&!hamburger?.contains(e.target))closeDrawer();});
 
 // ── TOAST ────────────────────────────────────────────────────
 window.toast = function(msg,type='') { const el=document.createElement('div'); el.className=`toast ${type}`; el.textContent=msg; toastContainer.appendChild(el); setTimeout(()=>el.remove(),3200); };
