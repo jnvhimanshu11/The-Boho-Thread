@@ -67,9 +67,7 @@ let selectedStarRating     = 0;
 const productsGrid    = document.getElementById('products-grid');
 const scrollerTrack   = document.getElementById('scroller-track');
 const navCats         = document.getElementById('collection-categories');
-const mobileCats      = document.getElementById('mobile-cat-pills');
 const searchInput     = document.getElementById('search-input');
-const searchMobile    = document.getElementById('search-input-mobile');
 const sortSelect      = document.getElementById('sort-select');
 const cartCountEl     = document.getElementById('cart-count');
 const wishCountEl     = document.getElementById('wish-count');
@@ -163,7 +161,6 @@ function renderCategories() {
     return `<button class="cat-pill ${activeCategory===c?'active':''}" data-cat="${c}" onclick="filterByCategory('${c}')">${icon}${c}</button>`;
   }).join('');
   if (navCats)    navCats.innerHTML    = allPill + pills;
-  if (mobileCats) mobileCats.innerHTML = allPill + pills;
 }
 
 window.filterByCategory = function(cat) {
@@ -535,7 +532,6 @@ document.getElementById('hero').addEventListener('touchend',e=>{ const diff=hTou
 // ── SEARCH & SORT ────────────────────────────────────────────
 function onSearch(val) { searchQuery=val.trim(); renderProducts(); }
 searchInput?.addEventListener('input',e=>onSearch(e.target.value));
-searchMobile?.addEventListener('input',e=>{onSearch(e.target.value);if(searchInput)searchInput.value=e.target.value;});
 sortSelect?.addEventListener('change',e=>{sortMode=e.target.value;renderProducts();});
 
 // ── HAMBURGER ────────────────────────────────────────────────

@@ -39,28 +39,27 @@ onAuthStateChanged(auth, user => {
 });
 
 function updateNavUser(user) {
-  const btn = document.getElementById('user-auth-btn');
-  const dot = document.getElementById('user-auth-dot');
+  const btn    = document.getElementById('user-auth-btn');
+  const dot    = document.getElementById('user-auth-dot');
   const mobBtn = document.getElementById('mob-user-btn');
   const mobDot = document.getElementById('mob-user-dot');
   if (!btn) return;
   if (user) {
-    // Show avatar initial or photo
     if (user.photoURL) {
       const avatarHtml = `<img src="${user.photoURL}" alt="avatar" style="width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);">`;
       btn.innerHTML = avatarHtml;
-      if (mobBtn) mobBtn.innerHTML = avatarHtml;
+      if (mobBtn) mobBtn.innerHTML = avatarHtml + '<span class="icon-label" id="mob-user-label">Account</span>';
     } else {
       const init = (user.displayName || user.phoneNumber || 'U')[0].toUpperCase();
       const initHtml = `<span style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;">${init}</span>`;
       btn.innerHTML = initHtml;
-      if (mobBtn) mobBtn.innerHTML = initHtml;
+      if (mobBtn) mobBtn.innerHTML = initHtml + '<span class="icon-label" id="mob-user-label">Account</span>';
     }
     if (dot) dot.classList.add('show');
     if (mobDot) mobDot.classList.add('show');
   } else {
     btn.innerHTML = `<i class="ph ph-user"></i>`;
-    if (mobBtn) mobBtn.innerHTML = `<i class="ph ph-user"></i>`;
+    if (mobBtn) mobBtn.innerHTML = `<i class="ph ph-user"></i><span class="icon-label" id="mob-user-label">Login</span>`;
     if (dot) dot.classList.remove('show');
     if (mobDot) mobDot.classList.remove('show');
   }
@@ -240,7 +239,8 @@ function closeMenuOutside(e) {
 
 window.signOutUser = async function() {
   await signOut(auth);
-  document.getElementById('user-menu-popup').classList.remove('open');
+  document.getElementById('user-menu-popup')?.classList.remove('open');
+  document.getElementById('mob-user-menu-popup')?.classList.remove('open');
   showAuthToast('You\'ve been signed out.');
 };
 
@@ -298,3 +298,18 @@ function showAuthToast(msg) {
   document.getElementById('toast-container')?.appendChild(t);
   setTimeout(() => t.remove(), 3500);
 }
+
+// ── Mobile user button handler ───────────────────────────────
+window.handleMobUserBtn = function() {
+  const user = auth.currentUser;
+  if (user) {
+    const popup = document.getElementById('mob-user-menu-popup');
+    if (!popup) return;
+    document.getElementById('mob-user-menu-name').textContent  = user.displayName || user.phoneNumber || 'User';
+    document.getElementById('mob-user-menu-email').textContent = user.email || user.phoneNumber || '';
+    popup.classList.toggle('open');
+  } else {
+    if (typeof closeDrawer === 'function') closeDrawer();
+    openAuthModal();
+  }
+};

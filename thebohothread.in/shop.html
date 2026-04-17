@@ -87,40 +87,40 @@
 <!-- Mobile Drawer -->
 <div class="mobile-drawer" id="mobile-drawer">
   <div class="nav-links">
-    <a href="shop.html">Home</a>
-    <a href="#products-section">Shop</a>
-    <a href="#about">About</a>
-    <a href="contact.html">Contact</a>
-  </div>
-  <div class="mobile-cats">
-    <h4>Categories</h4>
-    <div id="mobile-cat-pills" style="display:flex;flex-wrap:wrap;gap:8px;">
-      <button class="cat-pill active" data-cat="all">All</button>
-    </div>
-  </div>
-  <!-- Mobile search -->
-  <div class="nav-search" style="display:flex;margin-top:24px;width:100%;max-width:100%;">
-    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 256 256"><path d="M229.66,218.34l-50.06-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.06a8,8,0,0,0,11.31-11.31ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg>
-    <input type="text" id="search-input-mobile" placeholder="Search products…" autocomplete="off" />
+    <a href="shop.html" onclick="closeDrawer()">Home</a>
+    <a href="#products-section" onclick="closeDrawer()">Shop</a>
+    <a href="#about" onclick="closeDrawer()">About</a>
+    <a href="contact.html" onclick="closeDrawer()">Contact</a>
   </div>
   <!-- Mobile action icons: Wishlist, Cart, User, Admin -->
   <div class="mobile-drawer-actions">
-    <button class="nav-btn" id="mob-wish-btn" title="Wishlist" aria-label="Open Wishlist" onclick="document.getElementById('mobile-drawer').classList.remove('open');document.getElementById('wishlist-sidebar').classList.add('open');">
+    <button class="nav-btn" id="mob-wish-btn" title="Wishlist" aria-label="Open Wishlist" onclick="closeDrawer();document.getElementById('wishlist-sidebar').classList.add('open');">
       <i class="ph ph-heart"></i>
       <span class="badge-count" id="mob-wish-count">0</span>
       <span class="icon-label">Wishlist</span>
     </button>
-    <button class="nav-btn" id="mob-cart-btn" title="Cart" aria-label="Open Cart" onclick="document.getElementById('mobile-drawer').classList.remove('open');document.getElementById('cart-sidebar').classList.add('open');">
+    <button class="nav-btn" id="mob-cart-btn" title="Cart" aria-label="Open Cart" onclick="closeDrawer();document.getElementById('cart-sidebar').classList.add('open');">
       <i class="ph ph-shopping-cart"></i>
       <span class="badge-count" id="mob-cart-count">0</span>
       <span class="icon-label">Cart</span>
     </button>
-    <div class="user-auth-wrap">
-      <button class="nav-btn" id="mob-user-btn" onclick="document.getElementById('mobile-drawer').classList.remove('open');openAuthModal();" title="My Account" aria-label="My Account">
+    <div class="user-auth-wrap" style="position:relative;">
+      <button class="nav-btn" id="mob-user-btn" onclick="handleMobUserBtn()" title="My Account" aria-label="My Account">
         <i class="ph ph-user"></i>
-        <span class="icon-label">Login</span>
+        <span class="icon-label" id="mob-user-label">Login</span>
       </button>
       <span class="auth-online-dot" id="mob-user-dot"></span>
+      <!-- Mobile user popup (shown inside drawer when logged in) -->
+      <div class="user-menu-popup" id="mob-user-menu-popup" style="bottom:calc(100% + 8px);top:auto;left:50%;transform:translateX(-50%);right:auto;">
+        <div class="user-menu-info">
+          <div class="user-menu-name" id="mob-user-menu-name">User</div>
+          <div class="user-menu-email" id="mob-user-menu-email"></div>
+        </div>
+        <hr class="user-menu-divider" />
+        <button class="user-menu-item" onclick="signOutUser()">
+          <i class="ph ph-sign-out"></i> Sign Out
+        </button>
+      </div>
     </div>
     <a href="admin/index.html" class="nav-btn" title="Admin Panel" aria-label="Admin Panel">
       <i class="ph ph-user-gear"></i>

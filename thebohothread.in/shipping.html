@@ -138,24 +138,26 @@
     <a href="admin/index.html" class="nav-btn" title="Admin Panel" aria-label="Admin Panel"><i class="ph ph-user-gear"></i></a>
   </div>
   <div class="nav-hamburger" id="hamburger" role="button" aria-label="Open menu"
-    onclick="document.getElementById('mobile-drawer').classList.toggle('open')">
+    onclick="toggleDrawer()">
     <span></span><span></span><span></span>
   </div>
 </nav>
 <div class="mobile-drawer" id="mobile-drawer">
   <div class="nav-links">
-    <a href="shop.html">Home</a>
-    <a href="shop.html#products-section">Shop</a>
-    <a href="shop.html#about">About</a>
-    <a href="contact.html">Contact</a>
-  </div>
-  <div class="mobile-drawer-actions">
-    <a href="shop.html" class="nav-btn" title="Wishlist" aria-label="Wishlist"><i class="ph ph-heart"></i></a>
-    <a href="shop.html" class="nav-btn" title="Cart" aria-label="Cart"><i class="ph ph-shopping-cart"></i></a>
-    <a href="shop.html" class="nav-btn" title="My Account" aria-label="My Account"><i class="ph ph-user"></i></a>
-    <a href="admin/index.html" class="nav-btn" title="Admin Panel" aria-label="Admin Panel"><i class="ph ph-user-gear"></i></a>
+    <a href="shop.html" onclick="closeDrawer()">Home</a>
+    <a href="shop.html#products-section" onclick="closeDrawer()">Shop</a>
+    <a href="shop.html#about" onclick="closeDrawer()">About</a>
+    <a href="contact.html" onclick="closeDrawer()">Contact</a>
   </div>
 </div>
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+
+<script>
+function openDrawer(){var d=document.getElementById("mobile-drawer"),o=document.getElementById("mobile-drawer-overlay");d.classList.add("open");o.classList.add("open");document.body.style.overflow="hidden";}
+function closeDrawer(){var d=document.getElementById("mobile-drawer"),o=document.getElementById("mobile-drawer-overlay");d.classList.remove("open");o.classList.remove("open");document.body.style.overflow="";}
+function toggleDrawer(){document.getElementById("mobile-drawer").classList.contains("open")?closeDrawer():openDrawer();}
+document.getElementById("mobile-drawer-overlay").addEventListener("click",closeDrawer);
+</script>
 
 <!-- ════ HERO ════ -->
 <div class="policy-hero">
