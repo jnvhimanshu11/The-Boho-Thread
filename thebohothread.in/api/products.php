@@ -26,7 +26,10 @@ function castProduct(array $r): array {
 
 // ── GET ──────────────────────────────────────────────────────
 if ($method === 'GET') {
-    $rows = $db->query("SELECT * FROM products ORDER BY created_at DESC")->fetchAll();
+    // Optional: ?showDeleted=1 to include soft-deleted products
+    $showDeleted = isset($_GET['showDeleted']) && $_GET['showDeleted'] === '1';
+    $where = $showDeleted ? '' : 'WHERE is_deleted = 0';
+    $rows = $db->query("SELECT * FROM products $where ORDER BY created_at DESC")->fetchAll();
     ok(array_map('castProduct', $rows));
 }
 
@@ -98,6 +101,11 @@ if ($method === 'PUT') {
         $fields[] = "rating = ?";
         $params[]  = ($b['rating'] !== '' && $b['rating'] !== null) ? (float)$b['rating'] : null;
     }
+    if (array_key_exists('isDeleted', $b) || array_key_exists('is_deleted', $b)) {
+        $val = isset($b['isDeleted']) ? $b['isDeleted'] : $b['is_deleted'];
+        $fields[] = "is_deleted = ?";
+        $params[]  = (int)$val;  // 0 = active, 1 = soft-deleted
+    }
 
     if (!$fields) fail('No fields to update.');
 
@@ -109,6 +117,22 @@ if ($method === 'PUT') {
     $row = $stmt->fetch();
     if (!$row) fail('Product not found.', 404);
     ok(castProduct($row));
+}
+
+// ── PATCH — bulk soft-delete ──────────────────────────────────
+// Body: { "ids": [1,2,3], "isDeleted": 1 }  (1 = deactivate, 0 = activate)
+if ($method === 'PATCH') {
+    $b    = body();
+    $ids  = isset($b['ids']) && is_array($b['ids']) ? array_map('intval', $b['ids']) : [];
+    $flag = isset($b['isDeleted']) ? (int)$b['isDeleted'] : null;
+
+    if (!$ids)                       fail('ids array is required.');
+    if ($flag !== 0 && $flag !== 1)  fail('isDeleted must be 0 or 1.');
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $params = array_merge([$flag], $ids);
+    $db->prepare("UPDATE products SET is_deleted = ? WHERE id IN ($placeholders)")->execute($params);
+    ok(['updated' => count($ids), 'isDeleted' => $flag, 'ids' => $ids]);
 }
 
 // ── DELETE ───────────────────────────────────────────────────

@@ -290,9 +290,13 @@ function getBadgeStyle(name) {
 function productRowHTML(p) {
   const img=p.image?`<img class="table-img" src="${p.image}" alt="" onerror="this.src='https://via.placeholder.com/48/1a2a3a/c9a84c?text=?'">`:`<div class="table-img no-img">—</div>`;
   const badge=p.badge?`<span class="pill" style="${getBadgeStyle(p.badge)}">${p.badge}</span>`:`<span style="color:var(--text-muted);">—</span>`;
-  return `<tr>
+  const isDeleted = p.isDeleted == 1;
+  const rowStyle = isDeleted ? 'opacity:0.45;' : '';
+  const deletedBadge = isDeleted ? `<span style="font-size:0.7rem;background:rgba(224,92,92,0.18);color:#e05c5c;border:1px solid rgba(224,92,92,0.35);border-radius:4px;padding:2px 7px;margin-left:6px;vertical-align:middle;">INACTIVE</span>` : '';
+  return `<tr style="${rowStyle}" data-id="${p.id}">
+    <td style="width:36px;"><input type="checkbox" class="product-row-cb" data-id="${p.id}" onchange="onProductRowCbChange()" style="accent-color:var(--gold);cursor:pointer;width:15px;height:15px;"></td>
     <td>${img}</td>
-    <td style="font-weight:500;">${p.name}</td>
+    <td style="font-weight:500;">${p.name}${deletedBadge}</td>
     <td><span style="color:var(--gold);font-size:0.82rem;">${p.category||'—'}</span></td>
     <td style="white-space:nowrap;">₹${(p.price||0).toLocaleString()}</td>
     <td>${badge}</td>
@@ -323,6 +327,95 @@ function renderRecentTable() {
 }
 
 window.filterProductTable = function(val) { renderProductsTable(val); };
+
+// ── Bulk selection helpers ────────────────────────────────────
+function getSelectedProductIds() {
+  return Array.from(document.querySelectorAll('.product-row-cb:checked')).map(cb => cb.dataset.id);
+}
+
+function updateBulkBar() {
+  const ids = getSelectedProductIds();
+  const bar = document.getElementById('bulk-action-bar');
+  const countEl = document.getElementById('bulk-selected-count');
+  const selectAll = document.getElementById('select-all-products');
+  if (ids.length > 0) {
+    bar.style.display = 'flex';
+    countEl.textContent = ids.length + ' product' + (ids.length > 1 ? 's' : '') + ' selected';
+  } else {
+    bar.style.display = 'none';
+  }
+  const allCbs = document.querySelectorAll('.product-row-cb');
+  if (selectAll) {
+    selectAll.indeterminate = ids.length > 0 && ids.length < allCbs.length;
+    selectAll.checked = allCbs.length > 0 && ids.length === allCbs.length;
+  }
+}
+
+window.onProductRowCbChange = function() { updateBulkBar(); };
+
+window.toggleSelectAllProducts = function(checked) {
+  document.querySelectorAll('.product-row-cb').forEach(function(cb) { cb.checked = checked; });
+  updateBulkBar();
+};
+
+window.clearBulkSelection = function() {
+  document.querySelectorAll('.product-row-cb').forEach(function(cb) { cb.checked = false; });
+  var selectAll = document.getElementById('select-all-products');
+  if (selectAll) { selectAll.checked = false; selectAll.indeterminate = false; }
+  updateBulkBar();
+};
+
+// ── Bulk soft-delete  (isDeleted: 1 = deactivate, 0 = activate) ──
+window.bulkSoftDelete = async function(flag) {
+  var ids = getSelectedProductIds();
+  if (!ids.length) return;
+  var action = flag === 1 ? 'deactivate' : 'activate';
+  if (!confirm((action.charAt(0).toUpperCase()+action.slice(1)) + ' ' + ids.length + ' selected product' + (ids.length>1?'s':'') + '?')) return;
+  try {
+    await Promise.all(ids.map(function(id) { return fsUpdate(COL.products, id, { isDeleted: flag }); }));
+    ids.forEach(function(id) {
+      var p = products.find(function(x) { return String(x.id) === String(id); });
+      if (p) p.isDeleted = flag;
+    });
+    clearBulkSelection();
+    renderProductsTable(document.getElementById('product-search') ? document.getElementById('product-search').value : '');
+    renderRecentTable();
+    adminToast(ids.length + ' product' + (ids.length>1?'s':'') + ' ' + action + 'd.', flag===0?'success':'');
+  } catch(e) {
+    adminToast('Bulk update failed: ' + e.message, 'error');
+  }
+};
+
+// ── Download products as CSV ──────────────────────────────────
+window.downloadProductsCSV = function() {
+  if (!products.length) { adminToast('No products to download.', 'error'); return; }
+  var headers = ['ID','Name','Category','Description','Price','Original Price','Badge','Rating','isDeleted','Created At'];
+  var rows = products.map(function(p) {
+    return [
+      p.id,
+      '"' + (p.name||'').replace(/"/g,'""') + '"',
+      '"' + (p.category||'').replace(/"/g,'""') + '"',
+      '"' + (p.description||'').replace(/"/g,'""') + '"',
+      p.price || 0,
+      p.original_price || p.originalPrice || '',
+      '"' + (p.badge||'').replace(/"/g,'""') + '"',
+      p.rating || '',
+      p.isDeleted != null ? p.isDeleted : 0,
+      p.createdAt && p.createdAt.toDate ? p.createdAt.toDate().toISOString() : (p.createdAt || ''),
+    ].join(',');
+  });
+  var csv = [headers.join(',')].concat(rows).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'thebohothread_products_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  adminToast('CSV downloaded!', 'success');
+};
 
 // ═════════════════════════════════════════════════════════════
 //  PRODUCT MODAL

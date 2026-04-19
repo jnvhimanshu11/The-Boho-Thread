@@ -275,16 +275,33 @@
             <button class="btn btn-outline-gold" onclick="openExcelImportModal()" title="Bulk import products via Excel">
               <i class="ph ph-microsoft-excel-logo"></i> Import Excel
             </button>
+            <button class="btn btn-outline-gold" onclick="downloadProductsCSV()" title="Download product list as CSV">
+              <i class="ph ph-download-simple"></i> Download CSV
+            </button>
             <button class="btn btn-gold" onclick="openProductModal()">
               <i class="ph ph-plus"></i> Add Product
             </button>
           </div>
+        </div>
+        <!-- Bulk action bar (shown when rows are selected) -->
+        <div id="bulk-action-bar" style="display:none;align-items:center;gap:12px;padding:10px 20px;background:rgba(201,168,76,0.08);border-bottom:1px solid rgba(201,168,76,0.2);">
+          <span id="bulk-selected-count" style="color:var(--gold);font-size:0.9rem;font-weight:600;"></span>
+          <button class="btn btn-danger btn-sm" onclick="bulkSoftDelete(1)" style="gap:6px;">
+            <i class="ph ph-trash"></i> Deactivate Selected
+          </button>
+          <button class="btn btn-outline-gold btn-sm" onclick="bulkSoftDelete(0)" style="gap:6px;">
+            <i class="ph ph-arrow-counter-clockwise"></i> Activate Selected
+          </button>
+          <button class="btn btn-sm" onclick="clearBulkSelection()" style="background:transparent;color:var(--text-muted);border:1px solid rgba(255,255,255,0.1);">
+            Cancel
+          </button>
         </div>
         <div class="panel-body">
           <div class="admin-table-wrap">
             <table class="admin-table">
               <thead>
                 <tr>
+                  <th style="width:36px;"><input type="checkbox" id="select-all-products" title="Select all" onchange="toggleSelectAllProducts(this.checked)" style="accent-color:var(--gold);cursor:pointer;width:15px;height:15px;"></th>
                   <th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Badge</th><th>Rating</th><th>Actions</th>
                 </tr>
               </thead>

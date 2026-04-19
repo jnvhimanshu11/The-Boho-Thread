@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS products (
   image          MEDIUMTEXT     DEFAULT '',   -- MEDIUMTEXT to safely hold base64 images (primary/thumbnail)
   images         MEDIUMTEXT     DEFAULT NULL,  -- JSON array of up to 10 image URLs/base64
   sizes          TEXT           DEFAULT NULL,  -- JSON array: [{size, price, original_price}]
+  is_deleted     TINYINT(1)     NOT NULL DEFAULT 0,  -- 0 = active, 1 = soft-deleted/inactive
   created_at     TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
   updated_at     TIMESTAMP      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
