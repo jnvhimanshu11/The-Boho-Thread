@@ -927,7 +927,7 @@ window.downloadExcelTemplate = function() {
   // Style header row (best-effort — SheetJS CE does not do rich styling, just note color)
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Products');
-  XLSX.writeFile(wb, 'thebohothread_product_import_template.xlsx');
+  XLSX.writeFile(wb, 'TheBohoThread_Product_Import.xlsx');
   adminToast('Template downloaded!', 'success');
 };
 
