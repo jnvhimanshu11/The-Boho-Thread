@@ -276,7 +276,7 @@
               <i class="ph ph-microsoft-excel-logo"></i> Import Excel
             </button>
             <button class="btn btn-outline-gold" onclick="downloadProductsCSV()" title="Download product list as CSV">
-              <i class="ph ph-download-simple"></i> Download Product Master
+              <i class="ph ph-download-simple"></i> Download CSV
             </button>
             <button class="btn btn-gold" onclick="openProductModal()">
               <i class="ph ph-plus"></i> Add Product
@@ -1148,63 +1148,149 @@
 <div class="modal-backdrop" id="excel-import-modal-backdrop">
   <div class="admin-modal" style="max-width:720px;">
     <div class="admin-modal-header">
-      <h3><i class="ph ph-microsoft-excel-logo" style="color:#1d6f42;margin-right:8px;"></i> Bulk Import Products via Excel</h3>
+      <h3><i class="ph ph-microsoft-excel-logo" style="color:#1d6f42;margin-right:8px;"></i> Bulk Products via Excel</h3>
       <button class="modal-x" onclick="closeExcelImportModal()"><i class="ph ph-x"></i></button>
     </div>
+
+    <!-- Tab switcher -->
+    <div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.08);padding:0 24px;gap:0;">
+      <button id="excel-tab-import" onclick="switchExcelTab('import')" style="background:none;border:none;color:var(--gold);font-family:inherit;font-size:0.9rem;font-weight:600;padding:12px 18px 10px;cursor:pointer;border-bottom:2px solid var(--gold);margin-bottom:-1px;">
+        <i class="ph ph-upload-simple"></i> Add Products
+      </button>
+      <button id="excel-tab-delete" onclick="switchExcelTab('delete')" style="background:none;border:none;color:var(--text-muted);font-family:inherit;font-size:0.9rem;font-weight:600;padding:12px 18px 10px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;">
+        <i class="ph ph-trash"></i> Delete by ID
+      </button>
+    </div>
+
     <div class="admin-modal-body">
 
-      <!-- Step 1: Download Template -->
-      <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:10px;padding:16px;margin-bottom:20px;">
-        <p style="font-weight:600;margin-bottom:8px;"><i class="ph ph-info" style="color:var(--gold);"></i> Step 1 — Download the template</p>
-        <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:12px;">Fill in the Excel template with your product data. Image URLs must be direct links (e.g. <code>https://…/image.jpg</code>). For multiple images, separate with <code>|</code>. For sizes, use format <code>S:499|M:599|L:699</code>.</p>
-        <button class="btn btn-outline-gold btn-sm" onclick="downloadExcelTemplate()">
-          <i class="ph ph-download-simple"></i> Download Template (.xlsx)
-        </button>
+      <!-- ══ TAB: ADD PRODUCTS ══ -->
+      <div id="excel-panel-import">
+        <!-- Step 1: Download Template -->
+        <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:10px;padding:16px;margin-bottom:20px;">
+          <p style="font-weight:600;margin-bottom:8px;"><i class="ph ph-info" style="color:var(--gold);"></i> Step 1 — Download the template</p>
+          <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:12px;">Fill in the Excel template with your product data. Image URLs must be direct links (e.g. <code>https://…/image.jpg</code>). For multiple images, separate with <code>|</code>. For sizes, use format <code>S:499|M:599|L:699</code>.</p>
+          <button class="btn btn-outline-gold btn-sm" onclick="downloadExcelTemplate()">
+            <i class="ph ph-download-simple"></i> Download Template (.xlsx)
+          </button>
+        </div>
+
+        <!-- Step 2: Upload File -->
+        <div style="margin-bottom:20px;">
+          <p style="font-weight:600;margin-bottom:10px;"><i class="ph ph-upload-simple" style="color:var(--gold);"></i> Step 2 — Upload your filled Excel file</p>
+          <div id="excel-drop-zone" style="border:2px dashed rgba(201,168,76,0.4);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s;" onclick="document.getElementById('excel-file-input').click()" ondragover="excelDragOver(event)" ondrop="excelDrop(event)" ondragleave="excelDragLeave(event)">
+            <i class="ph ph-file-xls" style="font-size:2.4rem;color:var(--gold);display:block;margin-bottom:10px;"></i>
+            <p style="color:var(--text-muted);font-size:0.9rem;">Drag & drop your .xlsx / .xls file here, or <span style="color:var(--gold);text-decoration:underline;">click to browse</span></p>
+            <p id="excel-file-name" style="margin-top:8px;font-size:0.84rem;color:var(--gold);display:none;"></p>
+          </div>
+          <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelFile(this.files[0])" />
+        </div>
+
+        <!-- Preview Table -->
+        <div id="excel-preview-wrap" style="display:none;margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <p style="font-weight:600;"><i class="ph ph-table" style="color:var(--gold);"></i> Preview — <span id="excel-preview-count">0</span> product(s) found</p>
+            <span id="excel-preview-errors" style="font-size:0.82rem;color:#e05c5c;"></span>
+          </div>
+          <div style="overflow-x:auto;max-height:240px;border-radius:8px;border:1px solid rgba(255,255,255,0.07);">
+            <table class="admin-table" id="excel-preview-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Name</th><th>Category</th><th>Price</th><th>Badge</th><th>Images</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="excel-preview-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <div id="excel-import-progress" style="display:none;margin-bottom:16px;">
+          <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:6px;" id="excel-progress-label">Importing…</p>
+          <div style="background:rgba(255,255,255,0.07);border-radius:20px;height:8px;overflow:hidden;">
+            <div id="excel-progress-bar" style="height:100%;background:var(--gold);border-radius:20px;width:0%;transition:width 0.3s;"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <button class="btn btn-outline-gold" onclick="closeExcelImportModal()">Cancel</button>
+          <button class="btn btn-gold" id="excel-import-btn" onclick="runExcelImport()" disabled style="opacity:0.5;">
+            <i class="ph ph-upload-simple"></i> Import Products
+          </button>
+        </div>
       </div>
 
-      <!-- Step 2: Upload File -->
-      <div style="margin-bottom:20px;">
-        <p style="font-weight:600;margin-bottom:10px;"><i class="ph ph-upload-simple" style="color:var(--gold);"></i> Step 2 — Upload your filled Excel file</p>
-        <div id="excel-drop-zone" style="border:2px dashed rgba(201,168,76,0.4);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s;" onclick="document.getElementById('excel-file-input').click()" ondragover="excelDragOver(event)" ondrop="excelDrop(event)" ondragleave="excelDragLeave(event)">
-          <i class="ph ph-file-xls" style="font-size:2.4rem;color:var(--gold);display:block;margin-bottom:10px;"></i>
-          <p style="color:var(--text-muted);font-size:0.9rem;">Drag & drop your .xlsx / .xls file here, or <span style="color:var(--gold);text-decoration:underline;">click to browse</span></p>
-          <p id="excel-file-name" style="margin-top:8px;font-size:0.84rem;color:var(--gold);display:none;"></p>
+      <!-- ══ TAB: DELETE BY ID ══ -->
+      <div id="excel-panel-delete" style="display:none;">
+
+        <!-- Info + template download -->
+        <div style="background:rgba(224,92,92,0.07);border:1px solid rgba(224,92,92,0.25);border-radius:10px;padding:16px;margin-bottom:20px;">
+          <p style="font-weight:600;margin-bottom:8px;color:#e05c5c;"><i class="ph ph-warning"></i> Delete products using their unique Firestore ID</p>
+          <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:12px;">Upload an Excel / CSV with a column named <code>id</code> (the Firestore document ID from your CSV export). Choose whether to <strong>soft-delete</strong> (sets <code>isDeleted=1</code>, reversible) or <strong>permanently delete</strong> (cannot be undone).</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-outline-gold btn-sm" onclick="downloadDeleteTemplate()">
+              <i class="ph ph-download-simple"></i> Download Delete Template (.xlsx)
+            </button>
+            <button class="btn btn-outline-gold btn-sm" onclick="downloadProductsCSV()">
+              <i class="ph ph-download-simple"></i> Export Current Products (get IDs)
+            </button>
+          </div>
         </div>
-        <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelFile(this.files[0])" />
+
+        <!-- Upload zone -->
+        <div style="margin-bottom:20px;">
+          <p style="font-weight:600;margin-bottom:10px;"><i class="ph ph-upload-simple" style="color:var(--gold);"></i> Upload your ID list file</p>
+          <div id="del-drop-zone" style="border:2px dashed rgba(224,92,92,0.4);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all 0.2s;" onclick="document.getElementById('del-file-input').click()" ondragover="delDragOver(event)" ondrop="delDrop(event)" ondragleave="delDragLeave(event)">
+            <i class="ph ph-file-xls" style="font-size:2.2rem;color:#e05c5c;display:block;margin-bottom:8px;"></i>
+            <p style="color:var(--text-muted);font-size:0.9rem;">Drag & drop .xlsx / .xls / .csv here, or <span style="color:#e05c5c;text-decoration:underline;">click to browse</span></p>
+            <p id="del-file-name" style="margin-top:8px;font-size:0.84rem;color:#e05c5c;display:none;"></p>
+          </div>
+          <input type="file" id="del-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleDeleteFile(this.files[0])" />
+        </div>
+
+        <!-- Preview table -->
+        <div id="del-preview-wrap" style="display:none;margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <p style="font-weight:600;"><i class="ph ph-table" style="color:var(--gold);"></i> Preview — <span id="del-preview-count">0</span> ID(s) found</p>
+            <span id="del-preview-errors" style="font-size:0.82rem;color:#e05c5c;"></span>
+          </div>
+          <div style="overflow-x:auto;max-height:220px;border-radius:8px;border:1px solid rgba(255,255,255,0.07);">
+            <table class="admin-table">
+              <thead><tr><th>#</th><th>Firestore ID</th><th>Matched Product Name</th><th>Status</th></tr></thead>
+              <tbody id="del-preview-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Delete mode toggle -->
+        <div id="del-mode-wrap" style="display:none;margin-bottom:20px;background:rgba(255,255,255,0.03);border-radius:8px;padding:14px 16px;border:1px solid rgba(255,255,255,0.07);">
+          <p style="font-weight:600;margin-bottom:10px;font-size:0.9rem;">Delete Mode</p>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px;font-size:0.88rem;">
+            <input type="radio" name="del-mode" value="soft" checked style="accent-color:var(--gold);width:15px;height:15px;">
+            <span><strong style="color:var(--gold);">Soft Delete</strong> — sets <code>isDeleted = 1</code> (products hidden, can be restored)</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.88rem;">
+            <input type="radio" name="del-mode" value="permanent" style="accent-color:#e05c5c;width:15px;height:15px;">
+            <span><strong style="color:#e05c5c;">Permanent Delete</strong> — removes from Firestore completely <em style="color:var(--text-muted);">(cannot be undone)</em></span>
+          </label>
+        </div>
+
+        <!-- Progress -->
+        <div id="del-progress-wrap" style="display:none;margin-bottom:16px;">
+          <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:6px;" id="del-progress-label">Processing…</p>
+          <div style="background:rgba(255,255,255,0.07);border-radius:20px;height:8px;overflow:hidden;">
+            <div id="del-progress-bar" style="height:100%;background:#e05c5c;border-radius:20px;width:0%;transition:width 0.3s;"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <button class="btn btn-outline-gold" onclick="closeExcelImportModal()">Cancel</button>
+          <button class="btn btn-danger" id="del-run-btn" onclick="runExcelDelete()" disabled style="opacity:0.5;">
+            <i class="ph ph-trash"></i> Delete Products
+          </button>
+        </div>
       </div>
 
-      <!-- Preview Table -->
-      <div id="excel-preview-wrap" style="display:none;margin-bottom:20px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <p style="font-weight:600;"><i class="ph ph-table" style="color:var(--gold);"></i> Preview — <span id="excel-preview-count">0</span> product(s) found</p>
-          <span id="excel-preview-errors" style="font-size:0.82rem;color:#e05c5c;"></span>
-        </div>
-        <div style="overflow-x:auto;max-height:240px;border-radius:8px;border:1px solid rgba(255,255,255,0.07);">
-          <table class="admin-table" id="excel-preview-table">
-            <thead>
-              <tr>
-                <th>#</th><th>Name</th><th>Category</th><th>Price</th><th>Badge</th><th>Images</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="excel-preview-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Progress -->
-      <div id="excel-import-progress" style="display:none;margin-bottom:16px;">
-        <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:6px;" id="excel-progress-label">Importing…</p>
-        <div style="background:rgba(255,255,255,0.07);border-radius:20px;height:8px;overflow:hidden;">
-          <div id="excel-progress-bar" style="height:100%;background:var(--gold);border-radius:20px;width:0%;transition:width 0.3s;"></div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:12px;justify-content:flex-end;">
-        <button class="btn btn-outline-gold" onclick="closeExcelImportModal()">Cancel</button>
-        <button class="btn btn-gold" id="excel-import-btn" onclick="runExcelImport()" disabled style="opacity:0.5;">
-          <i class="ph ph-upload-simple"></i> Import Products
-        </button>
-      </div>
     </div>
   </div>
 </div>

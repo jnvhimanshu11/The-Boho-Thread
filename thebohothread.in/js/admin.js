@@ -981,6 +981,19 @@ window.clearTrending = function() {
 
 let excelImportRows = []; // parsed & validated rows ready to import
 
+// ── Excel modal tab switcher ──────────────────────────────────
+window.switchExcelTab = function(tab) {
+  var isImport = tab === 'import';
+  document.getElementById('excel-panel-import').style.display = isImport ? 'block' : 'none';
+  document.getElementById('excel-panel-delete').style.display = isImport ? 'none' : 'block';
+  var tImport = document.getElementById('excel-tab-import');
+  var tDelete = document.getElementById('excel-tab-delete');
+  tImport.style.color = isImport ? 'var(--gold)' : 'var(--text-muted)';
+  tImport.style.borderBottomColor = isImport ? 'var(--gold)' : 'transparent';
+  tDelete.style.color = isImport ? 'var(--text-muted)' : '#e05c5c';
+  tDelete.style.borderBottomColor = isImport ? 'transparent' : '#e05c5c';
+};
+
 // ── Template download ─────────────────────────────────────────
 window.downloadExcelTemplate = function() {
   const XLSX = window.XLSX;
@@ -1027,6 +1040,7 @@ window.downloadExcelTemplate = function() {
 // ── Modal open / close ────────────────────────────────────────
 window.openExcelImportModal = function() {
   excelImportRows = [];
+  deleteIdRows = [];
   document.getElementById('excel-import-modal-backdrop').classList.add('open');
   document.getElementById('excel-preview-wrap').style.display = 'none';
   document.getElementById('excel-import-progress').style.display = 'none';
@@ -1034,12 +1048,22 @@ window.openExcelImportModal = function() {
   document.getElementById('excel-file-input').value = '';
   document.getElementById('excel-import-btn').disabled = true;
   document.getElementById('excel-import-btn').style.opacity = '0.5';
+  // Reset delete tab
+  document.getElementById('del-preview-wrap').style.display = 'none';
+  document.getElementById('del-progress-wrap').style.display = 'none';
+  document.getElementById('del-mode-wrap').style.display = 'none';
+  document.getElementById('del-file-name').style.display = 'none';
+  document.getElementById('del-file-input').value = '';
+  document.getElementById('del-run-btn').disabled = true;
+  document.getElementById('del-run-btn').style.opacity = '0.5';
   resetDropZone();
+  switchExcelTab('import');
 };
 
 window.closeExcelImportModal = function() {
   document.getElementById('excel-import-modal-backdrop').classList.remove('open');
   excelImportRows = [];
+  deleteIdRows = [];
 };
 
 function resetDropZone() {
@@ -1249,4 +1273,201 @@ window.runExcelImport = async function() {
   btn.disabled = false;
   btn.style.opacity = '1';
   excelImportRows = [];
+};
+
+// ════════════════════════════════════════════════════════════════
+//  EXCEL DELETE BY ID
+// ════════════════════════════════════════════════════════════════
+let deleteIdRows = []; // { id, matchedName, valid }
+
+// ── Download delete template ──────────────────────────────────
+window.downloadDeleteTemplate = function() {
+  var XLSX = window.XLSX;
+  if (!XLSX) { adminToast('SheetJS not loaded yet, please try again.', 'error'); return; }
+
+  var header = ['id', 'name_for_reference'];
+  var sample = products.slice(0, 3).map(function(p) { return [p.id, p.name || '']; });
+  if (!sample.length) sample = [['PASTE_FIRESTORE_ID_HERE', 'Optional product name for your reference']];
+
+  var ws = XLSX.utils.aoa_to_sheet([header].concat(sample));
+  ws['!cols'] = [{ wch: 36 }, { wch: 32 }];
+
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Delete IDs');
+  XLSX.writeFile(wb, 'TheBohoThread_Delete_IDs.xlsx');
+  adminToast('Delete template downloaded!', 'success');
+};
+
+// ── Drop-zone handlers for delete tab ────────────────────────
+window.delDragOver = function(e) {
+  e.preventDefault();
+  var dz = document.getElementById('del-drop-zone');
+  dz.style.borderColor = '#e05c5c';
+  dz.style.background = 'rgba(224,92,92,0.05)';
+};
+window.delDragLeave = function() {
+  var dz = document.getElementById('del-drop-zone');
+  dz.style.borderColor = 'rgba(224,92,92,0.4)';
+  dz.style.background = 'transparent';
+};
+window.delDrop = function(e) {
+  e.preventDefault();
+  window.delDragLeave();
+  var file = e.dataTransfer.files[0];
+  if (file) handleDeleteFile(file);
+};
+
+// ── Parse delete file ─────────────────────────────────────────
+window.handleDeleteFile = function(file) {
+  if (!file) return;
+  var XLSX = window.XLSX;
+  if (!XLSX) { adminToast('SheetJS library not ready.', 'error'); return; }
+
+  var ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls','csv'].includes(ext)) {
+    adminToast('Please upload a .xlsx, .xls, or .csv file.', 'error'); return;
+  }
+
+  var fnEl = document.getElementById('del-file-name');
+  fnEl.textContent = '📄 ' + file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)';
+  fnEl.style.display = 'block';
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var wb = XLSX.read(data, { type: 'array' });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      parseDeletePreview(rows);
+    } catch(err) {
+      adminToast('Failed to read file: ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+function parseDeletePreview(rawRows) {
+  deleteIdRows = [];
+  var tbody = document.getElementById('del-preview-tbody');
+  tbody.innerHTML = '';
+
+  var invalidCount = 0;
+
+  rawRows.forEach(function(row, i) {
+    // Normalise keys
+    var r = {};
+    Object.keys(row).forEach(function(k) { r[k.toLowerCase().trim()] = String(row[k]).trim(); });
+
+    var id = r['id'] || r['product_id'] || r['firestore_id'] || '';
+    var valid = id.length > 0;
+    if (!valid) { invalidCount++; }
+
+    // Try to match against loaded products
+    var matched = products.find(function(p) { return String(p.id) === String(id); });
+    var matchedName = matched ? matched.name : (valid ? '<em style="color:#e05c5c;">Not found in current view</em>' : '<em style="color:var(--text-muted);">No ID</em>');
+    var statusHtml = !valid
+      ? '<span style="color:#e05c5c;font-size:0.78rem;">❌ Missing ID</span>'
+      : matched
+        ? '<span style="color:#4caf7d;font-size:0.78rem;">✓ Matched</span>'
+        : '<span style="color:#c9a84c;font-size:0.78rem;">⚠ ID not in current view</span>';
+
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td style="color:var(--text-muted)">' + (i+1) + '</td>'
+      + '<td style="font-family:monospace;font-size:0.8rem;color:var(--gold);">' + (id || '—') + '</td>'
+      + '<td>' + matchedName + '</td>'
+      + '<td>' + statusHtml + '</td>';
+    tbody.appendChild(tr);
+
+    if (valid) deleteIdRows.push({ id: id, matchedName: matched ? matched.name : id });
+  });
+
+  document.getElementById('del-preview-wrap').style.display = 'block';
+  document.getElementById('del-preview-count').textContent = rawRows.length;
+
+  var errEl = document.getElementById('del-preview-errors');
+  errEl.textContent = invalidCount ? ('⚠ ' + invalidCount + ' row(s) missing ID and will be skipped') : '';
+
+  var runBtn = document.getElementById('del-run-btn');
+  if (deleteIdRows.length > 0) {
+    document.getElementById('del-mode-wrap').style.display = 'block';
+    runBtn.disabled = false;
+    runBtn.style.opacity = '1';
+    runBtn.innerHTML = '<i class="ph ph-trash"></i> Delete ' + deleteIdRows.length + ' Product' + (deleteIdRows.length > 1 ? 's' : '');
+  } else {
+    document.getElementById('del-mode-wrap').style.display = 'none';
+    runBtn.disabled = true;
+    runBtn.style.opacity = '0.5';
+  }
+
+  adminToast('Parsed ' + rawRows.length + ' row(s) — ' + deleteIdRows.length + ' valid IDs.', deleteIdRows.length ? 'success' : 'error');
+}
+
+// ── Run Excel delete ──────────────────────────────────────────
+window.runExcelDelete = async function() {
+  if (!deleteIdRows.length) return;
+
+  var modeEl = document.querySelector('input[name="del-mode"]:checked');
+  var mode = modeEl ? modeEl.value : 'soft';
+  var isPermanent = mode === 'permanent';
+
+  var confirmMsg = isPermanent
+    ? 'PERMANENTLY delete ' + deleteIdRows.length + ' product(s)? This CANNOT be undone.'
+    : 'Soft-delete ' + deleteIdRows.length + ' product(s)? (sets isDeleted=1, can be restored later)';
+
+  if (!confirm(confirmMsg)) return;
+
+  var runBtn = document.getElementById('del-run-btn');
+  var progressWrap = document.getElementById('del-progress-wrap');
+  var progressBar  = document.getElementById('del-progress-bar');
+  var progressLabel= document.getElementById('del-progress-label');
+
+  runBtn.disabled = true;
+  runBtn.style.opacity = '0.5';
+  progressWrap.style.display = 'block';
+
+  var done = 0;
+  var total = deleteIdRows.length;
+  var succeeded = [];
+  var failed = [];
+
+  for (var i = 0; i < deleteIdRows.length; i++) {
+    var row = deleteIdRows[i];
+    progressLabel.textContent = (isPermanent ? 'Deleting' : 'Deactivating') + ' ' + (done+1) + ' of ' + total + ': "' + row.matchedName + '"…';
+    progressBar.style.width = Math.round((done / total) * 100) + '%';
+
+    try {
+      if (isPermanent) {
+        await fsDelete(COL.products, String(row.id));
+        products = products.filter(function(p) { return String(p.id) !== String(row.id); });
+      } else {
+        await fsUpdate(COL.products, String(row.id), { isDeleted: 1 });
+        var p = products.find(function(p) { return String(p.id) === String(row.id); });
+        if (p) p.isDeleted = 1;
+      }
+      succeeded.push(row.matchedName);
+    } catch(e) {
+      console.error('Delete failed for id:', row.id, e);
+      failed.push(row.matchedName);
+    }
+    done++;
+  }
+
+  progressBar.style.width = '100%';
+  progressLabel.textContent = 'Done! ' + succeeded.length + ' ' + (isPermanent ? 'deleted' : 'deactivated') + (failed.length ? ', ' + failed.length + ' failed.' : '.');
+
+  renderProductsTable();
+  renderRecentTable();
+  updateStats();
+
+  if (failed.length) {
+    adminToast(succeeded.length + ' done. ' + failed.length + ' failed — check console.', 'error');
+  } else {
+    adminToast('✓ ' + succeeded.length + ' product' + (succeeded.length > 1 ? 's' : '') + ' ' + (isPermanent ? 'permanently deleted' : 'soft-deleted') + '!', 'success');
+    setTimeout(function() { closeExcelImportModal(); }, 1800);
+  }
+
+  runBtn.disabled = false;
+  runBtn.style.opacity = '1';
+  deleteIdRows = [];
 };
