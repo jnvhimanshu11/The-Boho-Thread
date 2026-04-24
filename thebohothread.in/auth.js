@@ -5,27 +5,31 @@
 const Auth = (() => {
   const SESSION_KEY = 'splitmate_session';
 
+  // Use localStorage so session survives redirects (sessionStorage is wiped on redirect in some browsers)
   function getSession() {
-    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); }
+    try {
+      return JSON.parse(localStorage.getItem(SESSION_KEY)) ||
+             JSON.parse(sessionStorage.getItem(SESSION_KEY));
+    }
     catch { return null; }
   }
 
   function setSession(user) {
-    // Never store password in session
     const safe = { ...user };
     delete safe.password;
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(safe));
+    const json = JSON.stringify(safe);
+    localStorage.setItem(SESSION_KEY, json);
+    sessionStorage.setItem(SESSION_KEY, json);
   }
 
   function clearSession() {
+    localStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(SESSION_KEY);
   }
 
+  // Returns the cached session user directly (sync) — no Firestore re-fetch
   function currentUser() {
-    const s = getSession();
-    if (!s) return null;
-    // Re-fetch from DB for freshness
-    return DB.users.findById(s.id);
+    return getSession();
   }
 
   function isLoggedIn() {
@@ -68,6 +72,8 @@ const Auth = (() => {
 
   function logout() {
     clearSession();
+    // Also sign out of Firebase so redirect result is cleared
+    try { firebase.auth().signOut(); } catch(e) {}
     window.location.href = 'index.html';
   }
 

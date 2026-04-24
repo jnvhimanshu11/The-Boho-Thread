@@ -63,12 +63,12 @@
     </div>
     <div class="sample-cards">
       <div class="mini-card">
-        <div class="mc-label">For the friend who always 'forgets' their wallet</div>
-        <div class="mc-val">Because math shouldn't ruin dinner</div>
+        <div class="mc-label">You are owed overall</div>
+        <div class="mc-val">₹2,450.00</div>
       </div>
       <div class="mini-card">
-        <div class="mc-label">Used by 50,000+ roommates worldwide</div>
-        <div class="mc-val">Secure, encrypted, and private</div>
+        <div class="mc-label">Goa Trip • 5 members • Total spent</div>
+        <div class="mc-val">₹18,200.00</div>
       </div>
     </div>
   </div>
@@ -115,9 +115,8 @@
 <script src="db.firestore.js"></script>
 <script src="auth.js"></script>
 <script>
-Auth.redirectIfAuthed('dashboard.html');
 const invToken = new URLSearchParams(location.search).get('invite');
-if (invToken) sessionStorage.setItem('pending_invite', invToken);
+if (invToken) localStorage.setItem('pending_invite', invToken);
 
 function alert_(id, msg, type='error') {
   const el = document.getElementById(id);
@@ -126,42 +125,54 @@ function alert_(id, msg, type='error') {
 
 function googleLogin() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  // Use redirect instead of popup — avoids popup-blocked / popup-closed errors
   firebase.auth().signInWithRedirect(provider)
     .catch((err) => alert_('google-alert', 'Google sign-in failed: ' + err.message));
 }
 
 function redirect() {
-  const p = sessionStorage.getItem('pending_invite');
-  if (p) { sessionStorage.removeItem('pending_invite'); location.href=`invite.html?token=${p}`; }
+  const p = localStorage.getItem('pending_invite');
+  if (p) { localStorage.removeItem('pending_invite'); location.href=`invite.html?token=${p}`; }
   else location.href = 'dashboard.html';
 }
 
-// Handle the result when the page loads back after Google redirect
+// Wait for Firebase to resolve any pending redirect result FIRST,
+// then check if already logged in — this prevents the redirect loop
 firebase.auth().getRedirectResult()
   .then(async (result) => {
-    if (!result || !result.user) return; // No redirect result — normal page load
-    const fu = result.user;
-    let user = await DB.users.findByEmail(fu.email);
-    if (!user) {
-      user = await DB.users.create(fu.email, fu.displayName || fu.email, '__google__');
+    if (result && result.user) {
+      // Coming back from Google — create/update user record
+      const fu = result.user;
+      let user = await DB.users.findByEmail(fu.email);
+      if (!user) {
+        user = await DB.users.create(fu.email, fu.displayName || fu.email, '__google__');
+      }
+      // Sync latest Google name and photo
+      const updates = {};
+      if (fu.displayName && fu.displayName !== user.name) updates.name = fu.displayName;
+      if (fu.photoURL && fu.photoURL !== user.photoURL) updates.photoURL = fu.photoURL;
+      if (Object.keys(updates).length) {
+        await DB.users.update(user.id, updates);
+        user = await DB.users.findById(user.id);
+      }
+      Auth.setSession(user);
+      redirect();
+    } else {
+      // No redirect — check if already logged in via stored session
+      if (Auth.isLoggedIn()) {
+        redirect();
+      }
+      // Otherwise stay on login page — user needs to click the button
     }
-    // Always sync latest Google name and photo into DB + session
-    const updates = {};
-    if (fu.displayName && fu.displayName !== user.name) updates.name = fu.displayName;
-    if (fu.photoURL && fu.photoURL !== user.photoURL) updates.photoURL = fu.photoURL;
-    if (Object.keys(updates).length) {
-      await DB.users.update(user.id, updates);
-      user = await DB.users.findById(user.id);
-    }
-    Auth.setSession(user);
-    redirect();
   })
   .catch((err) => {
+    console.error(err);
     if (err.code !== 'auth/no-auth-event') {
       alert_('google-alert', 'Google sign-in failed: ' + err.message);
     }
+    // On error, still check local session
+    if (Auth.isLoggedIn()) redirect();
   });
+</script>
 
 
 </script>
