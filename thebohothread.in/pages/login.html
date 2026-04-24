@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign In – SplitEase</title>
+  <title>Sign In – SplitMate</title>
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="stylesheet" href="../css/landing.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,22 +17,12 @@
     </div>
     <p class="login-tagline">Sign in to manage your shared expenses</p>
 
+    <div id="google-alert"></div>
+
     <button class="google-btn" id="google-login-btn">
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
       Continue with Google
     </button>
-
-    <div class="divider-text">or</div>
-
-    <div class="form-group">
-      <label class="form-label">Email</label>
-      <input type="email" class="form-input" id="email-input" placeholder="you@example.com" />
-    </div>
-    <div class="form-group">
-      <label class="form-label">Full Name</label>
-      <input type="text" class="form-input" id="name-input" placeholder="Your name" />
-    </div>
-    <button class="btn-primary w-full" id="email-login-btn" style="width:100%">Sign In / Register</button>
 
     <p style="font-size:0.78rem;color:var(--text-dim);margin-top:20px;text-align:center;line-height:1.6">
       By continuing, you agree to our Terms of Service.<br>
@@ -49,62 +39,27 @@
   <script src="../js/db.js"></script>
   <script src="../js/ui.js"></script>
   <script>
-    // Already logged in?
     document.addEventListener('DOMContentLoaded', () => {
       const user = Auth.getCurrentUser();
       if (user) window.location.href = 'dashboard.html';
     });
 
-    async function doLogin(name, email) {
-      if (!email) return UI.toast('Please enter your email.', 'error');
-      if (!email.includes('@')) return UI.toast('Enter a valid email.', 'error');
-      if (!name) return UI.toast('Please enter your name.', 'error');
-
-      const users = Auth.getUsers();
-      let user = users[email];
-      if (!user) {
-        user = {
-          uid: 'u_' + Date.now(),
-          name,
-          email,
-          photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=7c6af7&color=fff`,
-          createdAt: Date.now(),
-          role: 'user'
-        };
-        users[email] = user;
-        localStorage.setItem('splitease_users', JSON.stringify(users));
-      }
-      localStorage.setItem('splitease_current_user', JSON.stringify(user));
-      sessionStorage.setItem('splitease_current_user', JSON.stringify(user));
-
-      // Check pending invites
-      const pending = DB.getPendingInvitesForUser(email);
-      if (pending.length > 0) {
-        document.getElementById('invite-banner').classList.remove('hidden');
-        document.getElementById('invite-banner').textContent =
-          `🔔 You have ${pending.length} pending group invitation${pending.length > 1 ? 's' : ''}!`;
-        setTimeout(() => window.location.href = 'dashboard.html', 1800);
-      } else {
-        window.location.href = 'dashboard.html';
-      }
-    }
-
     document.getElementById('google-login-btn').addEventListener('click', async () => {
       const user = await Auth.signInWithGoogle();
-      if (user) window.location.href = 'dashboard.html';
-    });
-
-    document.getElementById('email-login-btn').addEventListener('click', () => {
-      const email = document.getElementById('email-input').value.trim();
-      const name  = document.getElementById('name-input').value.trim();
-      doLogin(name, email);
-    });
-
-    // Enter key support
-    ['email-input', 'name-input'].forEach(id => {
-      document.getElementById(id).addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') document.getElementById('email-login-btn').click();
-      });
+      if (user) {
+        const pending = DB.getPendingInvitesForUser(user.email);
+        if (pending.length > 0) {
+          document.getElementById('invite-banner').classList.remove('hidden');
+          document.getElementById('invite-banner').textContent =
+            `🔔 You have ${pending.length} pending group invitation${pending.length > 1 ? 's' : ''}!`;
+          setTimeout(() => window.location.href = 'dashboard.html', 1800);
+        } else {
+          window.location.href = 'dashboard.html';
+        }
+      } else {
+        document.getElementById('google-alert').innerHTML =
+          '<div style="color:red;margin-bottom:12px">Google sign-in failed. Please try again.</div>';
+      }
     });
   </script>
 </body>
