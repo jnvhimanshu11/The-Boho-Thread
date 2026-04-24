@@ -134,7 +134,7 @@ function init() {
 function renderGreeting() {
   const h = new Date().getHours();
   const time = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  document.getElementById('greeting').textContent = `${time}, ${user.name.split(' ')[0]}! 👋`;
+  document.getElementById('greeting').textContent = `${time}, ${user.name(' ')[0]}! 👋`;
 }
 
 function renderStats() {
