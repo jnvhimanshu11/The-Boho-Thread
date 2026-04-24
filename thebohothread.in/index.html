@@ -103,7 +103,7 @@
 <script>
   const firebaseConfig = {
     apiKey:            "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
-    authDomain:        "thebohothread-96e2c.firebaseapp.com",
+    authDomain:        "thebohothread.in",
     projectId:         "thebohothread-96e2c",
     storageBucket:     "thebohothread-96e2c.firebasestorage.app",
     messagingSenderId: "100688387088",
@@ -125,8 +125,34 @@ function alert_(id, msg, type='error') {
 
 function googleLogin() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  firebase.auth().signInWithRedirect(provider)
-    .catch((err) => alert_('google-alert', 'Google sign-in failed: ' + err.message));
+
+  // Try popup first — works on mobile, Safari, and avoids redirect-loop issues
+  firebase.auth().signInWithPopup(provider)
+    .then(async (result) => {
+      const fu = result.user;
+      let user = await DB.users.findByEmail(fu.email);
+      if (!user) {
+        user = await DB.users.create(fu.email, fu.displayName || fu.email, '__google__');
+      }
+      const updates = {};
+      if (fu.displayName && fu.displayName !== user.name) updates.name = fu.displayName;
+      if (fu.photoURL && fu.photoURL !== user.photoURL) updates.photoURL = fu.photoURL;
+      if (Object.keys(updates).length) {
+        await DB.users.update(user.id, updates);
+        user = await DB.users.findById(user.id);
+      }
+      Auth.setSession(user);
+      redirect();
+    })
+    .catch((err) => {
+      // If popup was blocked by browser, fall back to redirect flow
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
+        firebase.auth().signInWithRedirect(provider)
+          .catch((e) => alert_('google-alert', 'Google sign-in failed: ' + e.message));
+      } else {
+        alert_('google-alert', 'Google sign-in failed: ' + err.message);
+      }
+    });
 }
 
 function redirect() {
@@ -172,9 +198,6 @@ firebase.auth().getRedirectResult()
     // On error, still check local session
     if (Auth.isLoggedIn()) redirect();
   });
-</script>
-
-
 </script>
 </body>
 </html>
