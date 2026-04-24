@@ -96,16 +96,11 @@ const Auth = (() => {
   // in FIREBASE_SETUP.md → FILE 2 section.
   // ============================================================
   function googleSignIn(callback) {
-    // ── DEMO MODE (delete after Firebase setup) ───────────────
-    callback({ email: 'google_user@gmail.com', name: 'Google User' });
-
-    // ── REAL FIREBASE (uncomment after setup) ─────────────────
-    // const provider = new firebase.auth.GoogleAuthProvider();
-    // firebase.auth().signInWithPopup(provider)
-    //   .then((result) => {
-    //     callback({ email: result.user.email, name: result.user.displayName });
-    //   })
-    //   .catch((err) => callback(null, err));
+    // Uses redirect flow — no popup needed
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithRedirect(provider)
+      .catch((err) => callback(null, err));
+    // Result is handled via getRedirectResult() on page load in index.html
   }
 
   return {
@@ -206,11 +201,29 @@ function initSidebar() {
   const nameEl = document.getElementById('sidebar-name');
   const emailEl = document.getElementById('sidebar-email');
   const avatarEl = document.getElementById('sidebar-avatar');
-  if (nameEl) nameEl.textContent = user.name;
+  const topbarAvatarEl = document.getElementById('topbar-avatar');
+
+  if (nameEl) nameEl.textContent = user.name || user.email;
   if (emailEl) emailEl.textContent = user.email;
+
+  // Show Google profile photo if available, otherwise initials
   if (avatarEl) {
-    avatarEl.textContent = initials(user.name);
-    avatarEl.style.background = user.avatarColor || '#6c63ff';
+    if (user.photoURL) {
+      avatarEl.innerHTML = `<img src="${user.photoURL}" alt="${user.name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+      avatarEl.style.background = 'transparent';
+    } else {
+      avatarEl.textContent = initials(user.name || user.email);
+      avatarEl.style.background = user.avatarColor || '#6c63ff';
+    }
+  }
+  if (topbarAvatarEl) {
+    if (user.photoURL) {
+      topbarAvatarEl.innerHTML = `<img src="${user.photoURL}" alt="${user.name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+      topbarAvatarEl.style.background = 'transparent';
+    } else {
+      topbarAvatarEl.textContent = initials(user.name || user.email);
+      topbarAvatarEl.style.background = user.avatarColor || '#6c63ff';
+    }
   }
 
   // Logout button

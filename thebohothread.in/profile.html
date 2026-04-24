@@ -52,24 +52,7 @@
           <button class="btn btn-primary mt-4" onclick="saveProfile()">Save Changes</button>
         </div>
 
-        <!-- CHANGE PASSWORD -->
-        <div class="card mb-4">
-          <h3 style="margin-bottom:16px">Change Password</h3>
-          <div id="pw-alert"></div>
-          <div class="form-group">
-            <label class="form-label">Current Password</label>
-            <input type="password" id="old-pw" class="form-input" placeholder="Current password">
-          </div>
-          <div class="form-group">
-            <label class="form-label">New Password</label>
-            <input type="password" id="new-pw" class="form-input" placeholder="New password (min 6 chars)">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Confirm New Password</label>
-            <input type="password" id="confirm-pw" class="form-input" placeholder="Confirm new password">
-          </div>
-          <button class="btn btn-secondary" onclick="changePassword()">Update Password</button>
-        </div>
+
       </div>
 
       <!-- RIGHT COL -->
@@ -187,36 +170,18 @@ function pickColor(color) {
   if (sidebarAvatar) sidebarAvatar.style.background = color;
 }
 
-function saveProfile() {
+async function saveProfile() {
   const name = document.getElementById('edit-name').value.trim();
   if (!name) { setAlert('profile-alert', 'Name is required', 'error'); return; }
-  DB.users.update(user.id, { name, avatarColor: selectedColor });
-  Auth.setSession(DB.users.findById(user.id));
+  await DB.users.update(user.id, { name, avatarColor: selectedColor });
+  const updated = await DB.users.findById(user.id);
+  Auth.setSession(updated);
   setAlert('profile-alert', 'Profile updated successfully!', 'ok');
   renderHero();
   initSidebar();
 }
 
-function changePassword() {
-  const oldPw = document.getElementById('old-pw').value;
-  const newPw = document.getElementById('new-pw').value;
-  const confirmPw = document.getElementById('confirm-pw').value;
 
-  if (!oldPw || !newPw || !confirmPw) { setAlert('pw-alert', 'All fields required', 'error'); return; }
-  if (newPw.length < 6) { setAlert('pw-alert', 'New password must be at least 6 characters', 'error'); return; }
-  if (newPw !== confirmPw) { setAlert('pw-alert', 'Passwords do not match', 'error'); return; }
-
-  const freshUser = DB.users.findById(user.id);
-  if (freshUser.password !== oldPw && freshUser.password !== '__google__') {
-    setAlert('pw-alert', 'Current password is incorrect', 'error'); return;
-  }
-
-  DB.users.update(user.id, { password: newPw });
-  setAlert('pw-alert', 'Password updated!', 'ok');
-  document.getElementById('old-pw').value = '';
-  document.getElementById('new-pw').value = '';
-  document.getElementById('confirm-pw').value = '';
-}
 
 function setAlert(id, msg, type) {
   document.getElementById(id).innerHTML = `<div class="alert alert-${type==='ok'?'success':'error'}" style="margin-bottom:12px">${msg}</div>`;

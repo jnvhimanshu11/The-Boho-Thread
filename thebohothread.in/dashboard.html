@@ -254,18 +254,18 @@ function renderActivity() {
   document.getElementById('activity-list').innerHTML = html;
 }
 
-function createGroup() {
+async function createGroup() {
   const name = document.getElementById('ng-name').value.trim();
   if (!name) { showToast('Group name is required','error'); return; }
   const cat = document.getElementById('ng-category').value;
   const desc = document.getElementById('ng-desc').value.trim();
-  DB.groups.create(name, desc, cat, user.id);
+  await DB.groups.create(name, desc, cat, user.id);
   closeModal('new-group-modal');
   document.getElementById('ng-name').value = '';
   document.getElementById('ng-desc').value = '';
   showToast('Group created!', 'success');
-  renderStats();
-  renderGroups();
+  await renderStats();
+  await renderGroups();
 }
 
 // Close modal on overlay click

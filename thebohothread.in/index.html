@@ -63,12 +63,12 @@
     </div>
     <div class="sample-cards">
       <div class="mini-card">
-        <div class="mc-label"></div>
-        <div class="mc-val"></div>
+        <div class="mc-label">You are owed overall</div>
+        <div class="mc-val">₹2,450.00</div>
       </div>
       <div class="mini-card">
-        <div class="mc-label"></div>
-        <div class="mc-val"></div>
+        <div class="mc-label">Goa Trip • 5 members • Total spent</div>
+        <div class="mc-val">₹18,200.00</div>
       </div>
     </div>
   </div>
@@ -126,14 +126,8 @@ function alert_(id, msg, type='error') {
 
 function googleLogin() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  firebase.auth().signInWithPopup(provider)
-    .then((result) => {
-      const fu = result.user;
-      let user = DB.users.findByEmail(fu.email);
-      if (!user) user = DB.users.create(fu.email, fu.displayName || fu.email, '__google__');
-      Auth.setSession(user);
-      redirect();
-    })
+  // Use redirect instead of popup — avoids popup-blocked / popup-closed errors
+  firebase.auth().signInWithRedirect(provider)
     .catch((err) => alert_('google-alert', 'Google sign-in failed: ' + err.message));
 }
 
@@ -142,6 +136,32 @@ function redirect() {
   if (p) { sessionStorage.removeItem('pending_invite'); location.href=`invite.html?token=${p}`; }
   else location.href = 'dashboard.html';
 }
+
+// Handle the result when the page loads back after Google redirect
+firebase.auth().getRedirectResult()
+  .then(async (result) => {
+    if (!result || !result.user) return; // No redirect result — normal page load
+    const fu = result.user;
+    let user = await DB.users.findByEmail(fu.email);
+    if (!user) {
+      user = await DB.users.create(fu.email, fu.displayName || fu.email, '__google__');
+    }
+    // Always sync latest Google name and photo into DB + session
+    const updates = {};
+    if (fu.displayName && fu.displayName !== user.name) updates.name = fu.displayName;
+    if (fu.photoURL && fu.photoURL !== user.photoURL) updates.photoURL = fu.photoURL;
+    if (Object.keys(updates).length) {
+      await DB.users.update(user.id, updates);
+      user = await DB.users.findById(user.id);
+    }
+    Auth.setSession(user);
+    redirect();
+  })
+  .catch((err) => {
+    if (err.code !== 'auth/no-auth-event') {
+      alert_('google-alert', 'Google sign-in failed: ' + err.message);
+    }
+  });
 
 
 </script>
