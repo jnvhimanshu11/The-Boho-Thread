@@ -1,10 +1,277 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0; url=shop.html" />
-  <title>TheBohoThread</title>
-  <script>window.location.replace("shop.html");</script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SplitMate — Split Expenses, Stay Friends</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.landing-wrap { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
+.landing-left {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+  padding: 60px 64px; display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+}
+.landing-left::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 20% 80%, rgba(108,99,255,0.3) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(34,197,94,0.12) 0%, transparent 50%);
+}
+.landing-left > * { position: relative; z-index: 1; }
+.brand { font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; color: white; margin-bottom: 80px; }
+.brand span { color: var(--accent2); }
+.hero-text { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.hero-text h1 { font-size: clamp(2rem, 4vw, 3rem); color: white; line-height: 1.15; margin-bottom: 20px; }
+.hero-text h1 em { color: var(--accent2); font-style: normal; }
+.hero-text p { color: rgba(255,255,255,0.6); font-size: 1rem; max-width: 400px; margin-bottom: 40px; }
+.feature-pills { display: flex; flex-wrap: wrap; gap: 10px; }
+.pill { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; padding: 6px 16px; font-size: 0.82rem; color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 6px; }
+.sample-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 48px; }
+.mini-card { background: rgba(255,255,255,0.06); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 14px 18px; color: white; max-width: 280px; }
+.mc-label { color: rgba(255,255,255,0.5); font-size: 0.72rem; margin-bottom: 4px; }
+.mc-val { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: var(--accent2); }
+.landing-right { display: flex; align-items: center; justify-content: center; padding: 40px 60px; }
+.auth-box { width: 100%; max-width: 420px; }
+.auth-tabs { display: flex; background: var(--bg3); border-radius: var(--radius-sm); padding: 4px; margin-bottom: 28px; }
+.auth-tab { flex: 1; padding: 10px; border: none; background: none; color: var(--text3); font-family: var(--font); font-size: 0.9rem; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all var(--transition); }
+.auth-tab.active { background: var(--surface); color: var(--text); }
+.google-btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 12px; background: white; border: none; border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 600; color: #333; cursor: pointer; transition: all var(--transition); }
+.google-btn:hover { background: #f5f5f5; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
+.password-wrap { position: relative; }
+.toggle-pw { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text3); cursor: pointer; }
+@media (max-width: 900px) {
+  .landing-wrap { grid-template-columns: 1fr; }
+  .landing-left { display: none; }
+  .landing-right { padding: 40px 24px; min-height: 100vh; }
+}
+</style>
 </head>
-<body></body>
+<body>
+<div class="landing-wrap">
+  <div class="landing-left">
+    <div class="brand">Split<span>Mate</span></div>
+    <div class="hero-text">
+      <h1>Split bills.<br><em>Not friendships.</em></h1>
+      <p>Track group expenses, split costs fairly, and settle up instantly. Perfect for trips, roommates, and shared adventures.</p>
+      <div class="feature-pills">
+        <div class="pill">✈️ Trip expenses</div>
+        <div class="pill">🏠 Shared living</div>
+        <div class="pill">📊 Smart split</div>
+        <div class="pill">💸 Settle up</div>
+        <div class="pill">👥 Invite friends</div>
+      </div>
+    </div>
+    <div class="sample-cards">
+      <div class="mini-card">
+        <div class="mc-label">You are owed overall</div>
+        <div class="mc-val">₹2,450.00</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-label">Goa Trip • 5 members • Total spent</div>
+        <div class="mc-val">₹18,200.00</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="landing-right">
+    <div class="auth-box">
+      <div style="margin-bottom:24px">
+        <h2 style="font-size:1.6rem">Welcome to SplitMate</h2>
+        <p style="margin-top:4px;font-size:0.88rem">Your group expense companion</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+        <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Create Account</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="login-form">
+        <button class="google-btn" onclick="googleLogin()" style="margin-bottom:4px">
+          <svg width="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </button>
+        <div class="divider-text"><span>or sign in with email</span></div>
+        <div id="login-alert"></div>
+        <div class="form-group">
+          <label class="form-label">Email address</label>
+          <input type="email" id="login-email" class="form-input" placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="password-wrap">
+            <input type="password" id="login-password" class="form-input" placeholder="Your password">
+            <button class="toggle-pw" onclick="togglePw('login-password')">👁</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="doLogin()">Sign In →</button>
+        <div class="text-sm text-muted" style="text-align:center;margin-top:12px">
+          <a href="#" onclick="fillDemo();return false;" style="color:var(--accent2)">Load demo credentials</a>
+        </div>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="register-form" style="display:none">
+        <button class="google-btn" onclick="googleLogin()" style="margin-bottom:4px">
+          <svg width="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Sign up with Google
+        </button>
+        <div class="divider-text"><span>or create account</span></div>
+        <div id="register-alert"></div>
+        <div class="form-group">
+          <label class="form-label">Full name</label>
+          <input type="text" id="reg-name" class="form-input" placeholder="Your full name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email address</label>
+          <input type="email" id="reg-email" class="form-input" placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="password-wrap">
+            <input type="password" id="reg-password" class="form-input" placeholder="Min 6 characters">
+            <button class="toggle-pw" onclick="togglePw('reg-password')">👁</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="doRegister()">Create Account →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="db.js"></script>
+  <script src="auth.js"></script>
+
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script>
+   
+    const firebaseConfig = {
+  apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+  authDomain: "thebohothread-96e2c.firebaseapp.com",
+  projectId: "thebohothread-96e2c",
+  storageBucket: "thebohothread-96e2c.firebasestorage.app",
+  messagingSenderId: "100688387088",
+  appId: "1:100688387088:web:f8a6af7565d3c25952fe95",
+  measurementId: "G-5VTK93354M"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
+  <script src="db.js"></script>
+  <script src="auth.js"></script>
+
+<script>
+Auth.redirectIfAuthed('dashboard.html');
+const invToken = new URLSearchParams(location.search).get('invite');
+if (invToken) sessionStorage.setItem('pending_invite', invToken);
+
+function switchTab(tab) {
+  document.getElementById('tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('tab-register').classList.toggle('active', tab==='register');
+  document.getElementById('login-form').style.display = tab==='login'?'block':'none';
+  document.getElementById('register-form').style.display = tab==='register'?'block':'none';
+}
+
+function alert_(id, msg, type='error') {
+  document.getElementById(id).innerHTML = `<div class="alert alert-${type==='ok'?'success':'error'}">${msg}</div>`;
+}
+
+function doLogin() {
+  const r = Auth.login(
+    document.getElementById('login-email').value.trim(),
+    document.getElementById('login-password').value
+  );
+  if (!r.success) { alert_('login-alert', r.error); return; }
+  redirect();
+}
+
+function doRegister() {
+  const r = Auth.register(
+    document.getElementById('reg-email').value.trim(),
+    document.getElementById('reg-name').value.trim(),
+    document.getElementById('reg-password').value
+  );
+  if (!r.success) { alert_('register-alert', r.error); return; }
+  redirect();
+}
+
+
+   function googleLogin() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider)
+      .then((result) => {
+        const firebaseUser = result.user;
+        let user = DB.users.findByEmail(firebaseUser.email);
+        if (!user) {
+          user = DB.users.create(
+            firebaseUser.email,
+            firebaseUser.displayName || firebaseUser.email,
+            '__google__',
+            null  // avatar color auto-assigned
+          );
+        }
+        Auth.setSession(user);
+        redirect();
+      })
+      .catch((error) => {
+        alert_('login-alert', 'Google sign-in failed: ' + error.message);
+      });
+  }
+
+  if (!email) return;
+  const name = email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  let user = DB.users.findByEmail(email);
+  if (!user) user = DB.users.create(email, name, '__google__');
+  Auth.setSession(user);
+  redirect();
+
+  // ── REAL FIREBASE (uncomment this after setup) ────────────
+  // const provider = new firebase.auth.GoogleAuthProvider();
+  // firebase.auth().signInWithPopup(provider)
+  //   .then((result) => {
+  //     const fu = result.user;
+  //     let user = DB.users.findByEmail(fu.email);
+  //     if (!user) user = DB.users.create(fu.email, fu.displayName || fu.email, '__google__');
+  //     Auth.setSession(user);
+  //     redirect();
+  //   })
+  //   .catch((err) => alert_('login-alert', 'Google sign-in failed: ' + err.message));
+}
+
+function redirect() {
+  const p = sessionStorage.getItem('pending_invite');
+  if (p) { sessionStorage.removeItem('pending_invite'); location.href=`invite.html?token=${p}`; }
+  else location.href = 'dashboard.html';
+}
+
+function fillDemo() {
+  let user = DB.users.findByEmail('demo@splitmate.app');
+  if (!user) {
+    user = DB.users.create('demo@splitmate.app','Demo User','demo123');
+    seedDemo(user.id);
+  }
+  document.getElementById('login-email').value='demo@splitmate.app';
+  document.getElementById('login-password').value='demo123';
+}
+
+function seedDemo(uid) {
+  const g = DB.groups.create('Goa Beach Trip','Weekend beach getaway','trip',uid);
+  const g2 = DB.groups.create('Flat Expenses','Monthly shared costs','home',uid);
+  DB.expenses.create({groupId:g.id,description:'Hotel - Sea View Inn',amount:4800,category:'accommodation',paidBy:uid,splits:[{userId:uid,amount:2400}],date:Date.now()-86400000*5});
+  DB.expenses.create({groupId:g.id,description:'Dinner at Britto\'s',amount:2200,category:'food',paidBy:uid,splits:[{userId:uid,amount:1100}],date:Date.now()-86400000*4});
+  DB.expenses.create({groupId:g.id,description:'Taxi & Fuel',amount:1600,category:'transport',paidBy:uid,splits:[{userId:uid,amount:800}],date:Date.now()-86400000*3});
+  DB.expenses.create({groupId:g.id,description:'Water sports',amount:3000,category:'entertainment',paidBy:uid,splits:[{userId:uid,amount:1500}],date:Date.now()-86400000*2});
+  DB.expenses.create({groupId:g2.id,description:'Electricity bill',amount:1800,category:'utilities',paidBy:uid,splits:[{userId:uid,amount:900}],date:Date.now()-86400000*10});
+  DB.expenses.create({groupId:g2.id,description:'Groceries',amount:2400,category:'groceries',paidBy:uid,splits:[{userId:uid,amount:1200}],date:Date.now()-86400000*7});
+}
+
+function togglePw(id) {
+  const el=document.getElementById(id); el.type=el.type==='password'?'text':'password';
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+</script>
+</body>
 </html>

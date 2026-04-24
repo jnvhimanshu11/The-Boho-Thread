@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Balances – SplitEase</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/landing.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    .balance-group-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .bgc-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .bgc-header:hover { background: var(--bg3); }
+    .bgc-body { padding: 16px 20px; }
+    .balance-pair {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+    }
+    .balance-pair:last-child { border-bottom: none; }
+    .bp-arrow { color: var(--accent-bright); font-size: 1rem; }
+    .overall-net {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .net-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .net-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin-bottom: 6px; }
+    .net-val { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; }
+  </style>
+</head>
+<body class="app-layout">
+
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Balances</h1>
+      <p class="page-subtitle">Your financial overview across all groups</p>
+    </div>
+
+    <!-- Overall summary -->
+    <div class="overall-net" id="overall-net"></div>
+
+    <!-- People who owe you / you owe -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px" id="owe-grid">
+      <div class="card" id="they-owe-you">
+        <div style="font-family:var(--font-display);font-weight:700;margin-bottom:14px;color:var(--green)">They owe you</div>
+        <div id="they-owe-list"></div>
+      </div>
+      <div class="card" id="you-owe-them">
+        <div style="font-family:var(--font-display);font-weight:700;margin-bottom:14px;color:var(--red)">You owe</div>
+        <div id="you-owe-list"></div>
+      </div>
+    </div>
+
+    <!-- Per group balances -->
+    <h2 style="font-family:var(--font-display);font-size:1.05rem;margin-bottom:14px">Balances by Group</h2>
+    <div id="group-balances"></div>
+  </main>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/sidebar.js"></script>
+  <script>
+    let currentUser;
+    const CAT_ICONS = { trip:'✈️', home:'🏠', event:'🎉', couple:'❤️', work:'💼', other:'📦' };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      currentUser = Auth.requireAuth('../index.html');
+      if (!currentUser) return;
+      Sidebar.init('balances');
+      renderAll();
+    });
+
+    function renderAll() {
+      const groups = DB.getGroupsForUser(currentUser.email);
+      const users  = Auth.getUsers();
+
+      // Aggregate balances across groups per person
+      const netByPerson = {}; // email -> net amount (positive = they owe me)
+      let totalOwed = 0, totalIOwe = 0;
+
+      groups.forEach(g => {
+        const txns = DB.calcSettlements(g.id);
+        txns.forEach(t => {
+          if (t.from === currentUser.email) {
+            // I owe t.to
+            netByPerson[t.to] = (netByPerson[t.to] || 0) - t.amount;
+            totalIOwe += t.amount;
+          }
+          if (t.to === currentUser.email) {
+            // t.from owes me
+            netByPerson[t.from] = (netByPerson[t.from] || 0) + t.amount;
+            totalOwed += t.amount;
+          }
+        });
+      });
+
+      // Overall net cards
+      document.getElementById('overall-net').innerHTML = `
+        <div class="net-card">
+          <div class="net-label">Total you are owed</div>
+          <div class="net-val text-green">${UI.formatAmount(totalOwed)}</div>
+        </div>
+        <div class="net-card">
+          <div class="net-label">Total you owe</div>
+          <div class="net-val text-red">${UI.formatAmount(totalIOwe)}</div>
+        </div>
+        <div class="net-card">
+          <div class="net-label">Net Balance</div>
+          <div class="net-val ${totalOwed - totalIOwe >= 0 ? 'text-green' : 'text-red'}">${UI.formatAmount(totalOwed - totalIOwe)}</div>
+        </div>`;
+
+      // They owe me / I owe them
+      const theyOwe = Object.entries(netByPerson).filter(([, v]) => v > 0);
+      const iOwe    = Object.entries(netByPerson).filter(([, v]) => v < 0);
+
+      const renderPairList = (pairs, positive) => {
+        if (!pairs.length) return `<div style="color:var(--text-dim);font-size:0.85rem">None — all clear!</div>`;
+        return pairs.map(([email, amt]) => {
+          const u = users[email] || { name: email.split('@')[0], email };
+          const absAmt = Math.abs(amt);
+          return `
+            <div class="balance-pair">
+              ${UI.avatar(u, 'avatar-sm')}
+              <div style="flex:1">
+                <div style="font-weight:500">${u.name}</div>
+                <div style="font-size:0.78rem;color:var(--text-dim)">${email}</div>
+              </div>
+              <div style="font-weight:700;color:${positive ? 'var(--green)' : 'var(--red)'}">
+                ${positive ? '+' : '-'}${UI.formatAmount(absAmt)}
+              </div>
+            </div>`;
+        }).join('');
+      };
+
+      document.getElementById('they-owe-list').innerHTML = renderPairList(theyOwe, true);
+      document.getElementById('you-owe-list').innerHTML  = renderPairList(iOwe, false);
+
+      // Per group
+      const gbContainer = document.getElementById('group-balances');
+      if (!groups.length) {
+        gbContainer.innerHTML = '<div class="card"><div class="empty-state"><div class="empty-icon">⚖️</div><h3>No groups yet</h3></div></div>';
+        return;
+      }
+
+      gbContainer.innerHTML = groups.map(g => {
+        const bals = DB.calcBalances(g.id);
+        const txns = DB.calcSettlements(g.id);
+        const myBal = bals[currentUser.email] || 0;
+        const balClass = myBal > 0 ? 'text-green' : myBal < 0 ? 'text-red' : 'text-muted';
+        const balText = myBal > 0
+          ? `You're owed ${UI.formatAmount(myBal, g.currency)}`
+          : myBal < 0
+          ? `You owe ${UI.formatAmount(Math.abs(myBal), g.currency)}`
+          : '✓ Settled';
+
+        const myTxns = txns.filter(t => t.from === currentUser.email || t.to === currentUser.email);
+
+        return `
+          <div class="balance-group-card">
+            <div class="bgc-header" onclick="window.location.href='group-detail.html?id=${g.id}'">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="font-size:1.4rem">${CAT_ICONS[g.category] || '📦'}</span>
+                <div>
+                  <div style="font-family:var(--font-display);font-weight:700">${g.name}</div>
+                  <div style="font-size:0.8rem;color:var(--text-muted)">${g.members.length} members</div>
+                </div>
+              </div>
+              <div style="text-align:right">
+                <div class="${balClass}" style="font-weight:700">${balText}</div>
+                <div style="font-size:0.8rem;color:var(--text-dim)">${UI.formatAmount(DB.calcGroupTotal(g.id), g.currency)} total</div>
+              </div>
+            </div>
+            ${myTxns.length ? `
+              <div class="bgc-body">
+                ${myTxns.map(t => {
+                  const from = users[t.from] || { name: t.from.split('@')[0] };
+                  const to   = users[t.to]   || { name: t.to.split('@')[0] };
+                  return `
+                    <div class="balance-pair">
+                      <span style="font-size:1rem">${from.name}</span>
+                      <span class="bp-arrow">→</span>
+                      <span style="flex:1">${to.name}</span>
+                      <span style="font-weight:700">${UI.formatAmount(t.amount, g.currency)}</span>
+                    </div>`;
+                }).join('')}
+              </div>` : ''}
+          </div>`;
+      }).join('');
+    }
+  </script>
+</body>
+</html>

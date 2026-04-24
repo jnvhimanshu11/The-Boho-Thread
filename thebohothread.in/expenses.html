@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>All Expenses — SplitMate</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.expense-full-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: var(--radius-sm); transition: background var(--transition); }
+.expense-full-row:hover { background: var(--surface2); }
+.exp-group-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--bg3); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; font-size: 0.72rem; color: var(--text3); }
+.month-header { font-family: var(--font-display); font-weight: 700; font-size: 0.8rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; padding: 16px 16px 6px; }
+.chart-bar-wrap { display: flex; align-items: flex-end; gap: 4px; height: 80px; }
+.chart-bar { flex: 1; border-radius: 4px 4px 0 0; min-width: 20px; transition: opacity var(--transition); cursor: pointer; }
+.chart-bar:hover { opacity: 0.8; }
+.pie-wrap { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.pie-legend { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.pie-legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+.pie-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div id="sidebar-mount"></div>
+<div class="page-wrap">
+  <div class="main-content">
+    <div class="page-header">
+      <div class="page-header-row">
+        <div>
+          <div class="page-title">All Expenses</div>
+          <div class="page-subtitle">Your complete expense history</div>
+        </div>
+        <a href="add-expense.html" class="btn btn-primary">+ Add Expense</a>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <!-- CHARTS ROW -->
+    <div class="grid-2 mb-4">
+      <div class="card">
+        <h3 style="margin-bottom:16px">Spending by Category</h3>
+        <div id="cat-chart"></div>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:16px">Monthly Overview</h3>
+        <div id="monthly-chart"></div>
+      </div>
+    </div>
+
+    <!-- FILTER ROW -->
+    <div class="card mb-4" style="padding:16px">
+      <div class="flex gap-3 flex-wrap" style="align-items:center">
+        <div>
+          <label class="form-label">Group</label>
+          <select id="filter-group" class="form-select" onchange="applyFilters()" style="width:auto">
+            <option value="all">All Groups</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Category</label>
+          <select id="filter-cat" class="form-select" onchange="applyFilters()" style="width:auto">
+            <option value="all">All Categories</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Month</label>
+          <select id="filter-month" class="form-select" onchange="applyFilters()" style="width:auto">
+            <option value="all">All Time</option>
+          </select>
+        </div>
+        <div style="margin-top:18px">
+          <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear</button>
+        </div>
+        <div style="margin-left:auto;margin-top:18px">
+          <span id="result-count" class="text-sm text-muted"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPENSE LIST -->
+    <div class="card" style="padding:8px" id="expense-list"></div>
+  </div>
+</div>
+
+<script src="db.js"></script>
+<script src="auth.js"></script>
+<script>
+const user = Auth.requireAuth();
+let allExpenses = [];
+let groups = [];
+let filtered = [];
+
+if (user) init();
+
+function init() {
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('expenses');
+  initSidebar();
+  groups = DB.groups.forUser(user.id);
+  loadExpenses();
+  populateFilters();
+  renderStats();
+  renderCharts();
+  applyFilters();
+}
+
+function loadExpenses() {
+  allExpenses = [];
+  groups.forEach(g => {
+    DB.expenses.forGroup(g.id).forEach(e => {
+      allExpenses.push({ ...e, groupName: g.name });
+    });
+  });
+  allExpenses.sort((a, b) => b.date - a.date);
+}
+
+function renderStats() {
+  const nonSettle = allExpenses.filter(e => !e.isSettlement);
+  const myPaid = nonSettle.filter(e => e.paidBy === user.id).reduce((s,e) => s+e.amount, 0);
+  const myShare = nonSettle.reduce((s,e) => {
+    const sp = e.splits?.find(sp => sp.userId === user.id);
+    return s + (sp ? sp.amount : 0);
+  }, 0);
+  const total = nonSettle.reduce((s,e) => s+e.amount, 0);
+
+  // Net balance across all groups
+  let netBal = 0;
+  groups.forEach(g => { netBal += DB.calc.userBalanceInGroup(g.id, user.id); });
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Total Group Spend</div>
+      <div class="stat-value stat-purple">${formatCurrency(total)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Amount You Paid</div>
+      <div class="stat-value">${formatCurrency(myPaid)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Your Share</div>
+      <div class="stat-value">${formatCurrency(myShare)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Net Balance</div>
+      <div class="stat-value" style="color:${netBal>=0?'var(--green)':'var(--red)'}">${netBal>=0?'+':''}${formatCurrency(netBal)}</div>
+    </div>`;
+}
+
+function renderCharts() {
+  const nonSettle = allExpenses.filter(e => !e.isSettlement);
+
+  // Category chart
+  const byCat = {};
+  nonSettle.forEach(e => { byCat[e.category] = (byCat[e.category]||0) + e.amount; });
+  const catTotal = Object.values(byCat).reduce((a,b) => a+b, 0);
+  const catSorted = Object.entries(byCat).sort((a,b) => b[1]-a[1]).slice(0,6);
+
+  const catHtml = catSorted.length ? `<div class="pie-wrap">
+    <svg width="90" height="90" viewBox="0 0 36 36">
+      ${buildPie(catSorted, catTotal)}
+    </svg>
+    <div class="pie-legend">${catSorted.map(([cat, amt]) => `
+      <div class="pie-legend-item">
+        <div class="pie-dot" style="background:${categoryColor(cat)}"></div>
+        <div style="flex:1">${categoryLabel(cat)}</div>
+        <div style="font-weight:700">${formatCurrency(amt)}</div>
+      </div>`).join('')}
+    </div>
+  </div>` : '<div class="empty-state" style="padding:20px"><div class="empty-icon">📊</div><div>No data yet</div></div>';
+  document.getElementById('cat-chart').innerHTML = catHtml;
+
+  // Monthly chart
+  const byMonth = {};
+  nonSettle.forEach(e => {
+    const d = new Date(e.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    byMonth[key] = (byMonth[key]||0) + e.amount;
+  });
+  const months = Object.keys(byMonth).sort().slice(-6);
+  const maxVal = Math.max(...months.map(m => byMonth[m]), 1);
+  const monthHtml = months.length ? `
+    <div class="chart-bar-wrap">
+      ${months.map(m => {
+        const h = Math.max((byMonth[m]/maxVal)*70, 4);
+        const label = new Date(m+'-01').toLocaleDateString('en-IN',{month:'short'});
+        return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px">
+          <div class="chart-bar" style="height:${h}px;background:var(--accent);opacity:0.8" title="${formatCurrency(byMonth[m])}"></div>
+          <div style="font-size:0.65rem;color:var(--text3)">${label}</div>
+        </div>`;
+      }).join('')}
+    </div>` : '<div class="empty-state" style="padding:20px"><div class="empty-icon">📈</div><div>No data yet</div></div>';
+  document.getElementById('monthly-chart').innerHTML = monthHtml;
+}
+
+function buildPie(data, total) {
+  if (!total) return '';
+  let offset = 0;
+  const r = 15.9154943; // radius for circumference = 100
+  const circ = 2 * Math.PI * r;
+  return data.map(([cat, amt]) => {
+    const pct = (amt / total) * 100;
+    const dash = (pct / 100) * circ;
+    const gap = circ - dash;
+    const rot = (offset / 100) * 360 - 90;
+    offset += pct;
+    return `<circle cx="18" cy="18" r="${r}" fill="none" stroke="${categoryColor(cat)}" stroke-width="3.5" stroke-dasharray="${dash} ${gap}" transform="rotate(${rot} 18 18)"/>`;
+  }).join('');
+}
+
+function populateFilters() {
+  const gSel = document.getElementById('filter-group');
+  groups.forEach(g => { gSel.innerHTML += `<option value="${g.id}">${g.name}</option>`; });
+
+  const cSel = document.getElementById('filter-cat');
+  const cats = [...new Set(allExpenses.map(e => e.category))];
+  cats.forEach(c => { cSel.innerHTML += `<option value="${c}">${categoryLabel(c)}</option>`; });
+
+  const mSel = document.getElementById('filter-month');
+  const months = [...new Set(allExpenses.map(e => {
+    const d = new Date(e.date);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  }))].sort().reverse();
+  months.forEach(m => {
+    const label = new Date(m+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+    mSel.innerHTML += `<option value="${m}">${label}</option>`;
+  });
+}
+
+function applyFilters() {
+  const gFilter = document.getElementById('filter-group').value;
+  const cFilter = document.getElementById('filter-cat').value;
+  const mFilter = document.getElementById('filter-month').value;
+
+  filtered = allExpenses.filter(e => {
+    if (gFilter !== 'all' && e.groupId !== gFilter) return false;
+    if (cFilter !== 'all' && e.category !== cFilter) return false;
+    if (mFilter !== 'all') {
+      const d = new Date(e.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      if (key !== mFilter) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('result-count').textContent = `${filtered.length} expense${filtered.length!==1?'s':''}`;
+  renderList();
+}
+
+function clearFilters() {
+  document.getElementById('filter-group').value = 'all';
+  document.getElementById('filter-cat').value = 'all';
+  document.getElementById('filter-month').value = 'all';
+  applyFilters();
+}
+
+function renderList() {
+  const el = document.getElementById('expense-list');
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">💸</div><div class="empty-title">No expenses found</div><div class="empty-desc">Try adjusting your filters</div></div>`;
+    return;
+  }
+
+  // Group by month
+  const byMonth = {};
+  filtered.forEach(e => {
+    const d = new Date(e.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    if (!byMonth[key]) byMonth[key] = [];
+    byMonth[key].push(e);
+  });
+
+  let html = '';
+  Object.keys(byMonth).sort().reverse().forEach(month => {
+    const label = new Date(month+'-01').toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+    const monthTotal = byMonth[month].filter(e=>!e.isSettlement).reduce((s,e) => s+e.amount, 0);
+    html += `<div class="month-header">${label} <span style="color:var(--text3);font-weight:400;font-size:0.75rem">— ${formatCurrency(monthTotal)}</span></div>`;
+    byMonth[month].forEach(e => {
+      const payer = DB.users.findById(e.paidBy);
+      const iPaid = e.paidBy === user.id;
+      const myShare = e.splits?.find(s => s.userId === user.id);
+      let shareColor = 'var(--text3)';
+      let shareText = '';
+      if (e.isSettlement) { shareColor = 'var(--green)'; shareText = 'Settlement'; }
+      else if (iPaid) { shareColor = 'var(--green)'; shareText = `You paid`; }
+      else if (myShare) { shareColor = 'var(--red)'; shareText = `Your share: ${formatCurrency(myShare.amount)}`; }
+
+      html += `<div class="expense-full-row">
+        <div class="expense-icon" style="background:${categoryColor(e.category)}22">${e.isSettlement?'✅':categoryIcon(e.category)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:0.92rem">${e.description}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:2px;flex-wrap:wrap">
+            <span style="font-size:0.75rem;color:${shareColor}">${shareText}</span>
+            <span class="exp-group-tag">📁 ${e.groupName}</span>
+            <span style="font-size:0.72rem;color:var(--text3)">${formatDate(e.date)}</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-family:var(--font-display);font-weight:700">${formatCurrency(e.amount)}</div>
+          <div style="font-size:0.72rem;color:var(--text3)">${payer ? (iPaid ? 'You' : payer.name) : '?'}</div>
+        </div>
+      </div>`;
+    });
+  });
+
+  el.innerHTML = html;
+}
+</script>
+</body>
+</html>
