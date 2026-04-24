@@ -55,13 +55,12 @@ REPLACE with:
   <script>
     // ✅ PASTE YOUR FIREBASE CONFIG HERE ↓↓↓
     const firebaseConfig = {
-  apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
-  authDomain: "thebohothread-96e2c.firebaseapp.com",
-  projectId: "thebohothread-96e2c",
-  storageBucket: "thebohothread-96e2c.firebasestorage.app",
-  messagingSenderId: "100688387088",
-  appId: "1:100688387088:web:f8a6af7565d3c25952fe95",
-  measurementId: "G-5VTK93354M"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
     firebase.initializeApp(firebaseConfig);
   </script>

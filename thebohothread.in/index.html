@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SplitMate — Split Expenses, Stay Friends</title>
@@ -140,28 +139,25 @@
   </div>
 </div>
 
-<script src="db.js"></script>
-  <script src="auth.js"></script>
 
-
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script>
-   
-    const firebaseConfig = {
-  apiKey: "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
-  authDomain: "thebohothread-96e2c.firebaseapp.com",
-  projectId: "thebohothread-96e2c",
-  storageBucket: "thebohothread-96e2c.firebasestorage.app",
-  messagingSenderId: "100688387088",
-  appId: "1:100688387088:web:f8a6af7565d3c25952fe95",
-  measurementId: "G-5VTK93354M"
-    };
-    firebase.initializeApp(firebaseConfig);
-  </script>
-  <script src="db.js"></script>
-  <script src="auth.js"></script>
-
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey:            "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+    authDomain:        "thebohothread-96e2c.firebaseapp.com",
+    projectId:         "thebohothread-96e2c",
+    storageBucket:     "thebohothread-96e2c.firebasestorage.app",
+    messagingSenderId: "100688387088",
+    appId:             "1:100688387088:web:f8a6af7565d3c25952fe95",
+    measurementId:     "G-5VTK93354M"
+  };
+  firebase.initializeApp(firebaseConfig);
+</script>
+<script src="db.firestore.js"></script>
+<script src="auth.js"></script>
 <script>
 Auth.redirectIfAuthed('dashboard.html');
 const invToken = new URLSearchParams(location.search).get('invite');
@@ -197,47 +193,23 @@ function doRegister() {
   redirect();
 }
 
+function googleLogin() {
+  // ============================================================
+  // 🔥 FIREBASE SETUP — STEP 2  (in index.html)
+  // Once you add Firebase scripts in <head>, DELETE the prompt()
+  // block below and UNCOMMENT the Firebase block underneath it.
+  // ============================================================
 
-   function googleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider)
-      .then((result) => {
-        const firebaseUser = result.user;
-        let user = DB.users.findByEmail(firebaseUser.email);
-        if (!user) {
-          user = DB.users.create(
-            firebaseUser.email,
-            firebaseUser.displayName || firebaseUser.email,
-            '__google__',
-            null  // avatar color auto-assigned
-          );
-        }
-        Auth.setSession(user);
-        redirect();
-      })
-      .catch((error) => {
-        alert_('login-alert', 'Google sign-in failed: ' + error.message);
-      });
-  }
-
-  if (!email) return;
-  const name = email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-  let user = DB.users.findByEmail(email);
-  if (!user) user = DB.users.create(email, name, '__google__');
-  Auth.setSession(user);
-  redirect();
-
-  // ── REAL FIREBASE (uncomment this after setup) ────────────
-  // const provider = new firebase.auth.GoogleAuthProvider();
-  // firebase.auth().signInWithPopup(provider)
-  //   .then((result) => {
-  //     const fu = result.user;
-  //     let user = DB.users.findByEmail(fu.email);
+  firebase.auth().signInWithPopup(provider)
+    .then((result) => {
+      const fu = result.user;
+      let user = DB.users.findByEmail(fu.email);
   //     if (!user) user = DB.users.create(fu.email, fu.displayName || fu.email, '__google__');
-  //     Auth.setSession(user);
-  //     redirect();
+      Auth.setSession(user);
+      redirect();
   //   })
-  //   .catch((err) => alert_('login-alert', 'Google sign-in failed: ' + err.message));
+    .catch((err) => alert_('login-alert', 'Google sign-in failed: ' + err.message));
 }
 
 function redirect() {

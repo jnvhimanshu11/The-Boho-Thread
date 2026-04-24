@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Join Group — SplitMate</title>
@@ -32,7 +31,23 @@ body { display: flex; align-items: center; justify-content: center; min-height: 
   </div>
 </div>
 
-<script src="db.js"></script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey:            "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+    authDomain:        "thebohothread-96e2c.firebaseapp.com",
+    projectId:         "thebohothread-96e2c",
+    storageBucket:     "thebohothread-96e2c.firebasestorage.app",
+    messagingSenderId: "100688387088",
+    appId:             "1:100688387088:web:f8a6af7565d3c25952fe95",
+    measurementId:     "G-5VTK93354M"
+  };
+  firebase.initializeApp(firebaseConfig);
+</script>
+<script src="db.firestore.js"></script>
 <script src="auth.js"></script>
 <script>
 const token = new URLSearchParams(location.search).get('token');
@@ -229,32 +244,22 @@ function registerAndJoin() {
   acceptInvite();
 }
 
+function googleJoin() {
+  // ============================================================
+  // 🔥 FIREBASE SETUP — STEP 3  (in invite.html)
+  // Add Firebase scripts in <head> then swap the blocks below.
+  // ============================================================
 
-  
-    function googleJoin() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider)
-      .then((result) => {
-        const fu = result.user;
-        let u = DB.users.findByEmail(fu.email);
-        if (!u) u = DB.users.create(fu.email, fu.displayName || fu.email, '__google__');
-        Auth.setSession(u);
-        acceptInvite();
-      })
-      .catch(err => setAlert('Google sign-in failed: ' + err.message));
-  }
-
-  // ── REAL FIREBASE (uncomment after setup) ─────────────────
-  // const provider = new firebase.auth.GoogleAuthProvider();
-  // firebase.auth().signInWithPopup(provider)
-  //   .then((result) => {
-  //     const fu = result.user;
-  //     let u = DB.users.findByEmail(fu.email);
+  const provider = new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithPopup(provider)
+    .then((result) => {
+      const fu = result.user;
+      let u = DB.users.findByEmail(fu.email);
   //     if (!u) u = DB.users.create(fu.email, fu.displayName || fu.email, '__google__');
-  //     Auth.setSession(u);
-  //     acceptInvite();
+      Auth.setSession(u);
+      acceptInvite();
   //   })
-  //   .catch(err => setAlert('Google sign-in failed: ' + err.message));
+    .catch(err => setAlert('Google sign-in failed: ' + err.message));
 }
 
 function acceptInvite() {

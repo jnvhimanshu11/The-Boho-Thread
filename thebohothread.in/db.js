@@ -7,12 +7,12 @@ const DB = (() => {
   const KEY = 'splitmate_db';
 
   function _load() {
-    try { return db.collection('users').doc(userId).get() || _defaultState(); }
+    try { return JSON.parse(localStorage.getItem(KEY)) || _defaultState(); }
     catch { return _defaultState(); }
   }
 
   function _save(state) {
-    db.collection('users').doc(userId).set(userData);
+    localStorage.setItem(KEY, JSON.stringify(state));
   }
 
   function _defaultState() {
@@ -26,7 +26,7 @@ const DB = (() => {
   // ---- USERS ----
   const users = {
     create(email, name, password, avatarColor) {
-      const db = firebase.firestore();
+      const db = _load();
       if (Object.values(db.users).find(u => u.email === email)) return null;
       const id = _id();
       const user = { id, email, name, password, avatarColor: avatarColor || _randomColor(), createdAt: Date.now(), groups: [] };
@@ -35,15 +35,15 @@ const DB = (() => {
       return user;
     },
     findByEmail(email) {
-      const db = firebase.firestore();
+      const db = _load();
       return Object.values(db.users).find(u => u.email === email) || null;
     },
     findById(id) {
-      const db = firebase.firestore();
+      const db = _load();
       return db.users[id] || null;
     },
     update(id, data) {
-      const db = firebase.firestore();
+      const db = _load();
       if (!db.users[id]) return null;
       db.users[id] = { ...db.users[id], ...data };
       _save(db);
@@ -60,7 +60,7 @@ const DB = (() => {
   // ---- GROUPS ----
   const groups = {
     create(name, description, category, createdBy) {
-      const db = firebase.firestore();
+      const db = _load();
       const id = _id();
       const group = {
         id, name, description, category,
@@ -76,15 +76,15 @@ const DB = (() => {
       return group;
     },
     findById(id) {
-      const db = firebase.firestore();
+      const db = _load();
       return db.groups[id] || null;
     },
     forUser(userId) {
-      const db = firebase.firestore();
+      const db = _load();
       return Object.values(db.groups).filter(g => g.members.includes(userId));
     },
     addMember(groupId, userId) {
-      const db = firebase.firestore();
+      const db = _load();
       if (!db.groups[groupId]) return false;
       if (db.groups[groupId].members.includes(userId)) return true;
       db.groups[groupId].members.push(userId);
@@ -95,14 +95,14 @@ const DB = (() => {
       return true;
     },
     update(id, data) {
-      const db = firebase.firestore();
+      const db = _load();
       if (!db.groups[id]) return null;
       db.groups[id] = { ...db.groups[id], ...data };
       _save(db);
       return db.groups[id];
     },
     delete(id) {
-      const db = firebase.firestore();
+      const db = _load();
       if (!db.groups[id]) return false;
       const group = db.groups[id];
       group.members.forEach(uid => {
@@ -119,7 +119,7 @@ const DB = (() => {
   // ---- EXPENSES ----
   const expenses = {
     create({ groupId, description, amount, category, paidBy, splits, date, notes }) {
-      const db = firebase.firestore();
+      const db = _load();
       const id = _id();
       const expense = {
         id, groupId, description, amount: parseFloat(amount),
@@ -131,28 +131,28 @@ const DB = (() => {
       return expense;
     },
     forGroup(groupId) {
-      const db = firebase.firestore();
+      const db = _load();
       return Object.values(db.expenses).filter(e => e.groupId === groupId).sort((a, b) => b.date - a.date);
     },
     forUser(userId) {
-      const db = firebase.firestore();
+      const db = _load();
       return Object.values(db.expenses).filter(e =>
         e.paidBy === userId || (e.splits && e.splits.some(s => s.userId === userId))
       ).sort((a, b) => b.date - a.date);
     },
     findById(id) {
-      const db = firebase.firestore();
+      const db = _load();
       return db.expenses[id] || null;
     },
     delete(id) {
-      const db = firebase.firestore();
+      const db = _load();
       if (!db.expenses[id]) return false;
       delete db.expenses[id];
       _save(db);
       return true;
     },
     update(id, data) {
-      const db = firebase.firestore();
+      const db = _load();
       if (!db.expenses[id]) return null;
       db.expenses[id] = { ...db.expenses[id], ...data };
       _save(db);
@@ -163,7 +163,7 @@ const DB = (() => {
   // ---- SETTLEMENTS ----
   const settlements = {
     create({ groupId, from, to, amount }) {
-      const db = firebase.firestore();
+      const db = _load();
       const id = _id();
       const s = { id, groupId, from, to, amount: parseFloat(amount), date: Date.now(), isSettlement: true };
       db.settlements[id] = s;
@@ -178,7 +178,7 @@ const DB = (() => {
       return s;
     },
     forGroup(groupId) {
-      const db = firebase.firestore();
+      const db = _load();
       return Object.values(db.settlements).filter(s => s.groupId === groupId);
     }
   };
@@ -186,7 +186,7 @@ const DB = (() => {
   // ---- INVITATIONS ----
   const invitations = {
     create(groupId, invitedBy, email) {
-      const db = firebase.firestore();
+      const db = _load();
       const token = _id() + _id();
       const inv = { token, groupId, invitedBy, email, status: 'pending', createdAt: Date.now() };
       db.invitations[token] = inv;
@@ -194,11 +194,11 @@ const DB = (() => {
       return inv;
     },
     findByToken(token) {
-      const db = firebase.firestore();
+      const db = _load();
       return db.invitations[token] || null;
     },
     accept(token, userId) {
-      const db = firebase.firestore();
+      const db = _load();
       const inv = db.invitations[token];
       if (!inv || inv.status !== 'pending') return null;
       inv.status = 'accepted';
@@ -211,7 +211,7 @@ const DB = (() => {
       return inv;
     },
     forGroup(groupId) {
-      const db = firebase.firestore();
+      const db = _load();
       return Object.values(db.invitations).filter(i => i.groupId === groupId);
     }
   };
@@ -278,7 +278,7 @@ const DB = (() => {
 
     // Total spent by user across all groups
     totalSpentByUser(userId) {
-      const db = firebase.firestore();
+      const db = _load();
       return Object.values(db.expenses)
         .filter(e => e.paidBy === userId && !e.isSettlement)
         .reduce((sum, e) => sum + e.amount, 0);

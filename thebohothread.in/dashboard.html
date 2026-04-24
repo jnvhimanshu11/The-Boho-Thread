@@ -100,7 +100,23 @@
   </div>
 </div>
 
-<script src="db.js"></script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey:            "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+    authDomain:        "thebohothread-96e2c.firebaseapp.com",
+    projectId:         "thebohothread-96e2c",
+    storageBucket:     "thebohothread-96e2c.firebasestorage.app",
+    messagingSenderId: "100688387088",
+    appId:             "1:100688387088:web:f8a6af7565d3c25952fe95",
+    measurementId:     "G-5VTK93354M"
+  };
+  firebase.initializeApp(firebaseConfig);
+</script>
+<script src="db.firestore.js"></script>
 <script src="auth.js"></script>
 <script>
 const user = Auth.requireAuth();

@@ -96,23 +96,18 @@ const Auth = (() => {
   // in FIREBASE_SETUP.md → FILE 2 section.
   // ============================================================
   function googleSignIn(callback) {
-    // ✅ REAL Google Sign-In via Firebase
-    const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider)
-      .then((result) => {
-        callback({
-          email: result.user.email,
-          name: result.user.displayName,
-          photoURL: result.user.photoURL
-        });
-      })
-      .catch((err) => {
-        console.error('Google sign-in error:', err);
-        callback(null, err);
-      });
+    // ── DEMO MODE (delete after Firebase setup) ───────────────
+    callback({ email: 'google_user@gmail.com', name: 'Google User' });
+
+    // ── REAL FIREBASE (uncomment after setup) ─────────────────
+    // const provider = new firebase.auth.GoogleAuthProvider();
+    // firebase.auth().signInWithPopup(provider)
+    //   .then((result) => {
+    //     callback({ email: result.user.email, name: result.user.displayName });
+    //   })
+    //   .catch((err) => callback(null, err));
   }
 
-    
   return {
     getSession, setSession, clearSession, currentUser, isLoggedIn,
     requireAuth, redirectIfAuthed, login, register, logout,
