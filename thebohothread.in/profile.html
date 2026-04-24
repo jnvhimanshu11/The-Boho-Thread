@@ -38,9 +38,16 @@
           <div id="profile-alert"></div>
           <div class="form-group">
             <label class="form-label">Full Name</label>
-            <input type="text" id="edit-name" class="form-input">
+            <input type="text" id="edit-name" class="form-input" autocomplete="name">
           </div>
-          
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="edit-email" class="form-input" readonly style="opacity:0.6;cursor:not-allowed">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Avatar Color</label>
+            <div class="avatar-picker" id="avatar-picker"></div>
+          </div>
           <button class="btn btn-primary mt-4" onclick="saveProfile()">Save Changes</button>
         </div>
 
@@ -142,12 +149,16 @@ function renderHero() {
 }
 
 function renderEditForm() {
-  document.getElementById('edit-name').value = user.name || '';
-  document.getElementById('edit-email').value = user.email || '';
+  const nameEl = document.getElementById('edit-name');
+  const emailEl = document.getElementById('edit-email');
+  if (nameEl) nameEl.value = user.name || '';
+  if (emailEl) emailEl.value = user.email || '';
 }
 
 function renderAvatarPicker() {
-  document.getElementById('avatar-picker').innerHTML = AVATAR_COLORS.map(c =>
+  const picker = document.getElementById('avatar-picker');
+  if (!picker) return;
+  picker.innerHTML = AVATAR_COLORS.map(c =>
     `<div class="color-dot${c===selectedColor?' selected':''}" style="background:${c}" onclick="pickColor('${c}')"></div>`
   ).join('');
 }

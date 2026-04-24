@@ -115,7 +115,7 @@
     function renderGreeting() {
       const h = new Date().getHours();
       const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-      document.getElementById('welcome-title').textContent = `${greet}, ${currentUser.name.split(' ')[0]}! 👋`;
+      document.getElementById('welcome-title').textContent = `${greet}, ${currentUser.name}! 👋`;
     }
 
     function renderInvites() {

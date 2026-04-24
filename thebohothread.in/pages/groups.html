@@ -138,6 +138,10 @@
     });
 
     function renderGroups() {
+      // Always re-fetch to ensure we have a valid user with email
+      currentUser = Auth.getCurrentUser() || currentUser;
+      if (!currentUser || !currentUser.email) return;
+
       const query = (document.getElementById('search-input')?.value || '').toLowerCase();
       const groups = DB.getGroupsForUser(currentUser.email)
         .filter(g => !query || g.name.toLowerCase().includes(query) || (g.description || '').toLowerCase().includes(query))
@@ -212,13 +216,25 @@
 
       if (!name) return UI.toast('Group name is required.', 'error');
 
-      DB.createGroup({
+      // Re-fetch currentUser to ensure it's fresh and valid
+      currentUser = Auth.requireAuth('../index.html');
+      if (!currentUser || !currentUser.email) {
+        UI.toast('Session expired. Please sign in again.', 'error');
+        return;
+      }
+
+      const group = DB.createGroup({
         name,
         description: desc,
         currency,
         category: selectedCat,
         createdBy: currentUser.email,
       });
+
+      if (!group) {
+        UI.toast('Failed to create group. Please try again.', 'error');
+        return;
+      }
 
       UI.closeModal('create-group-modal');
       UI.toast(`"${name}" created! 🎉`, 'success');
