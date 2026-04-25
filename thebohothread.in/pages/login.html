@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In – SplitMate</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/landing.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body class="login-page">
+
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="logo-icon">✦</span> SplitEase
+    </div>
+    <p class="login-tagline">Sign in to manage your shared expenses</p>
+
+    <div id="google-alert"></div>
+
+    <button class="google-btn" id="google-login-btn">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      Continue with Google
+    </button>
+
+    <p style="font-size:0.78rem;color:var(--text-dim);margin-top:20px;text-align:center;line-height:1.6">
+      By continuing, you agree to our Terms of Service.<br>
+      Your data stays private — only your group members can see shared expenses.
+    </p>
+
+    <!-- Pending invitations banner -->
+    <div id="invite-banner" class="hidden" style="margin-top:20px;padding:14px;background:var(--accent-glow);border:1px solid rgba(124,106,247,0.3);border-radius:var(--radius-sm);font-size:0.85rem;color:var(--accent-bright)">
+      🔔 You have pending group invitations!
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = Auth.getCurrentUser();
+      if (user) window.location.href = 'dashboard.html';
+    });
+
+    document.getElementById('google-login-btn').addEventListener('click', async () => {
+      const user = await Auth.signInWithGoogle();
+      if (user) {
+        const pending = DB.getPendingInvitesForUser(user.email);
+        if (pending.length > 0) {
+          document.getElementById('invite-banner').classList.remove('hidden');
+          document.getElementById('invite-banner').textContent =
+            `🔔 You have ${pending.length} pending group invitation${pending.length > 1 ? 's' : ''}!`;
+          setTimeout(() => window.location.href = 'dashboard.html', 1800);
+        } else {
+          window.location.href = 'dashboard.html';
+        }
+      } else {
+        document.getElementById('google-alert').innerHTML =
+          '<div style="color:red;margin-bottom:12px">Google sign-in failed. Please try again.</div>';
+      }
+    });
+  </script>
+</body>
+</html>
