@@ -163,9 +163,10 @@ const DB = {
 
       // Also update the user's groups array
       // OLD: db.users[createdBy].groups = [...groups, id];  _save(db);
-      await _fs().collection('users').doc(createdBy).update({
+      // Use set+merge so it works even if the user doc has no 'groups' field yet
+      await _fs().collection('users').doc(createdBy).set({
         groups: firebase.firestore.FieldValue.arrayUnion(id)
-      });
+      }, { merge: true });
 
       return group;
     },
@@ -200,9 +201,9 @@ const DB = {
       });
       // Add groupId to user.groups array
       // OLD: db.users[userId].groups = [...groups, groupId];
-      await _fs().collection('users').doc(userId).update({
+      await _fs().collection('users').doc(userId).set({
         groups: firebase.firestore.FieldValue.arrayUnion(groupId)
-      });
+      }, { merge: true });
       return true;
     },
 
