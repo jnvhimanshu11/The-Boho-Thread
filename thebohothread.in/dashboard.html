@@ -18,6 +18,7 @@
 .group-stat-val { font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; }
 .group-stat-label { font-size: 0.7rem; color: var(--text3); margin-top: 1px; }
 .new-group-card { border: 2px dashed var(--border); background: transparent; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; min-height: 160px; color: var(--text3); transition: all var(--transition); cursor: pointer; border-radius: var(--radius); }
+html { scroll-behavior: smooth; }
 .new-group-card:hover { border-color: var(--accent); color: var(--accent2); background: rgba(108,99,255,0.05); }
 .activity-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .activity-item:last-child { border-bottom: none; }
@@ -48,7 +49,7 @@
     <div class="stats-grid" id="stats-grid"></div>
 
     <!-- GROUPS -->
-    <div class="mb-4">
+    <div class="mb-4" id="groups">
       <div class="flex-between mb-3">
         <h3>My Groups</h3>
         <span id="group-count" class="text-sm text-muted"></span>
@@ -122,13 +123,13 @@
 const user = Auth.requireAuth();
 if (user) init();
 
-function init() {
+async function init() {
   document.getElementById('sidebar-mount').innerHTML = renderSidebar('dashboard');
   initSidebar();
   renderGreeting();
-  renderStats();
-  renderGroups();
-  renderActivity();
+  await renderStats();
+  await renderGroups();
+  await renderActivity();
 }
 
 function renderGreeting() {
@@ -137,16 +138,16 @@ function renderGreeting() {
   document.getElementById('greeting').textContent = `${time}, ${currentUser.name.split(' ')[0]}! 👋`;
 }
 
-function renderStats() {
-  const groups = DB.groups.forUser(user.id);
+async function renderStats() {
+  const groups = await DB.groups.forUser(user.id);
   let totalOwed = 0, totalOwe = 0, totalSpent = 0;
-  groups.forEach(g => {
-    const bal = DB.calc.userBalanceInGroup(g.id, user.id);
+  for (const g of groups) {
+    const bal = await DB.calc.userBalanceInGroup(g.id, user.id);
     if (bal > 0) totalOwed += bal;
     else if (bal < 0) totalOwe += Math.abs(bal);
-    const stats = DB.calc.groupStats(g.id);
+    const stats = await DB.calc.groupStats(g.id);
     totalSpent += stats.total;
-  });
+  }
 
   document.getElementById('stats-grid').innerHTML = `
     <div class="stat-card">
@@ -172,16 +173,16 @@ function renderStats() {
   `;
 }
 
-function renderGroups() {
-  const groups = DB.groups.forUser(user.id);
+async function renderGroups() {
+  const groups = await DB.groups.forUser(user.id);
   document.getElementById('group-count').textContent = `${groups.length} group${groups.length!==1?'s':''}`;
   const catIcons = { trip:'✈️', home:'🏠', friends:'👫', couple:'💑', work:'💼', other:'📦' };
   const catColors = { trip:'rgba(108,99,255,0.15)', home:'rgba(34,197,94,0.15)', friends:'rgba(249,115,22,0.15)', couple:'rgba(236,72,153,0.15)', work:'rgba(59,130,246,0.15)', other:'rgba(168,85,247,0.15)' };
 
   let html = '';
-  groups.forEach(g => {
-    const bal = DB.calc.userBalanceInGroup(g.id, user.id);
-    const stats = DB.calc.groupStats(g.id);
+  for (const g of groups) {
+    const bal = await DB.calc.userBalanceInGroup(g.id, user.id);
+    const stats = await DB.calc.groupStats(g.id);
     const balColor = bal > 0 ? 'var(--green)' : bal < 0 ? 'var(--red)' : 'var(--text2)';
     const balLabel = bal > 0 ? `You get back ${formatCurrency(bal)}` : bal < 0 ? `You owe ${formatCurrency(bal)}` : 'Settled up ✓';
     html += `
@@ -207,7 +208,7 @@ function renderGroups() {
           </div>
         </div>
       </a>`;
-  });
+  }
 
   html += `<div class="new-group-card" onclick="openModal('new-group-modal')">
     <div style="font-size:2rem">➕</div>
@@ -218,12 +219,13 @@ function renderGroups() {
   document.getElementById('group-grid').innerHTML = html;
 }
 
-function renderActivity() {
-  const groups = DB.groups.forUser(user.id);
+async function renderActivity() {
+  const groups = await DB.groups.forUser(user.id);
   const allExpenses = [];
-  groups.forEach(g => {
-    DB.expenses.forGroup(g.id).forEach(e => allExpenses.push({ ...e, groupName: g.name, groupId: g.id }));
-  });
+  for (const g of groups) {
+    const exps = await DB.expenses.forGroup(g.id);
+    exps.forEach(e => allExpenses.push({ ...e, groupName: g.name, groupId: g.id }));
+  }
   allExpenses.sort((a,b) => b.date - a.date);
   const recent = allExpenses.slice(0, 8);
 
