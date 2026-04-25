@@ -6,6 +6,7 @@
 <title>Dashboard — SplitMate</title>
 <link rel="stylesheet" href="style.css">
 <style>
+html { scroll-behavior: smooth; }
 .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 .group-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; cursor: pointer; transition: all var(--transition); text-decoration: none; display: block; color: var(--text); }
 .group-card:hover { border-color: var(--border2); transform: translateY(-3px); box-shadow: var(--shadow); }
@@ -18,7 +19,6 @@
 .group-stat-val { font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; }
 .group-stat-label { font-size: 0.7rem; color: var(--text3); margin-top: 1px; }
 .new-group-card { border: 2px dashed var(--border); background: transparent; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; min-height: 160px; color: var(--text3); transition: all var(--transition); cursor: pointer; border-radius: var(--radius); }
-html { scroll-behavior: smooth; }
 .new-group-card:hover { border-color: var(--accent); color: var(--accent2); background: rgba(108,99,255,0.05); }
 .activity-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .activity-item:last-child { border-bottom: none; }
@@ -48,13 +48,15 @@ html { scroll-behavior: smooth; }
     <!-- STATS -->
     <div class="stats-grid" id="stats-grid"></div>
 
-    <!-- GROUPS -->
+    <!-- GROUPS: id="groups" is the scroll anchor for sidebar "My Groups" link -->
     <div class="mb-4" id="groups">
       <div class="flex-between mb-3">
         <h3>My Groups</h3>
         <span id="group-count" class="text-sm text-muted"></span>
       </div>
-      <div class="group-grid" id="group-grid"></div>
+      <div class="group-grid" id="group-grid">
+        <div style="color:var(--text3);padding:16px">Loading groups…</div>
+      </div>
     </div>
 
     <!-- RECENT ACTIVITY -->
@@ -96,7 +98,7 @@ html { scroll-behavior: smooth; }
     </div>
     <div class="flex gap-3 mt-4">
       <button class="btn btn-secondary flex-1" onclick="closeModal('new-group-modal')">Cancel</button>
-      <button class="btn btn-primary flex-1" onclick="createGroup()">Create Group</button>
+      <button class="btn btn-primary flex-1" id="create-group-btn" onclick="createGroup()">Create Group</button>
     </div>
   </div>
 </div>
@@ -120,158 +122,148 @@ html { scroll-behavior: smooth; }
 <script src="db.firestore.js"></script>
 <script src="auth.js"></script>
 <script>
-const user = Auth.requireAuth();
-if (user) init();
+// FIX 1: 'currentUser' was undefined — Auth.requireAuth() returns the user object
+const currentUser = Auth.requireAuth();
+if (!currentUser) { window.location.href = 'index.html'; }
+
+init();
 
 async function init() {
   document.getElementById('sidebar-mount').innerHTML = renderSidebar('dashboard');
   initSidebar();
   renderGreeting();
-  await renderStats();
-  await renderGroups();
-  await renderActivity();
+
+  // FIX 2: All DB calls are async (Firestore) — load in parallel where possible
+  try {
+    await renderGroups();
+    await renderStats();
+    await renderActivity();
+  } catch(err) {
+    console.error('Dashboard load error:', err);
+  }
+
+  // FIX 3: Scroll to #groups section if sidebar link was clicked
+  if (window.location.hash === '#groups') {
+    setTimeout(() => {
+      document.getElementById('groups')?.scrollIntoView({ behavior: 'smooth' });
+    }, 200);
+  }
 }
 
 function renderGreeting() {
   const h = new Date().getHours();
   const time = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  document.getElementById('greeting').textContent = `${time}, ${currentUser.name.split(' ')[0]}! 👋`;
+  // FIX: use 'currentUser' not undefined 'user'
+  document.getElementById('greeting').textContent = time + ', ' + (currentUser.name || '').split(' ')[0] + '! 👋';
 }
 
 async function renderStats() {
-  const groups = await DB.groups.forUser(user.id);
+  const groups = await DB.groups.forUser(currentUser.id);
   let totalOwed = 0, totalOwe = 0, totalSpent = 0;
   for (const g of groups) {
-    const bal = await DB.calc.userBalanceInGroup(g.id, user.id);
+    const bal   = await DB.calc.userBalanceInGroup(g.id, currentUser.id);
+    const stats = await DB.calc.groupStats(g.id);
     if (bal > 0) totalOwed += bal;
     else if (bal < 0) totalOwe += Math.abs(bal);
-    const stats = await DB.calc.groupStats(g.id);
     totalSpent += stats.total;
   }
-
-  document.getElementById('stats-grid').innerHTML = `
-    <div class="stat-card">
-      <div class="stat-label">You are owed</div>
-      <div class="stat-value stat-green">${formatCurrency(totalOwed)}</div>
-      <div class="stat-sub">across ${groups.length} groups</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">You owe</div>
-      <div class="stat-value stat-red">${formatCurrency(totalOwe)}</div>
-      <div class="stat-sub">settle up soon</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Total Spent</div>
-      <div class="stat-value stat-purple">${formatCurrency(totalSpent)}</div>
-      <div class="stat-sub">all time</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Groups</div>
-      <div class="stat-value">${groups.length}</div>
-      <div class="stat-sub">active groups</div>
-    </div>
-  `;
+  document.getElementById('stats-grid').innerHTML =
+    '<div class="stat-card"><div class="stat-label">You are owed</div><div class="stat-value stat-green">' + formatCurrency(totalOwed) + '</div><div class="stat-sub">across ' + groups.length + ' group' + (groups.length!==1?'s':'') + '</div></div>' +
+    '<div class="stat-card"><div class="stat-label">You owe</div><div class="stat-value stat-red">' + formatCurrency(totalOwe) + '</div><div class="stat-sub">settle up soon</div></div>' +
+    '<div class="stat-card"><div class="stat-label">Total Spent</div><div class="stat-value stat-purple">' + formatCurrency(totalSpent) + '</div><div class="stat-sub">all time</div></div>' +
+    '<div class="stat-card"><div class="stat-label">Groups</div><div class="stat-value">' + groups.length + '</div><div class="stat-sub">active groups</div></div>';
 }
 
 async function renderGroups() {
-  const groups = await DB.groups.forUser(user.id);
-  document.getElementById('group-count').textContent = `${groups.length} group${groups.length!==1?'s':''}`;
-  const catIcons = { trip:'✈️', home:'🏠', friends:'👫', couple:'💑', work:'💼', other:'📦' };
+  const groups = await DB.groups.forUser(currentUser.id);
+  document.getElementById('group-count').textContent = groups.length + ' group' + (groups.length!==1?'s':'');
+  const catIcons  = { trip:'✈️', home:'🏠', friends:'👫', couple:'💑', work:'💼', other:'📦' };
   const catColors = { trip:'rgba(108,99,255,0.15)', home:'rgba(34,197,94,0.15)', friends:'rgba(249,115,22,0.15)', couple:'rgba(236,72,153,0.15)', work:'rgba(59,130,246,0.15)', other:'rgba(168,85,247,0.15)' };
 
   let html = '';
   for (const g of groups) {
-    const bal = await DB.calc.userBalanceInGroup(g.id, user.id);
+    const bal   = await DB.calc.userBalanceInGroup(g.id, currentUser.id);
     const stats = await DB.calc.groupStats(g.id);
     const balColor = bal > 0 ? 'var(--green)' : bal < 0 ? 'var(--red)' : 'var(--text2)';
-    const balLabel = bal > 0 ? `You get back ${formatCurrency(bal)}` : bal < 0 ? `You owe ${formatCurrency(bal)}` : 'Settled up ✓';
-    html += `
-      <a href="group.html?id=${g.id}" class="group-card">
-        <div class="group-card-header">
-          <div class="group-icon" style="background:${catColors[g.category]||catColors.other}">${catIcons[g.category]||'📦'}</div>
-          <span class="badge badge-gray">${g.members.length} member${g.members.length!==1?'s':''}</span>
-        </div>
-        <div class="group-name">${g.name}</div>
-        <div class="group-desc">${g.description || (catIcons[g.category]||'') + ' ' + (g.category||'')}</div>
-        <div class="group-stats">
-          <div class="group-stat">
-            <div class="group-stat-val">${formatCurrency(stats.total)}</div>
-            <div class="group-stat-label">Total spent</div>
-          </div>
-          <div class="group-stat">
-            <div class="group-stat-val">${stats.count}</div>
-            <div class="group-stat-label">Expenses</div>
-          </div>
-          <div class="group-stat">
-            <div class="group-stat-val" style="color:${balColor};font-size:0.78rem">${balLabel}</div>
-            <div class="group-stat-label">Your balance</div>
-          </div>
-        </div>
-      </a>`;
+    const balLabel = bal > 0 ? 'You get back ' + formatCurrency(bal) : bal < 0 ? 'You owe ' + formatCurrency(Math.abs(bal)) : 'Settled up ✓';
+    html += '<a href="group.html?id=' + g.id + '" class="group-card">' +
+      '<div class="group-card-header"><div class="group-icon" style="background:' + (catColors[g.category]||catColors.other) + '">' + (catIcons[g.category]||'📦') + '</div>' +
+      '<span class="badge badge-gray">' + g.members.length + ' member' + (g.members.length!==1?'s':'') + '</span></div>' +
+      '<div class="group-name">' + g.name + '</div>' +
+      '<div class="group-desc">' + (g.description || '') + '</div>' +
+      '<div class="group-stats">' +
+        '<div class="group-stat"><div class="group-stat-val">' + formatCurrency(stats.total) + '</div><div class="group-stat-label">Total spent</div></div>' +
+        '<div class="group-stat"><div class="group-stat-val">' + stats.count + '</div><div class="group-stat-label">Expenses</div></div>' +
+        '<div class="group-stat"><div class="group-stat-val" style="color:' + balColor + ';font-size:0.78rem">' + balLabel + '</div><div class="group-stat-label">Your balance</div></div>' +
+      '</div></a>';
   }
-
-  html += `<div class="new-group-card" onclick="openModal('new-group-modal')">
-    <div style="font-size:2rem">➕</div>
-    <div style="font-weight:600">Create New Group</div>
-    <div class="text-sm">Start tracking expenses</div>
-  </div>`;
-
+  html += '<div class="new-group-card" onclick="openModal(\'new-group-modal\')">' +
+    '<div style="font-size:2rem">➕</div><div style="font-weight:600">Create New Group</div>' +
+    '<div class="text-sm">Start tracking expenses</div></div>';
   document.getElementById('group-grid').innerHTML = html;
 }
 
 async function renderActivity() {
-  const groups = await DB.groups.forUser(user.id);
+  const groups = await DB.groups.forUser(currentUser.id);
   const allExpenses = [];
   for (const g of groups) {
-    const exps = await DB.expenses.forGroup(g.id);
-    exps.forEach(e => allExpenses.push({ ...e, groupName: g.name, groupId: g.id }));
+    try {
+      // FIX 4: Query without .orderBy() to avoid Firestore composite index requirement.
+      // Sort client-side instead.
+      const snap = await firebase.firestore().collection('expenses')
+        .where('groupId', '==', g.id).get();
+      snap.docs.forEach(d => allExpenses.push(Object.assign({}, d.data(), { groupName: g.name })));
+    } catch(e) { console.warn('expenses load error for group', g.id, e); }
   }
-  allExpenses.sort((a,b) => b.date - a.date);
+  allExpenses.sort(function(a, b) { return b.date - a.date; });
   const recent = allExpenses.slice(0, 8);
 
   if (!recent.length) {
-    document.getElementById('activity-list').innerHTML = `<div class="empty-state"><div class="empty-icon">💸</div><div class="empty-title">No activity yet</div><div class="empty-desc">Create a group and add your first expense</div></div>`;
+    document.getElementById('activity-list').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">💸</div><div class="empty-title">No activity yet</div><div class="empty-desc">Create a group and add your first expense</div></div>';
     return;
   }
-
-  const html = recent.map(e => {
-    const isSettled = e.isSettlement;
-    const myShare = e.splits?.find(s => s.userId === user.id);
-    const iPaid = e.paidBy === user.id;
-    let amtHtml = '';
-    if (isSettled) amtHtml = `<div class="activity-amount" style="color:var(--green)">Settled</div>`;
-    else if (iPaid) amtHtml = `<div class="activity-amount" style="color:var(--green)">+${formatCurrency(e.amount)}</div>`;
-    else if (myShare) amtHtml = `<div class="activity-amount" style="color:var(--red)">-${formatCurrency(myShare.amount)}</div>`;
-
-    return `<div class="activity-item">
-      <div class="activity-icon" style="background:${categoryColor(e.category)}22;font-size:1.1rem">${categoryIcon(e.category)}</div>
-      <div class="activity-text">
-        <div class="activity-title">${e.description}</div>
-        <div class="activity-sub">${e.groupName} • ${timeAgo(e.date)}</div>
-      </div>
-      ${amtHtml}
-    </div>`;
+  document.getElementById('activity-list').innerHTML = recent.map(function(e) {
+    var myShare = e.splits && e.splits.find(function(s) { return s.userId === currentUser.id; });
+    var iPaid = e.paidBy === currentUser.id;
+    var amtHtml = '';
+    if (e.isSettlement) amtHtml = '<div class="activity-amount" style="color:var(--green)">Settled</div>';
+    else if (iPaid)     amtHtml = '<div class="activity-amount" style="color:var(--green)">+' + formatCurrency(e.amount) + '</div>';
+    else if (myShare)   amtHtml = '<div class="activity-amount" style="color:var(--red)">-' + formatCurrency(myShare.amount) + '</div>';
+    return '<div class="activity-item">' +
+      '<div class="activity-icon" style="background:' + categoryColor(e.category) + '22">' + categoryIcon(e.category) + '</div>' +
+      '<div class="activity-text"><div class="activity-title">' + e.description + '</div>' +
+      '<div class="activity-sub">' + e.groupName + ' • ' + timeAgo(e.date) + '</div></div>' +
+      amtHtml + '</div>';
   }).join('');
-
-  document.getElementById('activity-list').innerHTML = html;
 }
 
 async function createGroup() {
   const name = document.getElementById('ng-name').value.trim();
-  if (!name) { showToast('Group name is required','error'); return; }
-  const cat = document.getElementById('ng-category').value;
-  const desc = document.getElementById('ng-desc').value.trim();
-  await DB.groups.create(name, desc, cat, user.id);
-  closeModal('new-group-modal');
-  document.getElementById('ng-name').value = '';
-  document.getElementById('ng-desc').value = '';
-  showToast('Group created!', 'success');
-  await renderStats();
-  await renderGroups();
+  if (!name) { showToast('Group name is required', 'error'); return; }
+  const btn = document.getElementById('create-group-btn');
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+  try {
+    const cat  = document.getElementById('ng-category').value;
+    const desc = document.getElementById('ng-desc').value.trim();
+    await DB.groups.create(name, desc, cat, currentUser.id);
+    closeModal('new-group-modal');
+    document.getElementById('ng-name').value = '';
+    document.getElementById('ng-desc').value = '';
+    showToast('Group created! 🎉', 'success');
+    await renderGroups();
+    await renderStats();
+  } catch(err) {
+    console.error('Create group error:', err);
+    showToast('Failed to create group. Try again.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Create Group';
+  }
 }
 
-// Close modal on overlay click
-document.getElementById('new-group-modal').addEventListener('click', e => {
+document.getElementById('new-group-modal').addEventListener('click', function(e) {
   if (e.target.id === 'new-group-modal') closeModal('new-group-modal');
 });
 </script>
