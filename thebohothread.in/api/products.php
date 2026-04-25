@@ -1,0 +1,145 @@
+<?php
+// ============================================================
+// TheBohoThread — Products API  (api/products.php)
+// GET    /api/products.php         → list all products
+// POST   /api/products.php         → create product
+// PUT    /api/products.php?id=N    → update product
+// DELETE /api/products.php?id=N    → delete product
+// ============================================================
+require_once __DIR__ . '/db.php';
+sendHeaders();
+
+$method = $_SERVER['REQUEST_METHOD'];
+$id     = isset($_GET['id']) ? (int)$_GET['id'] : null;
+$db     = getDB();
+
+function castProduct(array $r): array {
+    $r['id']             = (int)$r['id'];
+    $r['price']          = (float)$r['price'];
+    $r['original_price'] = ($r['original_price'] !== null && $r['original_price'] !== '') ? (float)$r['original_price'] : null;
+    $r['rating']         = ($r['rating'] !== null && $r['rating'] !== '') ? (float)$r['rating'] : null;
+    // Parse JSON fields
+    $r['images'] = ($r['images'] ?? null) ? json_decode($r['images'], true) : [];
+    $r['sizes']  = ($r['sizes']  ?? null) ? json_decode($r['sizes'],  true) : [];
+    return $r;
+}
+
+// ── GET ──────────────────────────────────────────────────────
+if ($method === 'GET') {
+    // Optional: ?showDeleted=1 to include soft-deleted products
+    $showDeleted = isset($_GET['showDeleted']) && $_GET['showDeleted'] === '1';
+    $where = $showDeleted ? '' : 'WHERE is_deleted = 0';
+    $rows = $db->query("SELECT * FROM products $where ORDER BY created_at DESC")->fetchAll();
+    ok(array_map('castProduct', $rows));
+}
+
+// ── POST — create ────────────────────────────────────────────
+if ($method === 'POST') {
+    $b     = body();
+    $name  = trim($b['name']         ?? '');
+    $cat   = trim($b['category']     ?? '');
+    $desc  = trim($b['description']  ?? '');
+    $price = (float)($b['price']     ?? 0);
+    $orig  = (isset($b['original_price']) && $b['original_price'] !== '') ? (float)$b['original_price'] : null;
+    $rating= (isset($b['rating'])    && $b['rating'] !== '')              ? (float)$b['rating']         : null;
+    $badge  = trim($b['badge']        ?? '');
+    $image  = trim($b['image']        ?? '');
+    $images = isset($b['images']) && is_array($b['images']) ? json_encode($b['images']) : null;
+    $sizes  = isset($b['sizes'])  && is_array($b['sizes'])  ? json_encode($b['sizes'])  : null;
+
+    if (!$name)      fail('Product name is required.');
+    if (!$cat)       fail('Category is required.');
+    if ($price <= 0) fail('Valid price is required.');
+
+    $db->prepare(
+        "INSERT INTO products (name, category, description, price, original_price, rating, badge, image, images, sizes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )->execute([$name, $cat, $desc, $price, $orig, $rating, $badge, $image, $images, $sizes]);
+
+    $newId = (int)$db->lastInsertId();
+    $stmt  = $db->prepare("SELECT * FROM products WHERE id = ?");
+    $stmt->execute([$newId]);
+    $row = $stmt->fetch();
+    if (!$row) fail('Product saved but could not be retrieved.', 500);
+    ok(castProduct($row));
+}
+
+// ── PUT — update ─────────────────────────────────────────────
+if ($method === 'PUT') {
+    if (!$id) fail('Product ID required.');
+    $b = body();
+
+    $fields = [];
+    $params = [];
+
+    // Handle images JSON array
+    if (array_key_exists('images', $b)) {
+        $fields[] = "images = ?";
+        $params[]  = (is_array($b['images'])) ? json_encode($b['images']) : null;
+    }
+    // Handle sizes JSON array
+    if (array_key_exists('sizes', $b)) {
+        $fields[] = "sizes = ?";
+        $params[]  = (is_array($b['sizes']) && count($b['sizes']) > 0) ? json_encode($b['sizes']) : null;
+    }
+
+    foreach (['name','category','description','badge','image'] as $f) {
+        if (array_key_exists($f, $b)) {
+            $fields[] = "$f = ?";
+            $params[]  = trim((string)$b[$f]);
+        }
+    }
+    if (array_key_exists('price', $b)) {
+        $fields[] = "price = ?";
+        $params[]  = (float)$b['price'];
+    }
+    if (array_key_exists('original_price', $b)) {
+        $fields[] = "original_price = ?";
+        $params[]  = ($b['original_price'] !== '' && $b['original_price'] !== null) ? (float)$b['original_price'] : null;
+    }
+    if (array_key_exists('rating', $b)) {
+        $fields[] = "rating = ?";
+        $params[]  = ($b['rating'] !== '' && $b['rating'] !== null) ? (float)$b['rating'] : null;
+    }
+    if (array_key_exists('isDeleted', $b) || array_key_exists('is_deleted', $b)) {
+        $val = isset($b['isDeleted']) ? $b['isDeleted'] : $b['is_deleted'];
+        $fields[] = "is_deleted = ?";
+        $params[]  = (int)$val;  // 0 = active, 1 = soft-deleted
+    }
+
+    if (!$fields) fail('No fields to update.');
+
+    $params[] = $id;
+    $db->prepare("UPDATE products SET " . implode(', ', $fields) . " WHERE id = ?")->execute($params);
+
+    $stmt = $db->prepare("SELECT * FROM products WHERE id = ?");
+    $stmt->execute([$id]);
+    $row = $stmt->fetch();
+    if (!$row) fail('Product not found.', 404);
+    ok(castProduct($row));
+}
+
+// ── PATCH — bulk soft-delete ──────────────────────────────────
+// Body: { "ids": [1,2,3], "isDeleted": 1 }  (1 = deactivate, 0 = activate)
+if ($method === 'PATCH') {
+    $b    = body();
+    $ids  = isset($b['ids']) && is_array($b['ids']) ? array_map('intval', $b['ids']) : [];
+    $flag = isset($b['isDeleted']) ? (int)$b['isDeleted'] : null;
+
+    if (!$ids)                       fail('ids array is required.');
+    if ($flag !== 0 && $flag !== 1)  fail('isDeleted must be 0 or 1.');
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $params = array_merge([$flag], $ids);
+    $db->prepare("UPDATE products SET is_deleted = ? WHERE id IN ($placeholders)")->execute($params);
+    ok(['updated' => count($ids), 'isDeleted' => $flag, 'ids' => $ids]);
+}
+
+// ── DELETE ───────────────────────────────────────────────────
+if ($method === 'DELETE') {
+    if (!$id) fail('Product ID required.');
+    $db->prepare("DELETE FROM products WHERE id = ?")->execute([$id]);
+    ok(['deleted' => $id]);
+}
+
+fail('Method not allowed.', 405);

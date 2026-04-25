@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    // Clean URL — always show just the domain
+    history.replaceState(null, '', '/');
+    // Also clean URL on any internal page navigation
+    document.addEventListener('click', function(e) {
+      var a = e.target.closest('a[href]');
+      if (!a) return;
+      var href = a.getAttribute('href');
+      if (!href || a.target || href.startsWith('http') || href.startsWith('//') || href.startsWith('mailto') || href.startsWith('tel') || href.startsWith('#') || href.startsWith('javascript')) return;
+      // Let the navigation happen, then clean URL on the next page (each page has its own script)
+    });
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>TheBohoThread — Curated Collection</title>
+  <meta name="description" content="TheBohoThread — Discover curated products crafted for modern living." />
+  <link rel="stylesheet" href="css/main.css" />
+  <!-- Icons: Phosphor Icons CDN -->
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════
+     NAVBAR
+════════════════════════════════════════════════ -->
+<nav id="navbar">
+  <a href="shop.html" class="nav-logo">The<span>Boho<span style="color:var(--gold);">Thread</span></a>
+
+  <!-- Desktop static links -->
+  <div class="nav-links">
+    <a href="shop.html">Home</a>
+    <a href="#products-section">Shop</a>
+    <a href="#about">About</a>
+    <a href="contact.html">Contact</a>
+  </div>
+
+  <!-- Search -->
+  <div class="nav-search">
+    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M229.66,218.34l-50.06-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.06a8,8,0,0,0,11.31-11.31ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/>
+    </svg>
+    <input type="text" id="search-input" placeholder="Search products…" autocomplete="off" />
+  </div>
+
+  <!-- Action buttons -->
+  <div class="nav-actions">
+    <button class="nav-btn" id="wish-open-btn" title="Wishlist" aria-label="Open Wishlist">
+      <i class="ph ph-heart"></i>
+      <span class="badge-count" id="wish-count">0</span>
+    </button>
+    <button class="nav-btn" id="cart-open-btn" title="Cart" aria-label="Open Cart">
+      <i class="ph ph-shopping-cart"></i>
+      <span class="badge-count" id="cart-count">0</span>
+    </button>
+    <!-- User Auth Button -->
+    <div class="user-auth-wrap">
+      <button class="nav-btn" id="user-auth-btn" onclick="openAuthModal()" title="My Account" aria-label="My Account">
+        <i class="ph ph-user"></i>
+      </button>
+      <span class="auth-online-dot" id="user-auth-dot"></span>
+      <!-- Signed-in user popup menu -->
+      <div class="user-menu-popup" id="user-menu-popup">
+        <div class="user-menu-info">
+          <div class="user-menu-name" id="user-menu-name">User</div>
+          <div class="user-menu-email" id="user-menu-email"></div>
+        </div>
+        <hr class="user-menu-divider" />
+        <button class="user-menu-item" onclick="signOutUser()">
+          <i class="ph ph-sign-out"></i> Sign Out
+        </button>
+      </div>
+    </div>
+    <a href="admin/index.html" class="nav-btn" title="Admin Panel" aria-label="Admin Panel">
+      <i class="ph ph-user-gear"></i>
+    </a>
+  </div>
+
+  <!-- Mobile hamburger -->
+  <div class="nav-hamburger" id="hamburger" role="button" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<!-- Mobile Drawer -->
+<div class="mobile-drawer" id="mobile-drawer">
+  <div class="nav-links">
+    <a href="shop.html" onclick="closeDrawer()">Home</a>
+    <a href="#products-section" onclick="closeDrawer()">Shop</a>
+    <a href="#about" onclick="closeDrawer()">About</a>
+    <a href="contact.html" onclick="closeDrawer()">Contact</a>
+  </div>
+  <!-- Mobile action icons: Wishlist, Cart, User, Admin -->
+  <div class="mobile-drawer-actions">
+    <button class="nav-btn" id="mob-wish-btn" title="Wishlist" aria-label="Open Wishlist" onclick="closeDrawer();document.getElementById('wishlist-sidebar').classList.add('open');">
+      <i class="ph ph-heart"></i>
+      <span class="badge-count" id="mob-wish-count">0</span>
+      <span class="icon-label">Wishlist</span>
+    </button>
+    <button class="nav-btn" id="mob-cart-btn" title="Cart" aria-label="Open Cart" onclick="closeDrawer();document.getElementById('cart-sidebar').classList.add('open');">
+      <i class="ph ph-shopping-cart"></i>
+      <span class="badge-count" id="mob-cart-count">0</span>
+      <span class="icon-label">Cart</span>
+    </button>
+    <div class="user-auth-wrap" style="position:relative;">
+      <button class="nav-btn" id="mob-user-btn" onclick="handleMobUserBtn()" title="My Account" aria-label="My Account">
+        <i class="ph ph-user"></i>
+        <span class="icon-label" id="mob-user-label">Login</span>
+      </button>
+      <span class="auth-online-dot" id="mob-user-dot"></span>
+      <!-- Mobile user popup (shown inside drawer when logged in) -->
+      <div class="user-menu-popup" id="mob-user-menu-popup" style="bottom:calc(100% + 8px);top:auto;left:50%;transform:translateX(-50%);right:auto;">
+        <div class="user-menu-info">
+          <div class="user-menu-name" id="mob-user-menu-name">User</div>
+          <div class="user-menu-email" id="mob-user-menu-email"></div>
+        </div>
+        <hr class="user-menu-divider" />
+        <button class="user-menu-item" onclick="signOutUser()">
+          <i class="ph ph-sign-out"></i> Sign Out
+        </button>
+      </div>
+    </div>
+    <a href="admin/index.html" class="nav-btn" title="Admin Panel" aria-label="Admin Panel">
+      <i class="ph ph-user-gear"></i>
+      <span class="icon-label">Admin</span>
+    </a>
+  </div>
+</div>
+
+<!-- Mobile drawer overlay -->
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+
+<!-- ════════════════════════════════════════════════
+     HERO BANNER (auto-scrolling)
+════════════════════════════════════════════════ -->
+<section class="hero" id="hero">
+  <div class="hero-slides" id="hero-slides">
+    <div class="hero-slide" style="background:linear-gradient(135deg,#0d1b2a 0%,#162235 100%);">
+      <div class="hero-slide-content">
+        <span class="tag">New Arrivals</span>
+        <h1>Curated for<br/>Modern Living</h1>
+        <p>Discover our latest collection—where craftsmanship meets contemporary design.</p>
+        <button class="btn-primary" onclick="document.getElementById('products-section').scrollIntoView({behavior:'smooth'})">
+          <i class="ph ph-arrow-right"></i> Explore Now
+        </button>
+      </div>
+    </div>
+    <div class="hero-slide" style="background:linear-gradient(135deg,#1a1030 0%,#0d1b2a 100%);">
+      <div class="hero-slide-content">
+        <span class="tag">Best Sellers</span>
+        <h1>Top Picks<br/>This Season</h1>
+        <p>Our customers' favorites — timeless pieces that never go out of style.</p>
+        <button class="btn-primary" onclick="filterByCategory('all')">
+          <i class="ph ph-star"></i> Shop Best Sellers
+        </button>
+      </div>
+    </div>
+    <div class="hero-slide" style="background:linear-gradient(135deg,#0a1a10 0%,#0d1b2a 100%);">
+      <div class="hero-slide-content">
+        <span class="tag">Limited Time</span>
+        <h1>Exclusive Deals<br/>Just for You</h1>
+        <p>Limited stock, unlimited style. Grab these special offers before they're gone.</p>
+        <button class="btn-primary" onclick="filterByCategory('sale')">
+          <i class="ph ph-lightning"></i> See Deals
+        </button>
+      </div>
+    </div>
+  </div>
+  <button class="hero-arrow left" id="hero-prev" aria-label="Previous">&#8592;</button>
+  <button class="hero-arrow right" id="hero-next" aria-label="Next">&#8594;</button>
+  <div class="hero-dots" id="hero-dots"></div>
+</section>
+
+<!-- ════════════════════════════════════════════════
+     AUTO-SCROLLING PRODUCT STRIP
+════════════════════════════════════════════════ -->
+<section class="scroller-section">
+  <h2>Trending <span>Right Now</span></h2>
+  <div class="scroller-track-wrapper">
+    <div class="scroller-track" id="scroller-track">
+      <!-- Duplicated by JS for infinite loop -->
+    </div>
+  </div>
+  <div class="scroller-scrollbar-wrap">
+    <button class="scroller-arrow" id="scroller-prev" aria-label="Scroll left">&#8249;</button>
+    <div class="scroller-scrollbar" id="scroller-scrollbar">
+      <div class="scroller-scrollbar-thumb" id="scroller-thumb"></div>
+    </div>
+    <button class="scroller-arrow" id="scroller-next" aria-label="Scroll right">&#8250;</button>
+  </div>
+</section>
+<!-- ════════════════════════════════════════════════
+     PRODUCTS GRID
+════════════════════════════════════════════════ -->
+<section class="products-section" id="products-section">
+  <div class="section-header">
+    <h2>Our <span>Collection</span></h2>
+    <div class="filter-bar">
+      <select id="sort-select" aria-label="Sort products">
+        <option value="default">Sort: Default</option>
+        <option value="price-asc">Price: Low to High</option>
+        <option value="price-desc">Price: High to Low</option>
+        <option value="name-asc">Name: A–Z</option>
+        <option value="newest">Newest First</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Category pills row -->
+  <div id="collection-categories">
+    <button class="cat-pill active" data-cat="all">All</button>
+    <!-- Dynamic categories injected by JS -->
+  </div>
+
+  <div id="products-grid">
+    <div class="loader-wrap"><div class="spinner"></div></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════
+     ABOUT STRIP
+════════════════════════════════════════════════ -->
+<section id="about" style="padding:64px 48px;background:var(--navy-mid);border-top:1px solid rgba(201,168,76,0.1);border-bottom:1px solid rgba(201,168,76,0.1);">
+  <div style="max-width:900px;margin:0 auto;text-align:center;">
+    <h2 style="font-size:2.2rem;color:var(--cream);margin-bottom:16px;">Why <span style="color:var(--gold);">TheBohoThread?</span></h2>
+    <p style="color:var(--text-muted);font-size:1rem;line-height:1.8;margin-bottom:40px;">We believe every product tells a story. Our curated selection brings you the finest items — each carefully chosen for quality, design, and lasting value.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:24px;">
+      <div style="background:var(--navy-card);border-radius:12px;padding:24px;border:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:2rem;margin-bottom:10px;">🎯</div>
+        <h4 style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--cream);margin-bottom:6px;">Curated Selection</h4>
+        <p style="font-size:0.82rem;color:var(--text-muted);">Hand-picked products for quality and design.</p>
+      </div>
+      <div style="background:var(--navy-card);border-radius:12px;padding:24px;border:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:2rem;margin-bottom:10px;">🚚</div>
+        <h4 style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--cream);margin-bottom:6px;">Fast Shipping</h4>
+        <p style="font-size:0.82rem;color:var(--text-muted);">Delivered to your door, swiftly and safely.</p>
+      </div>
+      <div style="background:var(--navy-card);border-radius:12px;padding:24px;border:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:2rem;margin-bottom:10px;">🔒</div>
+        <h4 style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--cream);margin-bottom:6px;">Secure Payments</h4>
+        <p style="font-size:0.82rem;color:var(--text-muted);">Your data is always safe with us.</p>
+      </div>
+      <div style="background:var(--navy-card);border-radius:12px;padding:24px;border:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:2rem;margin-bottom:10px;">💬</div>
+        <h4 style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--cream);margin-bottom:6px;">24/7 Support</h4>
+        <p style="font-size:0.82rem;color:var(--text-muted);">We're always here when you need us.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════ -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:700;color:var(--gold);">The<span style="color:var(--cream);font-weight:300;">Boho</span><span style="color:var(--gold);">Thread</span></div>
+      <p>Curated products for modern living. Quality, design, and value — all in one place.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Shop</h4>
+      <ul>
+        <li><a href="#products-section">All Products</a></li>
+        <li><a href="javascript:void(0)" onclick="filterByCategory('new')">New Arrivals</a></li>
+        <li><a href="javascript:void(0)" onclick="filterByCategory('sale')">Sale Items</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Help</h4>
+      <ul>
+        <li><a href="faq.html">FAQ</a></li>
+        <li><a href="shipping.html">Shipping Info</a></li>
+        <li><a href="returns.html">Returns</a></li>
+        <li><a href="contact.html">Contact Us</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Company</h4>
+      <ul>
+        <li><a href="#about">About Us</a></li>
+        <li><a href="data-policy.html">Privacy Policy</a></li>
+        <li><a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a></li>
+        <li><a href="admin/index.html">Admin</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 TheBohoThread. All rights reserved.</p>
+    <p style="color:var(--gold);font-size:0.78rem;">Crafted with ♥</p>
+  </div>
+</footer>
+
+<!-- ════════════════════════════════════════════════
+     CART SIDEBAR
+════════════════════════════════════════════════ -->
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<aside class="cart-sidebar" id="cart-sidebar" role="dialog" aria-label="Shopping cart">
+  <div class="sidebar-header">
+    <h3>Your Cart</h3>
+    <button class="sidebar-close" id="cart-close-btn" aria-label="Close cart"><i class="ph ph-x"></i></button>
+  </div>
+  <div class="sidebar-body" id="cart-body">
+    <!-- Cart items injected by JS -->
+  </div>
+  <div class="sidebar-footer">
+    <div class="cart-total">
+      <span>Total</span>
+      <span id="cart-total">₹0.00</span>
+    </div>
+    <button class="checkout-btn" onclick="checkout()">Proceed to Checkout</button>
+  </div>
+</aside>
+
+<!-- ════════════════════════════════════════════════
+     WISHLIST SIDEBAR
+════════════════════════════════════════════════ -->
+<aside class="wishlist-sidebar" id="wishlist-sidebar" role="dialog" aria-label="Wishlist">
+  <div class="sidebar-header">
+    <h3>My Wishlist</h3>
+    <button class="sidebar-close" id="wish-close-btn" aria-label="Close wishlist"><i class="ph ph-x"></i></button>
+  </div>
+  <div class="sidebar-body" id="wishlist-body">
+    <!-- Wishlist items injected by JS -->
+  </div>
+</aside>
+
+<!-- ════════════════════════════════════════════════
+     PRODUCT DETAIL MODAL
+════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="product-modal" role="dialog" aria-modal="true">
+  <div class="modal" id="modal-inner">
+    <div class="modal-img" id="modal-img-wrap" style="position:relative;overflow:hidden;">
+      <img id="modal-img" src="" alt="" />
+      <button class="modal-close" id="modal-close"><i class="ph ph-x"></i></button>
+      <!-- Carousel prev/next -->
+      <button id="modal-img-prev" style="display:none;position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(13,27,42,0.7);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;align-items:center;justify-content:center;z-index:10;">‹</button>
+      <button id="modal-img-next" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(13,27,42,0.7);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;align-items:center;justify-content:center;z-index:10;">›</button>
+      <!-- Carousel dots -->
+      <div id="modal-img-dots" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;"></div>
+    </div>
+    <div class="modal-content">
+      <div class="product-cat-tag" id="modal-cat"></div>
+      <h2 id="modal-name"></h2>
+      <div class="star-rating" id="modal-stars"></div>
+      <p class="desc" id="modal-desc"></p>
+      <!-- Size selector (shown only when product has sizes) -->
+      <div id="modal-size-selector" style="display:none;margin-bottom:12px;">
+        <label style="font-size:0.82rem;color:var(--text-muted);display:block;margin-bottom:8px;">Select Size:</label>
+        <div id="modal-size-options" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
+      <div class="modal-price" id="modal-price"></div>
+      <div class="qty-picker">
+        <label>Qty:</label>
+        <div class="cart-item-qty">
+          <button class="qty-btn" onclick="changeModalQty(-1)">−</button>
+          <span class="qty-val" id="modal-qty-val">1</span>
+          <button class="qty-btn" onclick="changeModalQty(1)">+</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="add-cart-btn" id="modal-add-cart">Add to Cart</button>
+        <button class="modal-wish-btn" id="modal-wish-btn" title="Add to Wishlist"><svg viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+      </div>
+
+      <!-- ── REVIEWS SECTION ── -->
+      <div class="reviews-section" id="modal-reviews-section">
+        <div class="reviews-header">
+          <h4>Customer Reviews</h4>
+          <div class="reviews-summary" id="reviews-summary"></div>
+        </div>
+
+        <!-- Approved reviews list -->
+        <div id="approved-reviews-list"></div>
+
+        <!-- Write a review -->
+        <div class="write-review-wrap" id="write-review-wrap">
+          <h5>Write a Review</h5>
+          <div class="star-picker" id="star-picker">
+            <span class="star-pick" data-val="1">★</span>
+            <span class="star-pick" data-val="2">★</span>
+            <span class="star-pick" data-val="3">★</span>
+            <span class="star-pick" data-val="4">★</span>
+            <span class="star-pick" data-val="5">★</span>
+          </div>
+          <input class="review-name-input" id="review-name" placeholder="Your name" maxlength="60" />
+          <textarea class="review-textarea" id="review-text" placeholder="Share your thoughts about this product…" maxlength="500" rows="3"></textarea>
+          <button class="submit-review-btn" id="submit-review-btn" onclick="submitReview()">
+            <i class="ph ph-paper-plane-tilt"></i> Submit Review
+          </button>
+          <p class="review-disclaimer">Your review will appear after admin approval.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     TOAST CONTAINER
+════════════════════════════════════════════════ -->
+<div id="toast-container"></div>
+
+<!-- ════════════════════════════════════════════════
+     JS
+════════════════════════════════════════════════ -->
+<script type="module" src="js/app.js"></script>
+
+<!-- ════════════════════════════════════════════════
+     AUTH MODAL
+════════════════════════════════════════════════ -->
+<div class="auth-modal-overlay" id="auth-modal" role="dialog" aria-modal="true" aria-label="Sign In">
+  <div class="auth-modal-card">
+
+    <!-- Header -->
+    <div class="auth-modal-header">
+      <div class="auth-logo">The<span>Boho</span><span class="auth-logo-gold">Thread</span></div>
+      <button class="auth-close-btn" onclick="closeAuthModal()" aria-label="Close"><i class="ph ph-x"></i></button>
+    </div>
+
+    <!-- Step 1: Choose method -->
+    <div id="step-choose">
+      <h2 class="auth-title">Welcome Back</h2>
+      <p class="auth-subtitle">Sign in to your account to continue shopping</p>
+
+      <!-- Google -->
+      <button class="auth-btn auth-btn-google" id="btn-google-signin" onclick="signInWithGoogle()">
+        <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          <path fill="none" d="M0 0h48v48H0z"/>
+        </svg>
+        Continue with Google
+      </button>
+
+
+
+      
+
+      <!-- <div class="auth-divider"><span>or</span></div> -->
+      <!-- Phone -->
+       <!--  <button class="auth-btn auth-btn-phone" onclick="showPhoneStep()">
+        <i class="ph ph-phone"></i>
+        Continue with Phone Number
+      </button> 
+-->
+
+      <p class="auth-terms">By signing in, you agree to our <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Terms</a> &amp; <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</p>
+    </div>
+
+    <!-- Step 2: Phone number input -->
+    <div id="step-phone" style="display:none;">
+      <button class="auth-back-btn" onclick="backToChoose()"><i class="ph ph-arrow-left"></i> Back</button>
+      <h2 class="auth-title">Phone Sign In</h2>
+      <p class="auth-subtitle">We'll send a one-time password to verify your number</p>
+
+      <label class="auth-label">Mobile Number</label>
+      <div class="auth-phone-row">
+        <span class="auth-country-code">🇮🇳 +91</span>
+        <input class="auth-input" id="auth-phone-input" type="tel" placeholder="95XXX XXX00" maxlength="10" inputmode="numeric" />
+      </div>
+      <p class="auth-field-error" id="auth-phone-error"></p>
+
+      <div id="recaptcha-container"></div>
+
+      <button class="auth-btn auth-btn-primary" id="btn-send-otp" onclick="sendOTP()">
+        <i class="ph ph-paper-plane-tilt"></i> Send OTP
+      </button>
+    </div>
+
+    <!-- Step 3: OTP verify -->
+    <div id="step-otp" style="display:none;">
+      <button class="auth-back-btn" onclick="resendOTP()"><i class="ph ph-arrow-left"></i> Back</button>
+      <h2 class="auth-title">Enter OTP</h2>
+      <p class="auth-subtitle">Code sent to <strong id="auth-otp-sent-to"></strong></p>
+
+      <label class="auth-label">6-Digit OTP</label>
+      <input class="auth-input auth-otp-input" id="auth-otp-input" type="tel" placeholder="• • • • • •" maxlength="6" inputmode="numeric" />
+      <p class="auth-field-error" id="auth-otp-error"></p>
+
+      <button class="auth-btn auth-btn-primary" id="btn-verify-otp" onclick="verifyOTP()">
+        <i class="ph ph-check-circle"></i> Verify &amp; Sign In
+      </button>
+
+      <p class="auth-resend">Didn't receive it? <button class="auth-resend-btn" onclick="resendOTP()">Resend OTP</button></p>
+    </div>
+
+  </div>
+</div>
+
+<!-- Recaptcha anchor (invisible) -->
+<div id="recaptcha-container" style="position:fixed;bottom:0;left:0;z-index:9999;"></div>
+
+<!-- ════════════════ AUTH SCRIPT ════════════════ -->
+<script type="module" src="js/auth.js"></script>
+
+</body>
+</html>
