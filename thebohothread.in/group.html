@@ -1,480 +1,379 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Group — SplitMate</title>
-<link rel="stylesheet" href="style.css">
-<style>
-.group-hero { background: linear-gradient(135deg, var(--surface) 0%, var(--bg3) 100%); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 24px; }
-.group-hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.group-icon-big { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 12px; }
-.two-col { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
-.settle-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
-.member-avatar-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-.member-chip { display: flex; align-items: center; gap: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px 4px 4px; font-size: 0.78rem; }
-.balance-bar { height: 8px; border-radius: 999px; background: var(--surface2); overflow: hidden; margin-top: 6px; }
-.balance-fill-pos { background: var(--green); height: 100%; border-radius: 999px; }
-.balance-fill-neg { background: var(--red); height: 100%; border-radius: 999px; }
-.filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
-.filter-btn { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg3); color: var(--text3); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all var(--transition); }
-.filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
-.invite-link-box { display: flex; gap: 8px; }
-.invite-link-box input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; color: var(--text3); font-size: 0.82rem; }
-@media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Groups – SplitEase</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/landing.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    if (!firebase.apps.length) {
+      firebase.initializeApp({
+        apiKey:            "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+        authDomain:        "thebohothread-96e2c.firebaseapp.com",
+        projectId:         "thebohothread-96e2c",
+        storageBucket:     "thebohothread-96e2c.firebasestorage.app",
+        messagingSenderId: "100688387088",
+        appId:             "1:100688387088:web:f8a6af7565d3c25952fe95"
+      });
+    }
+  </script>
+
+  <style>
+    .cat-option { display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.2s;font-size:0.8rem;gap:6px; }
+    .cat-option:hover { border-color:var(--accent); }
+    .cat-option.selected { border-color:var(--accent);background:var(--accent-glow);color:var(--accent-bright); }
+    .cat-options { display:grid;grid-template-columns:repeat(3,1fr);gap:10px; }
+
+    .groups-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px; }
+    .group-card {
+      background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
+      padding:20px;cursor:pointer;transition:all 0.2s;position:relative;
+    }
+    .group-card:hover { border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,106,247,0.12); }
+    .group-card-top { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px; }
+    .group-card-icon { font-size:2rem;line-height:1; }
+    .group-card-members { font-size:0.75rem;color:var(--text-muted);background:var(--bg3);padding:3px 8px;border-radius:99px; }
+    .group-card-name { font-family:var(--font-display);font-weight:800;font-size:1.05rem;margin-bottom:3px; }
+    .group-card-desc { font-size:0.8rem;color:var(--text-muted);margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .group-card-stats { display:flex;gap:12px;justify-content:space-between;align-items:center; }
+    .group-card-amount { font-family:var(--font-display);font-weight:700;font-size:1.1rem; }
+    .group-card-expenses { font-size:0.78rem;color:var(--text-dim); }
+    .group-card-bal { font-size:0.8rem;font-weight:600; }
+
+    /* 3-dot menu */
+    .three-dot-btn {
+      position:absolute;top:12px;right:12px;
+      background:transparent;border:none;color:var(--text-muted);
+      font-size:1.2rem;cursor:pointer;border-radius:6px;
+      width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+      transition:all 0.15s;line-height:1;z-index:2;
+    }
+    .three-dot-btn:hover { background:var(--bg3);color:var(--text); }
+    .dropdown-menu {
+      position:absolute;top:38px;right:10px;
+      background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);
+      box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:100;min-width:160px;
+      overflow:hidden;display:none;
+    }
+    .dropdown-menu.open { display:block; }
+    .dropdown-item {
+      padding:10px 16px;font-size:0.85rem;cursor:pointer;
+      transition:background 0.1s;display:flex;align-items:center;gap:8px;color:var(--text);
+    }
+    .dropdown-item:hover { background:var(--bg3); }
+    .dropdown-item.danger { color:var(--red); }
+    .dropdown-item.danger:hover { background:rgba(239,68,68,0.08); }
+  </style>
 </head>
-<body>
-<div id="sidebar-mount"></div>
-<div class="page-wrap">
-  <div class="main-content">
+<body class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
 
-    <!-- BREADCRUMB + HEADER -->
-    <div class="breadcrumb mb-3">
-      <a href="dashboard.html">Dashboard</a>
-      <span class="sep">›</span>
-      <span id="bc-name">Group</span>
-    </div>
-
-    <!-- GROUP HERO -->
-    <div class="group-hero" id="group-hero">Loading...</div>
-
-    <!-- TABS -->
-    <div class="tabs" id="main-tabs">
-      <button class="tab-btn active" onclick="switchTab('expenses')">💸 Expenses</button>
-      <button class="tab-btn" onclick="switchTab('balances')">⚖️ Balances</button>
-      <button class="tab-btn" onclick="switchTab('settle')">✅ Settle Up</button>
-      <button class="tab-btn" onclick="switchTab('members')">👥 Members</button>
-    </div>
-
-    <!-- TAB CONTENT -->
-    <div id="tab-expenses"></div>
-    <div id="tab-balances" style="display:none"></div>
-    <div id="tab-settle" style="display:none"></div>
-    <div id="tab-members" style="display:none"></div>
-
-  </div>
-</div>
-
-<!-- ADD EXPENSE BUTTON (floating) -->
-<button id="fab" onclick="location.href='add-expense.html?group='+groupId" style="position:fixed;bottom:28px;right:28px;width:56px;height:56px;border-radius:50%;background:var(--accent);border:none;color:white;font-size:1.6rem;cursor:pointer;box-shadow:var(--shadow-accent);display:flex;align-items:center;justify-content:center;z-index:200;transition:transform var(--transition)" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">+</button>
-
-<!-- INVITE MODAL -->
-<div class="modal-overlay" id="invite-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Invite to Group</div>
-      <button class="modal-close" onclick="closeModal('invite-modal')">✕</button>
-    </div>
-    <div class="alert alert-info mb-3">Share this link with friends. They'll need to sign in or register to join.</div>
-    <div class="form-group">
-      <label class="form-label">Invite link</label>
-      <div class="invite-link-box">
-        <input type="text" id="invite-link" readonly>
-        <button class="btn btn-secondary" onclick="copyInvite()">📋 Copy</button>
+  <main class="main-content">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px">
+      <div class="page-header" style="margin-bottom:0">
+        <h1 class="page-title">My Groups</h1>
+        <p class="page-subtitle">Manage your shared expense groups</p>
       </div>
+      <button class="btn-primary" onclick="openCreateGroup()">+ New Group</button>
     </div>
-    <div class="divider"></div>
-    <div class="form-group">
-      <label class="form-label">Or invite by email</label>
-      <input type="email" id="invite-email" class="form-input" placeholder="friend@example.com">
+
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+      <input type="text" class="form-input" id="search-input" placeholder="Search groups..." style="max-width:260px" oninput="renderGroups()" />
     </div>
-    <button class="btn btn-primary btn-full" onclick="sendEmailInvite()">Send Invitation</button>
-  </div>
-</div>
 
-<!-- EDIT GROUP MODAL -->
-<div class="modal-overlay" id="edit-group-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Edit Group</div>
-      <button class="modal-close" onclick="closeModal('edit-group-modal')">✕</button>
+    <div id="groups-list" class="groups-grid">
+      <div style="color:var(--text-muted);padding:40px;text-align:center;grid-column:1/-1">Loading groups…</div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Group name</label>
-      <input type="text" id="edit-name" class="form-input">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Description</label>
-      <input type="text" id="edit-desc" class="form-input">
-    </div>
-    <div class="flex gap-3 mt-4">
-      <button class="btn btn-secondary flex-1" onclick="closeModal('edit-group-modal')">Cancel</button>
-      <button class="btn btn-primary flex-1" onclick="saveGroupEdit()">Save Changes</button>
-    </div>
-    <div class="divider"></div>
-    <button class="btn btn-danger btn-full" onclick="deleteGroup()">🗑️ Delete Group</button>
-  </div>
-</div>
+  </main>
 
-<!-- SETTLE CONFIRM MODAL -->
-<div class="modal-overlay" id="settle-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Record Settlement</div>
-      <button class="modal-close" onclick="closeModal('settle-modal')">✕</button>
-    </div>
-    <div id="settle-details"></div>
-    <div class="flex gap-3 mt-4">
-      <button class="btn btn-secondary flex-1" onclick="closeModal('settle-modal')">Cancel</button>
-      <button class="btn btn-green flex-1" id="settle-confirm-btn">Mark as Settled</button>
-    </div>
-  </div>
-</div>
-
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey:            "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
-    authDomain:        "thebohothread-96e2c.firebaseapp.com",
-    projectId:         "thebohothread-96e2c",
-    storageBucket:     "thebohothread-96e2c.firebasestorage.app",
-    messagingSenderId: "100688387088",
-    appId:             "1:100688387088:web:f8a6af7565d3c25952fe95",
-    measurementId:     "G-5VTK93354M"
-  };
-  firebase.initializeApp(firebaseConfig);
-</script>
-<script src="db.firestore.js"></script>
-<script src="auth.js"></script>
-<script>
-const user = Auth.requireAuth();
-const groupId = new URLSearchParams(location.search).get('id');
-let group = null;
-let activeTab = 'expenses';
-let activeFilter = 'all';
-
-if (!groupId || !Auth.canAccessGroup(groupId)) {
-  location.href = 'dashboard.html';
-}
-
-function init() {
-  document.getElementById('sidebar-mount').innerHTML = renderSidebar('groups');
-  initSidebar();
-  group = DB.groups.findById(groupId);
-  document.getElementById('bc-name').textContent = group.name;
-  document.title = `${group.name} — SplitMate`;
-  renderHero();
-  renderTab('expenses');
-  generateInviteLink();
-}
-if (user) init();
-
-function renderHero() {
-  const stats = DB.calc.groupStats(groupId);
-  const myBal = DB.calc.userBalanceInGroup(groupId, user.id);
-  const balColor = myBal > 0 ? 'var(--green)' : myBal < 0 ? 'var(--red)' : 'var(--text2)';
-  const catIcons = { trip:'✈️', home:'🏠', friends:'👫', couple:'💑', work:'💼', other:'📦' };
-  const catColors = { trip:'rgba(108,99,255,0.15)', home:'rgba(34,197,94,0.15)', friends:'rgba(249,115,22,0.15)', couple:'rgba(236,72,153,0.15)', work:'rgba(59,130,246,0.15)', other:'rgba(168,85,247,0.15)' };
-  const isAdmin = Auth.isGroupAdmin(groupId);
-
-  const memberNames = group.members.slice(0,4).map(uid => {
-    const u = DB.users.findById(uid);
-    return u ? `<div class="member-chip"><div class="avatar" style="background:${u.avatarColor||'#6c63ff'};width:22px;height:22px;font-size:0.65rem">${(u.name||'?')[0].toUpperCase()}</div>${u.name?.split(' ')[0]||'?'}</div>` : '';
-  }).join('');
-  const extra = group.members.length > 4 ? `<div class="member-chip">+${group.members.length-4} more</div>` : '';
-
-  document.getElementById('group-hero').innerHTML = `
-    <div class="group-hero-top">
-      <div>
-        <div class="group-icon-big" style="background:${catColors[group.category]||catColors.other}">${catIcons[group.category]||'📦'}</div>
-        <h2 style="margin-bottom:4px">${group.name}</h2>
-        <p style="font-size:0.85rem;margin-bottom:12px">${group.description || ''}</p>
-        <div class="member-avatar-row">${memberNames}${extra}</div>
+  <!-- Create Group Modal -->
+  <div class="modal-overlay" id="create-group-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Create New Group</h2>
+        <button class="modal-close" onclick="UI.closeModal('create-group-modal')">&times;</button>
       </div>
-      <div class="flex gap-2" style="flex-wrap:wrap">
-        <button class="btn btn-secondary btn-sm" onclick="openModal('invite-modal')">👥 Invite</button>
-        ${isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="openEditModal()">✏️ Edit</button>` : ''}
-        <button class="btn btn-primary btn-sm" onclick="location.href='add-expense.html?group=${groupId}'">+ Expense</button>
+      <div class="form-group">
+        <label class="form-label">Group Name *</label>
+        <input type="text" class="form-input" id="g-name" placeholder="e.g. Goa Trip 2025" maxlength="60" />
       </div>
-    </div>
-    <div class="stats-grid mt-4" style="margin-bottom:0">
-      <div class="stat-card">
-        <div class="stat-label">Total Spent</div>
-        <div class="stat-value stat-purple">${formatCurrency(stats.total)}</div>
-        <div class="stat-sub">${stats.count} expenses</div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input type="text" class="form-input" id="g-desc" placeholder="Optional description" />
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Your Balance</div>
-        <div class="stat-value" style="color:${balColor}">${myBal >= 0 ? '+' : ''}${formatCurrency(myBal)}</div>
-        <div class="stat-sub">${myBal > 0 ? 'others owe you' : myBal < 0 ? 'you owe others' : 'all settled!'}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Members</div>
-        <div class="stat-value">${group.members.length}</div>
-        <div class="stat-sub">in this group</div>
-      </div>
-    </div>`;
-}
-
-function switchTab(tab) {
-  activeTab = tab;
-  ['expenses','balances','settle','members'].forEach(t => {
-    document.getElementById(`tab-${t}`).style.display = t === tab ? 'block' : 'none';
-  });
-  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', ['expenses','balances','settle','members'][i] === tab);
-  });
-  renderTab(tab);
-}
-
-function renderTab(tab) {
-  if (tab === 'expenses') renderExpenses();
-  else if (tab === 'balances') renderBalances();
-  else if (tab === 'settle') renderSettle();
-  else if (tab === 'members') renderMembers();
-}
-
-function renderExpenses() {
-  const expenses = DB.expenses.forGroup(groupId);
-  const el = document.getElementById('tab-expenses');
-
-  const cats = [...new Set(expenses.map(e => e.category))];
-  const filterHtml = `
-    <div class="filter-row">
-      <button class="filter-btn ${activeFilter==='all'?'active':''}" onclick="setFilter('all')">All</button>
-      ${cats.map(c => `<button class="filter-btn ${activeFilter===c?'active':''}" onclick="setFilter('${c}')">${categoryIcon(c)} ${categoryLabel(c)}</button>`).join('')}
-    </div>`;
-
-  const filtered = activeFilter === 'all' ? expenses : expenses.filter(e => e.category === activeFilter);
-
-  if (!filtered.length) {
-    el.innerHTML = filterHtml + `<div class="empty-state"><div class="empty-icon">💸</div><div class="empty-title">No expenses yet</div><div class="empty-desc">Add your first expense to start tracking</div><button class="btn btn-primary" onclick="location.href='add-expense.html?group=${groupId}'">+ Add Expense</button></div>`;
-    return;
-  }
-
-  const listHtml = filtered.map(e => {
-    const payer = DB.users.findById(e.paidBy);
-    const myShare = e.splits?.find(s => s.userId === user.id);
-    const iPaid = e.paidBy === user.id;
-    let shareLabel = '';
-    if (e.isSettlement) shareLabel = `<span style="color:var(--green)">Settlement</span>`;
-    else if (iPaid && myShare) shareLabel = `<span style="color:var(--green)">You paid • your share ${formatCurrency(myShare.amount)}</span>`;
-    else if (iPaid) shareLabel = `<span style="color:var(--green)">You paid for others</span>`;
-    else if (myShare) shareLabel = `<span style="color:var(--red)">Your share: ${formatCurrency(myShare.amount)}</span>`;
-    else shareLabel = `<span style="color:var(--text3)">Not involved</span>`;
-
-    const isAdmin = Auth.isGroupAdmin(groupId);
-    const canDelete = iPaid || isAdmin;
-
-    return `<div class="expense-item" onclick="toggleExpenseDetail('ed-${e.id}')">
-      <div class="expense-icon" style="background:${categoryColor(e.category)}22">${e.isSettlement ? '✅' : categoryIcon(e.category)}</div>
-      <div class="expense-info">
-        <div class="expense-name">${e.description}</div>
-        <div class="expense-meta">${payer ? (iPaid ? 'You' : payer.name) : '?'} paid • ${formatDateShort(e.date)}</div>
-        <div class="expense-meta">${shareLabel}</div>
-        <div id="ed-${e.id}" style="display:none;margin-top:8px;font-size:0.8rem;color:var(--text3)">
-          ${e.splits?.map(s => { const u=DB.users.findById(s.userId); return `<span>${u?.name||'?'}: ${formatCurrency(s.amount)}</span>`; }).join(' • ')||''}
-          ${e.notes ? `<div style="margin-top:4px;font-style:italic">"${e.notes}"</div>` : ''}
-          ${canDelete ? `<button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="deleteExpense('${e.id}',event)">Delete</button>` : ''}
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <div class="cat-options" id="cat-options">
+          <div class="cat-option selected" data-cat="trip" onclick="selectCat('trip')">✈️<span>Trip</span></div>
+          <div class="cat-option" data-cat="home" onclick="selectCat('home')">🏠<span>Home</span></div>
+          <div class="cat-option" data-cat="friends" onclick="selectCat('friends')">👫<span>Friends</span></div>
+          <div class="cat-option" data-cat="couple" onclick="selectCat('couple')">❤️<span>Couple</span></div>
+          <div class="cat-option" data-cat="work" onclick="selectCat('work')">💼<span>Work</span></div>
+          <div class="cat-option" data-cat="other" onclick="selectCat('other')">📦<span>Other</span></div>
         </div>
       </div>
-      <div class="expense-amount">
-        <div class="total">${formatCurrency(e.amount)}</div>
-        <div class="share text-xs">${categoryLabel(e.category)}</div>
+      <div class="form-group">
+        <label class="form-label">Currency</label>
+        <select class="form-input" id="g-currency">
+          <option value="INR">₹ Indian Rupee (INR)</option>
+          <option value="USD">$ US Dollar (USD)</option>
+          <option value="EUR">€ Euro (EUR)</option>
+          <option value="GBP">£ British Pound (GBP)</option>
+          <option value="AUD">A$ Australian Dollar (AUD)</option>
+          <option value="JPY">¥ Japanese Yen (JPY)</option>
+        </select>
       </div>
-    </div>`;
-  }).join('');
+      <button class="btn-primary w-full" style="width:100%;margin-top:8px" onclick="createGroup()">Create Group</button>
+    </div>
+  </div>
 
-  el.innerHTML = filterHtml + `<div class="card" style="padding:8px">${listHtml}</div>`;
-}
-
-function toggleExpenseDetail(id) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-
-function setFilter(cat) {
-  activeFilter = cat;
-  renderExpenses();
-}
-
-function deleteExpense(id, event) {
-  event.stopPropagation();
-  if (!confirm('Delete this expense?')) return;
-  DB.expenses.delete(id);
-  showToast('Expense deleted', 'success');
-  renderHero();
-  renderExpenses();
-}
-
-function renderBalances() {
-  const balances = DB.calc.getBalances(groupId);
-  const el = document.getElementById('tab-balances');
-  const members = group.members.map(uid => DB.users.findById(uid)).filter(Boolean);
-  const amounts = Object.values(balances);
-  const maxAbs = Math.max(...amounts.map(Math.abs), 1);
-
-  const rows = members.map(m => {
-    const bal = balances[m.id] || 0;
-    const rounded = Math.round(bal * 100) / 100;
-    const color = rounded > 0 ? 'var(--green)' : rounded < 0 ? 'var(--red)' : 'var(--text2)';
-    const label = rounded > 0 ? `gets back ${formatCurrency(bal)}` : rounded < 0 ? `owes ${formatCurrency(Math.abs(bal))}` : 'settled ✓';
-    const pct = (Math.abs(bal) / maxAbs) * 100;
-    return `<div style="margin-bottom:16px">
-      <div class="flex-between mb-1">
-        <div class="flex gap-2 align-items-center" style="align-items:center;gap:10px">
-          <div class="avatar" style="background:${m.avatarColor||'#6c63ff'}">${initials(m.name)}</div>
-          <div>
-            <div style="font-weight:600;font-size:0.9rem">${m.name}${m.id===user.id?' (you)':''}</div>
-            <div style="font-size:0.75rem;color:${color}">${label}</div>
-          </div>
+  <!-- Edit Group Modal -->
+  <div class="modal-overlay" id="edit-group-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Group</h2>
+        <button class="modal-close" onclick="UI.closeModal('edit-group-modal')">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Group Name *</label>
+        <input type="text" class="form-input" id="eg-name" placeholder="Group name" maxlength="60" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input type="text" class="form-input" id="eg-desc" placeholder="Optional description" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <div class="cat-options" id="edit-cat-options">
+          <div class="cat-option" data-cat="trip" onclick="selectEditCat('trip')">✈️<span>Trip</span></div>
+          <div class="cat-option" data-cat="home" onclick="selectEditCat('home')">🏠<span>Home</span></div>
+          <div class="cat-option" data-cat="friends" onclick="selectEditCat('friends')">👫<span>Friends</span></div>
+          <div class="cat-option" data-cat="couple" onclick="selectEditCat('couple')">❤️<span>Couple</span></div>
+          <div class="cat-option" data-cat="work" onclick="selectEditCat('work')">💼<span>Work</span></div>
+          <div class="cat-option" data-cat="other" onclick="selectEditCat('other')">📦<span>Other</span></div>
         </div>
-        <div style="font-family:var(--font-display);font-weight:700;color:${color}">${rounded >= 0 ? '+' : ''}${formatCurrency(bal)}</div>
       </div>
-      <div class="balance-bar">
-        <div class="${rounded >= 0 ? 'balance-fill-pos' : 'balance-fill-neg'}" style="width:${pct}%"></div>
-      </div>
-    </div>`;
-  }).join('');
+      <button class="btn-primary w-full" style="width:100%;margin-top:8px" onclick="saveEditGroup()">Save Changes</button>
+    </div>
+  </div>
 
-  el.innerHTML = `<div class="card">${rows || '<div class="empty-state"><div class="empty-icon">⚖️</div><div class="empty-title">No balances yet</div></div>'}</div>`;
-}
+  <script src="../js/auth.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/sidebar.js"></script>
+  <script>
+    const fs = () => firebase.firestore();
+    function _rid() { return Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
 
-function renderSettle() {
-  const txns = DB.calc.simplifyDebts(groupId);
-  const el = document.getElementById('tab-settle');
+    const CAT_ICONS = {trip:'✈️',home:'🏠',friends:'👫',event:'🎉',couple:'❤️',work:'💼',other:'📦'};
 
-  if (!txns.length) {
-    el.innerHTML = `<div class="card"><div class="empty-state"><div class="empty-icon">🎉</div><div class="empty-title">All settled up!</div><div class="empty-desc">No outstanding balances in this group</div></div></div>`;
-    return;
-  }
+    let currentUser, allGroups=[], selectedCat='trip', editingGroupId=null, editingCat='trip';
 
-  const rows = txns.map((t,i) => {
-    const from = DB.users.findById(t.from);
-    const to = DB.users.findById(t.to);
-    const isMe = t.from === user.id || t.to === user.id;
-    return `<div class="settle-row">
-      <div class="avatar avatar-sm" style="background:${from?.avatarColor||'#6c63ff'}">${initials(from?.name)}</div>
-      <div style="flex:1">
-        <div style="font-size:0.88rem"><strong>${from?.name||'?'}${t.from===user.id?' (you)':''}</strong> pays <strong>${to?.name||'?'}${t.to===user.id?' (you)':''}</strong></div>
-        <div class="settle-amount">${formatCurrency(t.amount)}</div>
-      </div>
-      <div class="avatar avatar-sm" style="background:${to?.avatarColor||'#22c55e'}">${initials(to?.name)}</div>
-      ${isMe ? `<button class="btn btn-green btn-sm" onclick="confirmSettle(${i})">Settle</button>` : ''}
-    </div>`;
-  }).join('');
+    document.addEventListener('DOMContentLoaded', async () => {
+      currentUser = Auth.requireAuth('../index.html');
+      if (!currentUser) return;
+      Sidebar.init('groups');
+      await loadGroups();
+      if (new URLSearchParams(location.search).get('new') === '1') openCreateGroup();
+    });
 
-  el.innerHTML = `
-    <div class="card">
-      <div class="mb-3"><p>The minimum number of transactions to settle all debts:</p></div>
-      ${rows}
-    </div>`;
+    // Close any open dropdown on outside click
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.three-dot-btn') && !e.target.closest('.dropdown-menu')) {
+        document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+      }
+    });
 
-  // Store txns for modal
-  window._settleTxns = txns;
-}
+    async function loadGroups() {
+      const myKey = currentUser.id || currentUser.email;
+      try {
+        const snap = await fs().collection('groups').where('members','array-contains',myKey).get();
+        allGroups = snap.docs.map(d => d.data()).sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
+        renderGroups();
+      } catch(err) {
+        document.getElementById('groups-list').innerHTML =
+          `<div style="color:var(--red);padding:20px;grid-column:1/-1">Failed to load groups: ${err.message}</div>`;
+      }
+    }
 
-function confirmSettle(idx) {
-  const t = window._settleTxns[idx];
-  const from = DB.users.findById(t.from);
-  const to = DB.users.findById(t.to);
-  document.getElementById('settle-details').innerHTML = `
-    <div class="card card-accent" style="text-align:center;padding:24px">
-      <div style="font-size:0.9rem;color:var(--text2);margin-bottom:8px">${from?.name} pays</div>
-      <div style="font-family:var(--font-display);font-size:2rem;font-weight:800;color:var(--green)">${formatCurrency(t.amount)}</div>
-      <div style="font-size:0.9rem;color:var(--text2);margin-top:8px">to ${to?.name}</div>
-    </div>`;
-  document.getElementById('settle-confirm-btn').onclick = () => {
-    DB.settlements.create({ groupId, from: t.from, to: t.to, amount: t.amount });
-    closeModal('settle-modal');
-    showToast('Settlement recorded! ✅', 'success');
-    renderHero();
-    renderTab('settle');
-    renderTab('balances');
-  };
-  openModal('settle-modal');
-}
+    function renderGroups() {
+      const query = (document.getElementById('search-input')?.value||'').toLowerCase();
+      const filtered = allGroups.filter(g =>
+        !query || g.name.toLowerCase().includes(query) || (g.description||'').toLowerCase().includes(query)
+      );
 
-function renderMembers() {
-  const el = document.getElementById('tab-members');
-  const isAdmin = Auth.isGroupAdmin(groupId);
-  const invites = DB.invitations.forGroup(groupId);
-  const pending = invites.filter(i => i.status === 'pending');
+      const list = document.getElementById('groups-list');
+      if (!filtered.length) {
+        list.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+          <div class="empty-icon">👥</div>
+          <h3>${query?'No groups match your search':'No groups yet'}</h3>
+          <p>${query?'Try a different search term':'Create your first group to start tracking shared expenses'}</p>
+          ${!query?'<button class="btn-primary" onclick="openCreateGroup()">+ Create Group</button>':''}
+        </div>`;
+        return;
+      }
 
-  const memberRows = group.members.map(uid => {
-    const m = DB.users.findById(uid);
-    if (!m) return '';
-    const bal = DB.calc.userBalanceInGroup(groupId, uid);
-    const balColor = bal > 0 ? 'var(--green)' : bal < 0 ? 'var(--red)' : 'var(--text2)';
-    return `<div class="member-row">
-      <div class="avatar" style="background:${m.avatarColor||'#6c63ff'}">${initials(m.name)}</div>
-      <div class="member-info">
-        <div class="member-name">${m.name}${m.id===user.id?' (you)':''}</div>
-        <div class="member-role">${uid===group.createdBy?'Admin':'Member'} • ${m.email}</div>
-      </div>
-      <div class="member-balance" style="color:${balColor}">${bal>=0?'+':''}${formatCurrency(bal)}</div>
-    </div>`;
-  }).join('');
+      list.innerHTML = filtered.map(g => {
+        const myKey = currentUser.id||currentUser.email;
+        const isAdmin = g.createdBy === myKey;
+        const balText = '✓ Settled up'; // balances computed client-side after expenses load
 
-  const pendingRows = pending.length ? `<div class="mt-4"><h3 style="margin-bottom:12px">Pending Invites</h3>` +
-    pending.map(inv => `<div class="member-row"><div class="avatar" style="background:var(--border2);color:var(--text3)">?</div><div class="member-info"><div class="member-name">${inv.email||'Invite link'}</div><div class="member-role">Pending invitation</div></div><span class="badge badge-orange">Pending</span></div>`).join('') + `</div>` : '';
+        return `
+          <div class="group-card" onclick="goToGroup(event,'${g.id}')">
+            <!-- 3-dot menu button -->
+            <button class="three-dot-btn" onclick="toggleMenu(event,'menu-${g.id}')" title="Options">⋮</button>
+            <div class="dropdown-menu" id="menu-${g.id}">
+              <div class="dropdown-item" onclick="openEditGroup(event,'${g.id}')">✏️ Edit Group</div>
+              ${isAdmin ? `<div class="dropdown-item danger" onclick="confirmDelete(event,'${g.id}','${g.name.replace(/'/g,"\\'")}')">🗑️ Delete Group</div>` : ''}
+            </div>
 
-  el.innerHTML = `
-    <div class="card">
-      <div class="flex-between mb-3">
-        <h3>${group.members.length} Members</h3>
-        <button class="btn btn-primary btn-sm" onclick="openModal('invite-modal')">+ Invite</button>
-      </div>
-      ${memberRows}
-      ${pendingRows}
-    </div>`;
-}
+            <div class="group-card-top">
+              <div class="group-card-icon">${CAT_ICONS[g.category]||'📦'}</div>
+              <div class="group-card-members">${g.members.length} member${g.members.length!==1?'s':''}</div>
+            </div>
+            <div class="group-card-name">${g.name}</div>
+            <div class="group-card-desc">${g.description||'No description'}</div>
+            <div class="group-card-stats">
+              <div>
+                <div class="group-card-amount">₹0.00</div>
+                <div class="group-card-expenses">Total spent</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-weight:700">0</div>
+                <div class="group-card-expenses">Expenses</div>
+              </div>
+              <div class="group-card-bal text-muted">Settled up ✓</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
 
-function generateInviteLink() {
-  const inv = DB.invitations.create(groupId, user.id, '');
-  const link = `${location.origin}/invite.html?token=${inv.token}`;
-  const el = document.getElementById('invite-link');
-  if (el) el.value = link;
-  window._currentInviteToken = inv.token;
-  window._currentInviteLink = link;
-}
+    function goToGroup(e, id) {
+      // Don't navigate if clicking the 3-dot btn or its dropdown
+      if (e.target.closest('.three-dot-btn') || e.target.closest('.dropdown-menu')) return;
+      window.location.href = 'group-detail.html?id=' + id;
+    }
 
-function copyInvite() {
-  const link = document.getElementById('invite-link').value;
-  navigator.clipboard.writeText(link).then(() => showToast('Invite link copied!', 'success'));
-}
+    function toggleMenu(e, menuId) {
+      e.stopPropagation();
+      const menu = document.getElementById(menuId);
+      const wasOpen = menu.classList.contains('open');
+      // Close all first
+      document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+      if (!wasOpen) menu.classList.add('open');
+    }
 
-function sendEmailInvite() {
-  const email = document.getElementById('invite-email').value.trim();
-  if (!email) { showToast('Enter an email address', 'error'); return; }
-  const inv = DB.invitations.create(groupId, user.id, email);
-  // In production: send actual email via backend
-  const link = `${location.origin}/invite.html?token=${inv.token}`;
-  showToast(`Invite link generated for ${email}. Share: ${link.slice(0,40)}...`, 'success', 6000);
-  document.getElementById('invite-email').value = '';
-  alert(`📨 In a real app, this email would be sent automatically.\n\nInvite link for ${email}:\n${link}\n\nShare this with your friend!`);
-}
+    // ── Create Group ──────────────────────────────────────────────────────────
+    function selectCat(cat) {
+      selectedCat = cat;
+      document.querySelectorAll('#cat-options .cat-option').forEach(el => el.classList.toggle('selected', el.dataset.cat===cat));
+    }
 
-function openEditModal() {
-  document.getElementById('edit-name').value = group.name;
-  document.getElementById('edit-desc').value = group.description || '';
-  openModal('edit-group-modal');
-}
+    function openCreateGroup() {
+      selectedCat = 'trip';
+      document.querySelectorAll('#cat-options .cat-option').forEach(el => el.classList.toggle('selected', el.dataset.cat==='trip'));
+      ['g-name','g-desc'].forEach(id => document.getElementById(id).value='');
+      UI.openModal('create-group-modal');
+      document.getElementById('g-name').focus();
+    }
 
-function saveGroupEdit() {
-  const name = document.getElementById('edit-name').value.trim();
-  if (!name) { showToast('Name required', 'error'); return; }
-  DB.groups.update(groupId, { name, description: document.getElementById('edit-desc').value.trim() });
-  group = DB.groups.findById(groupId);
-  closeModal('edit-group-modal');
-  renderHero();
-  showToast('Group updated', 'success');
-}
+    async function createGroup() {
+      const name = document.getElementById('g-name').value.trim();
+      const desc = document.getElementById('g-desc').value.trim();
+      const currency = document.getElementById('g-currency').value;
+      if (!name) return UI.toast('Group name is required.','error');
 
-function deleteGroup() {
-  if (!confirm(`Delete "${group.name}"? This will remove all expenses. This cannot be undone.`)) return;
-  DB.groups.delete(groupId);
-  location.href = 'dashboard.html';
-}
+      const myKey = currentUser.id || currentUser.email;
+      const id = _rid();
+      const group = {
+        id, name, description: desc, category: selectedCat,
+        currency: currency==='INR'?'₹':currency==='USD'?'$':currency==='EUR'?'€':currency==='GBP'?'£':currency,
+        createdBy: myKey, members: [myKey],
+        createdAt: Date.now(), isActive: true
+      };
+      try {
+        await fs().collection('groups').doc(id).set(group);
+        // Also add groupId to user's groups array
+        await fs().collection('users').doc(myKey).set({ groups: firebase.firestore.FieldValue.arrayUnion(id) }, {merge:true});
+        UI.closeModal('create-group-modal');
+        UI.toast(`"${name}" created! 🎉`,'success');
+        allGroups.unshift(group);
+        renderGroups();
+      } catch(err) {
+        UI.toast('Failed to create group: '+err.message,'error');
+      }
+    }
 
-// Close modals on overlay click
-['invite-modal','edit-group-modal','settle-modal'].forEach(id => {
-  document.getElementById(id).addEventListener('click', e => { if (e.target.id === id) closeModal(id); });
-});
-</script>
+    // ── Edit Group ────────────────────────────────────────────────────────────
+    function selectEditCat(cat) {
+      editingCat = cat;
+      document.querySelectorAll('#edit-cat-options .cat-option').forEach(el => el.classList.toggle('selected', el.dataset.cat===cat));
+    }
+
+    function openEditGroup(e, groupId) {
+      e.stopPropagation();
+      document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+
+      const g = allGroups.find(x => x.id===groupId);
+      if (!g) return;
+      editingGroupId = groupId;
+      editingCat = g.category || 'trip';
+
+      document.getElementById('eg-name').value = g.name;
+      document.getElementById('eg-desc').value = g.description || '';
+      document.querySelectorAll('#edit-cat-options .cat-option').forEach(el => el.classList.toggle('selected', el.dataset.cat===editingCat));
+
+      UI.openModal('edit-group-modal');
+      document.getElementById('eg-name').focus();
+    }
+
+    async function saveEditGroup() {
+      const name = document.getElementById('eg-name').value.trim();
+      const desc = document.getElementById('eg-desc').value.trim();
+      if (!name) return UI.toast('Group name is required.','error');
+      if (!editingGroupId) return;
+
+      try {
+        await fs().collection('groups').doc(editingGroupId).update({
+          name, description: desc, category: editingCat, updatedAt: Date.now()
+        });
+        // Update local cache
+        const idx = allGroups.findIndex(g => g.id===editingGroupId);
+        if (idx > -1) { allGroups[idx] = {...allGroups[idx], name, description:desc, category:editingCat}; }
+        UI.closeModal('edit-group-modal');
+        UI.toast('Group updated! ✓','success');
+        renderGroups();
+      } catch(err) {
+        UI.toast('Failed to update: '+err.message,'error');
+      }
+    }
+
+    // ── Delete Group ──────────────────────────────────────────────────────────
+    function confirmDelete(e, groupId, groupName) {
+      e.stopPropagation();
+      document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+      UI.confirm(`Delete "${groupName}"? This will remove all expenses permanently.`, async () => {
+        try {
+          const expSnap = await fs().collection('expenses').where('groupId','==',groupId).get();
+          const batch = fs().batch();
+          expSnap.docs.forEach(d => batch.delete(d.ref));
+          batch.delete(fs().collection('groups').doc(groupId));
+          await batch.commit();
+          allGroups = allGroups.filter(g => g.id!==groupId);
+          UI.toast('Group deleted.','info');
+          renderGroups();
+        } catch(err) {
+          UI.toast('Failed to delete: '+err.message,'error');
+        }
+      });
+    }
+  </script>
 </body>
 </html>
