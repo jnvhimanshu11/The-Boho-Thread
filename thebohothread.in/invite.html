@@ -64,7 +64,7 @@ body { display: flex; align-items: center; justify-content: center; min-height: 
       const sigBytes = Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
       const valid    = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(msg));
       if (!valid) return null;
-      const payload  = JSON.parse(atob(p.replace(/-/g,'+').replace(/_/g,'/')));
+      const payload  = JSON.parse(decodeURIComponent(escape(atob(p.replace(/-/g,'+').replace(/_/g,'/')))));  // Unicode-safe
       if (payload.exp < Date.now()) return null;
       return payload;
     } catch { return null; }
