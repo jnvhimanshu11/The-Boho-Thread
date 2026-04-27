@@ -740,7 +740,9 @@
           ${inp}
         </div>`;
       }).join('');
-      updateSplitDisplay();
+      // NOTE: do NOT call updateSplitDisplay() here — it would create infinite recursion
+      // for 'equal' split type (updateSplitDisplay -> renderSplitMembers -> updateSplitDisplay ...)
+      if (splitType !== 'equal') updateSplitDisplay();
     }
 
     function toggleSplitMember(mid, chk) {
@@ -749,7 +751,7 @@
     }
 
     function updateSplitDisplay() {
-      if (splitType === 'equal') { renderSplitMembers(); return; }
+      if (splitType === 'equal') { return; } // equal splits show amounts inline already, no total needed
       const amount = parseFloat(document.getElementById('e-amount')?.value) || 0;
       let total = 0;
       document.querySelectorAll('.split-member-input').forEach(i => total += parseFloat(i.value) || 0);
