@@ -177,7 +177,11 @@
     let currentUser, allGroups=[], selectedCat='trip', editingGroupId=null, editingCat='trip';
 
     document.addEventListener('DOMContentLoaded', async () => {
-      currentUser = Auth.requireAuth('../index.html');
+      // If an ?id= param was passed, redirect to the proper group detail page
+      const gid = new URLSearchParams(location.search).get('id');
+      if (gid) { window.location.replace('pages/group-detail.html?id=' + gid); return; }
+
+      currentUser = Auth.requireAuth('index.html');
       if (!currentUser) return;
       Sidebar.init('groups');
       await loadGroups();

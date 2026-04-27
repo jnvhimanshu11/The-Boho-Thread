@@ -125,6 +125,8 @@ function alert_(id, msg, type='error') {
 
 function googleLogin() {
   const provider = new firebase.auth.GoogleAuthProvider();
+  // Force account picker every time so user can choose which account to use
+  provider.setCustomParameters({ prompt: 'select_account' });
 
   // Try popup first — works on mobile, Safari, and avoids redirect-loop issues
   firebase.auth().signInWithPopup(provider)
