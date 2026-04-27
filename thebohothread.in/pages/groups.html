@@ -187,7 +187,7 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group">
           <label class="form-label">Amount *</label>
-          <input type="number" class="form-input" id="e-amount" placeholder="0" min="0" step="0.01" oninput="renderSplitMembers()" />
+          <input type="number" class="form-input" id="e-amount" placeholder="0" min="0" step="0.01" oninput="renderSplitMembers(parseFloat(this.value)||0)" />
         </div>
         <div class="form-group">
           <label class="form-label">Category</label>
@@ -715,8 +715,8 @@
       renderSplitMembers();
     }
 
-    function renderSplitMembers() {
-      const amount = parseFloat(document.getElementById('e-amount')?.value) || 0;
+    function renderSplitMembers(forcedAmount) {
+      const amount = (forcedAmount !== undefined) ? forcedAmount : (parseFloat(document.getElementById('e-amount')?.value) || 0);
       const count  = selectedSplitMembers.size || 1;
       const eq     = amount / count;
       const el     = document.getElementById('split-members-list');
@@ -751,12 +751,30 @@
     }
 
     function updateSplitDisplay() {
-      if (splitType === 'equal') { return; } // equal splits show amounts inline already, no total needed
+      if (splitType === 'equal') { return; }
       const amount = parseFloat(document.getElementById('e-amount')?.value) || 0;
       let total = 0;
       document.querySelectorAll('.split-member-input').forEach(i => total += parseFloat(i.value) || 0);
       const disp = document.getElementById('split-total-display');
-      if (disp) disp.textContent = splitType === 'percentage' ? `Total: ${total.toFixed(1)}% (should be 100%)` : `Split total: ${fmt(total)} of ${fmt(amount)}`;
+      if (!disp) return;
+      const isPercent = splitType === 'percentage';
+      const over = isPercent ? total > 100.005 : total > amount + 0.005;
+      disp.textContent = isPercent
+        ? `Total: ${total.toFixed(1)}% (should be 100%)`
+        : `Split total: ${fmt(total)} of ${fmt(amount)}`;
+      disp.style.color = over ? '#ef4444' : '';
+      let warn = document.getElementById('split-over-warning');
+      if (over) {
+        if (!warn) {
+          warn = document.createElement('div');
+          warn.id = 'split-over-warning';
+          warn.style.cssText = 'color:#ef4444;font-size:0.82rem;margin-top:4px;font-weight:600';
+          disp.insertAdjacentElement('afterend', warn);
+        }
+        warn.textContent = isPercent
+          ? `⚠️ Total exceeds 100% — reduce by ${(total - 100).toFixed(1)}%`
+          : `⚠️ Split exceeds total by ${fmt(total - amount)} — fix before saving`;
+      } else if (warn) warn.remove();
     }
 
     function buildSplitsArray() {
@@ -788,6 +806,18 @@
       if (!desc)               { toast_('Description is required.', 'error'); return; }
       if (!amount || amount<=0){ toast_('Enter a valid amount.', 'error'); return; }
       if (!selectedSplitMembers.size){ toast_('Select at least one member.', 'error'); return; }
+
+      // Validate custom/percentage splits don't exceed total
+      if (splitType !== 'equal') {
+        let splitTotal = 0;
+        document.querySelectorAll('.split-member-input').forEach(i => splitTotal += parseFloat(i.value) || 0);
+        if (splitType === 'percentage' && splitTotal > 100.005) {
+          toast_(`⚠️ Percentages add up to ${splitTotal.toFixed(1)}% — must equal 100%`, 'error'); return;
+        }
+        if (splitType === 'custom' && splitTotal > amount + 0.005) {
+          toast_(`⚠️ Split total ₹${splitTotal.toFixed(2)} exceeds expense amount ₹${amount.toFixed(2)}`, 'error'); return;
+        }
+      }
 
       const myId = currentUser.id, myEmail = currentUser.email;
       const splits = buildSplitsArray();
