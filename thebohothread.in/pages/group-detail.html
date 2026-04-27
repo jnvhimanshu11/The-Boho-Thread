@@ -9,6 +9,49 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
+  <!-- EmailJS (free tier: 200 emails/month, no backend needed) -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+  <!-- Lightweight JWT signing (HMAC-SHA256 via SubtleCrypto — built into all browsers, no library needed) -->
+  <script>
+    // ── JWT helpers ──────────────────────────────────────────────────────────
+    // We use HS256 with a secret stored only in your Firebase project config.
+    // The token payload carries: groupId, invitedEmail, invitedBy, exp (1 week).
+    // On invite.html we verify the token before accepting.
+
+    const JWT_SECRET = 'REPLACE_WITH_YOUR_OWN_SECRET_32CHARS'; // 🔑 change this!
+
+    async function _jwtSign(payload) {
+      const header  = { alg: 'HS256', typ: 'JWT' };
+      const encode  = obj => btoa(JSON.stringify(obj)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+      const msg     = encode(header) + '.' + encode(payload);
+      const key     = await crypto.subtle.importKey(
+        'raw', new TextEncoder().encode(JWT_SECRET),
+        { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+      );
+      const sig     = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
+      const sigB64  = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+      return msg + '.' + sigB64;
+    }
+
+    async function _jwtVerify(token) {
+      try {
+        const [h, p, s] = token.split('.');
+        const msg  = h + '.' + p;
+        const key  = await crypto.subtle.importKey(
+          'raw', new TextEncoder().encode(JWT_SECRET),
+          { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
+        );
+        const sigBytes = Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+        const valid    = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(msg));
+        if (!valid) return null;
+        const payload  = JSON.parse(atob(p.replace(/-/g,'+').replace(/_/g,'/')));
+        if (payload.exp < Date.now()) return null; // expired
+        return payload;
+      } catch { return null; }
+    }
+  </script>
+
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -780,18 +823,59 @@
       const email = document.getElementById('invite-email').value.trim().toLowerCase();
       if (!email || !email.includes('@')) { toast_('Enter a valid email.', 'error'); return; }
       if (group.members.includes(email)) { toast_('Already a member.', 'error'); return; }
+
+      const btn = document.querySelector('#invite-modal .btn-primary');
+      btn.textContent = 'Sending…';
+      btn.disabled = true;
+
       try {
-        await _fs().collection('groups').doc(groupId).update({
-          members: firebase.firestore.FieldValue.arrayUnion(email)
+        // ── 1. Build JWT token (expires in 7 days) ──────────────────────────
+        const payload = {
+          groupId,
+          invitedEmail : email,
+          invitedBy    : currentUser.id || currentUser.email,
+          inviterName  : currentUser.name || currentUser.email,
+          exp          : Date.now() + 7 * 24 * 60 * 60 * 1000
+        };
+        const jwtToken  = await _jwtSign(payload);
+        const inviteUrl = `${location.origin}/invite.html?token=${encodeURIComponent(jwtToken)}`;
+
+        // ── 2. Store pending invitation in Firestore ─────────────────────────
+        await _fs().collection('invitations').doc(jwtToken.slice(-20)).set({
+          jwtToken, groupId,
+          invitedEmail : email,
+          invitedBy    : currentUser.id || currentUser.email,
+          status       : 'pending',
+          createdAt    : Date.now()
         });
-        group.members.push(email);
-        groupMembers.push({ email, name: email.split('@')[0] });
+
+        // ── 3. Send email via EmailJS (free, no backend) ─────────────────────
+        // 🔧 Replace these 3 values from https://dashboard.emailjs.com
+        const EMAILJS_SERVICE_ID  = 'service_t7ljtan';   
+        const EMAILJS_TEMPLATE_ID = 'template_i6ntai5';  
+        const EMAILJS_PUBLIC_KEY  = 'MoAhJABgcqEeGGR_O';   
+
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email    : email,
+          to_name     : email.split('@')[0],
+          from_name   : currentUser.name || 'A friend',
+          group_name  : group.name,
+          invite_url  : inviteUrl,
+          expiry_days : '7'
+        });
+
         closeMod('invite-modal');
         document.getElementById('invite-email').value = '';
-        toast_(email + ' added! 📨', 'success');
-        renderHeader();
-        renderTab(currentTab);
-      } catch(err) { toast_('Failed: ' + err.message, 'error'); }
+        toast_('Invite email sent to ' + email + ' 📨', 'success');
+
+      } catch(err) {
+        toast_('Failed to send invite: ' + err.message, 'error');
+      } finally {
+        btn.textContent = 'Send Invitation';
+        btn.disabled = false;
+      }
     }
 
     // ── Settle ────────────────────────────────────────────────────────────────
