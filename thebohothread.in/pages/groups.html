@@ -729,9 +729,9 @@
         if (splitType === 'equal') {
           inp = `<span style="color:var(--text-muted);font-size:0.85rem">${chk ? fmt(eq) : '—'}</span>`;
         } else if (splitType === 'percentage') {
-          inp = `<input type="number" class="form-input split-member-input" data-mid="${mid}" placeholder="%" min="0" max="100" value="${chk ? Math.round(100/count) : 0}" oninput="updateSplitDisplay()" />`;
+          inp = `<input type="number" class="form-input split-member-input" data-mid="${mid}" placeholder="%" min="0" max="100" value="${chk ? Math.round(100/count) : 0}" oninput="updateSplitDisplay()" ${chk ? '' : 'disabled style="opacity:0.35"'} />`;
         } else {
-          inp = `<input type="number" class="form-input split-member-input" data-mid="${mid}" placeholder="0" min="0" step="0.01" value="${chk ? eq.toFixed(2) : 0}" oninput="updateSplitDisplay()" />`;
+          inp = `<input type="number" class="form-input split-member-input" data-mid="${mid}" placeholder="0" min="0" max="${amount}" step="0.01" value="${chk ? eq.toFixed(2) : '0'}" oninput="updateSplitDisplay()" ${chk ? '' : 'disabled style="opacity:0.35"'} />`;
         }
         return `<div class="split-member-row">
           <input type="checkbox" ${chk ? 'checked' : ''} onchange="toggleSplitMember('${mid}',this.checked)" style="accent-color:var(--accent)">
@@ -751,7 +751,11 @@
     }
 
     function updateSplitDisplay() {
-      if (splitType === 'equal') { return; }
+      if (splitType === 'equal') {
+        const disp = document.getElementById('split-total-display');
+        if (disp) { disp.textContent = ''; disp.style.color = ''; }
+        return;
+      }
       const amount = parseFloat(document.getElementById('e-amount')?.value) || 0;
       let total = 0;
       document.querySelectorAll('.split-member-input').forEach(i => {
