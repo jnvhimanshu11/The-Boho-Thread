@@ -873,8 +873,11 @@
         document.getElementById('invite-email').value = '';
         toast_('Invite email sent to ' + email + ' 📨', 'success');
 
-      } catch(err) {
-        toast_('Failed to send invite: ' + err.message, 'error');
+    } catch(err) {
+    // EmailJS rejects with {status, text} object, not a standard Error
+    const msg = err?.text || err?.message || (typeof err === 'string' ? err : 'Email service error — check EmailJS dashboard.');
+    toast_('Failed to send invite: ' + msg, 'error');
+    
       } finally {
         btn.textContent = 'Send Invitation';
         btn.disabled = false;
