@@ -359,7 +359,12 @@
     }
 
     function memberName(memberId) {
-      // Check pending invites first (virtual members identified by token)
+      // Handle invite:email keys (used by openSettleModal / openAddExpense)
+      if (memberId && memberId.startsWith('invite:')) {
+        const email = memberId.slice(7);
+        return email.split('@')[0];
+      }
+      // Check pending invites by token (legacy path)
       const inv = pendingInvites.find(i => i.token === memberId);
       if (inv) return inv.invitedEmail || inv.email;
       const m = groupMembers.find(u => (u.id || u.email) === memberId || u.email === memberId);
@@ -367,6 +372,10 @@
     }
 
     function memberAvatar(memberId) {
+      // Handle invite:email keys
+      if (memberId && memberId.startsWith('invite:')) {
+        return `<div class="mini-avatar" style="background:#e6a817;color:#fff;font-size:0.9rem">@</div>`;
+      }
       // Pending invite — show @ icon with status color
       const inv = pendingInvites.find(i => i.token === memberId);
       if (inv) {
@@ -1015,7 +1024,7 @@
       const myId = currentUser.id, myEmail = currentUser.email;
       const myKey = group.members.find(m => m === myId || m === myEmail) || myEmail;
 
-      // Include pending/invited members in the dropdowns (same pattern as openAddExpense)
+      // Include pending/invited members (same pattern as openAddExpense)
       const inviteKeys = pendingInvites.map(i => `invite:${i.invitedEmail || i.email}`);
       const allMemberKeys = [...group.members, ...inviteKeys];
 
