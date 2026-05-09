@@ -1014,7 +1014,22 @@
     function openSettleModal() {
       const myId = currentUser.id, myEmail = currentUser.email;
       const myKey = group.members.find(m => m === myId || m === myEmail) || myEmail;
-      const opts = group.members.map(m => `<option value="${m}">${memberName(m)}</option>`).join('');
+
+      // Include pending/invited members in the dropdowns (same pattern as openAddExpense)
+      const inviteKeys = pendingInvites.map(i => `invite:${i.invitedEmail || i.email}`);
+      const allMemberKeys = [...group.members, ...inviteKeys];
+
+      const opts = allMemberKeys.map(m => {
+        const inv = pendingInvites.find(i => `invite:${i.invitedEmail || i.email}` === m);
+        let label;
+        if (inv) {
+          label = `${inv.invitedEmail || inv.email} (${inv.status === 'rejected' ? 'declined' : 'invited'})`;
+        } else {
+          label = memberName(m) + (m === myKey ? ' (You)' : '');
+        }
+        return `<option value="${m}">${label}</option>`;
+      }).join('');
+
       document.getElementById('s-from').innerHTML = opts;
       document.getElementById('s-to').innerHTML   = opts;
       document.getElementById('s-from').value = myKey;
