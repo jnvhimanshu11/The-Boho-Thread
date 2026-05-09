@@ -448,7 +448,16 @@
           const invSnap = await _fs().collection('invitations')
             .where('groupId', '==', groupId)
             .get();
-          pendingInvites = invSnap.docs.map(d => d.data()).filter(i => i.status !== 'accepted');
+          const allInvites = invSnap.docs.map(d => d.data()).filter(i => i.status !== 'accepted');
+          // FIX: Deduplicate by email — same person may have been invited multiple times
+          // (each invite creates a new Firestore doc with a new token), causing duplicate rows
+          const seenEmails = new Set();
+          pendingInvites = allInvites.filter(inv => {
+            const email = inv.invitedEmail || inv.email;
+            if (seenEmails.has(email)) return false;
+            seenEmails.add(email);
+            return true;
+          });
         } catch(e) {
           pendingInvites = [];
         }
@@ -736,11 +745,9 @@
     // ── Add Expense ───────────────────────────────────────────────────────────
     function openAddExpense() {
       splitType = 'equal';
-      // Include both accepted members and pending/rejected invite tokens
-      const allMemberKeys = [
-        ...group.members,
-        ...pendingInvites.map(i => i.token)
-      ];
+      // FIX: Use stable email-based key for pending invites (not token, which differs per invite doc)
+      const inviteKeys = pendingInvites.map(i => `invite:${i.invitedEmail || i.email}`);
+      const allMemberKeys = [...group.members, ...inviteKeys];
       selectedSplitMembers = new Set(allMemberKeys);
       document.querySelectorAll('.split-tab').forEach(t => t.classList.toggle('active', t.dataset.type === 'equal'));
 
@@ -749,7 +756,7 @@
 
       // Build payer dropdown: accepted members with name, invites with email + badge
       document.getElementById('e-paidby').innerHTML = allMemberKeys.map(m => {
-        const inv = pendingInvites.find(i => i.token === m);
+        const inv = pendingInvites.find(i => `invite:${i.invitedEmail || i.email}` === m);
         let label;
         if (inv) {
           label = `${inv.invitedEmail || inv.email} (${inv.status === 'rejected' ? 'declined' : 'invited'})`;
@@ -777,14 +784,13 @@
       const el     = document.getElementById('split-members-list');
       if (!el) return;
 
-      // All member keys: accepted + invite tokens
-      const allMemberKeys = [
-        ...group.members,
-        ...pendingInvites.map(i => i.token)
-      ];
+      // FIX: Use stable email-based keys for invites, matching openAddExpense
+      const inviteKeys = pendingInvites.map(i => `invite:${i.invitedEmail || i.email}`);
+      const allMemberKeys = [...group.members, ...inviteKeys];
 
       el.innerHTML = allMemberKeys.map(mid => {
-        const inv = pendingInvites.find(i => i.token === mid);
+        // FIX: Look up invite by email-based key instead of token
+        const inv = pendingInvites.find(i => `invite:${i.invitedEmail || i.email}` === mid);
         const email = inv ? (inv.invitedEmail || inv.email) : null;
         const statusBadge = inv
           ? (inv.status === 'rejected'
@@ -794,6 +800,11 @@
         const displayName = email
           ? `<span style="color:${inv.status==='rejected'?'var(--text-muted)':'var(--text)'}">${email}</span>${statusBadge}`
           : memberName(mid);
+
+        // FIX: For invite keys, render avatar inline (can't use memberAvatar which looks up by token)
+        const avatarHtml = inv
+          ? `<div class="mini-avatar" style="background:${inv.status==='rejected'?'#888':'#e6a817'};color:#fff;opacity:${inv.status==='rejected'?'0.5':'1'};font-size:0.9rem">@</div>`
+          : memberAvatar(mid);
 
         const chk  = selectedSplitMembers.has(mid);
         let inp = '';
@@ -806,7 +817,7 @@
         }
         return `<div class="split-member-row">
           <input type="checkbox" ${chk ? 'checked' : ''} onchange="toggleSplitMember('${mid}',this.checked)" style="accent-color:var(--accent)">
-          ${memberAvatar(mid)}
+          ${avatarHtml}
           <span class="split-member-name">${displayName}</span>
           ${inp}
         </div>`;
