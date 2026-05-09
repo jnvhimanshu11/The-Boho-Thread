@@ -213,6 +213,20 @@ const DB = (() => {
     forGroup(groupId) {
       const db = _load();
       return Object.values(db.invitations).filter(i => i.groupId === groupId);
+    },
+    reject(token) {
+      const db = _load();
+      const inv = db.invitations[token];
+      if (!inv || inv.status !== 'pending') return null;
+      inv.status = 'rejected';
+      inv.rejectedAt = Date.now();
+      db.invitations[token] = inv;
+      _save(db);
+      return inv;
+    },
+    getPendingForGroup(groupId) {
+      const db = _load();
+      return Object.values(db.invitations).filter(i => i.groupId === groupId && i.status !== 'accepted');
     }
   };
 

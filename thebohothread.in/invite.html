@@ -146,6 +146,7 @@ async function render() {
         You're signed in as <strong>${user.name}</strong> (${user.email}).
       </div>
       <button class="btn btn-primary btn-full btn-lg" onclick="joinGroup()">🎉 Join ${group.name}</button>
+      <button class="btn btn-ghost btn-full mt-2" onclick="declineInvite()" style="color:var(--red,#e05252)">✕ Decline Invitation</button>
       <button class="btn btn-ghost btn-full mt-2" onclick="Auth.logout()">Sign in as someone else</button>`;
   } else {
     card.innerHTML = `
@@ -269,6 +270,25 @@ async function showSuccess(groupId) {
     <p style="margin:12px 0">You've successfully joined <strong>${group?.name || 'the group'}</strong>.</p>
     <a href="group.html?id=${groupId}" class="btn btn-primary btn-full btn-lg mt-3">Open Group →</a>
     <a href="dashboard.html" class="btn btn-ghost btn-full mt-2">Go to Dashboard</a>`;
+}
+
+async function declineInvite() {
+  const payload = await _jwtVerify(rawToken);
+  if (!payload) return;
+  try {
+    await _fs().collection('invitations').doc(rawToken.slice(-20)).update({
+      status: 'rejected',
+      rejectedAt: Date.now()
+    });
+  } catch(e) {
+    // fallback for non-Firestore
+    try { DB.invitations.reject(rawToken.slice(-20)); } catch(_) {}
+  }
+  document.getElementById('invite-card').innerHTML = `
+    <div style="font-size:3rem;margin-bottom:16px">👋</div>
+    <h2>Invitation Declined</h2>
+    <p style="margin:12px 0">You've declined this group invitation. You can always ask to be invited again.</p>
+    <a href="index.html" class="btn btn-primary btn-full mt-3">Go Home</a>`;
 }
 
 render();

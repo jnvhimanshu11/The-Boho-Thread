@@ -440,6 +440,26 @@ const DB = {
         .where('groupId', '==', groupId)
         .get();
       return snap.docs.map(d => d.data());
+    },
+
+    // ── REJECT INVITATION
+    async reject(token) {
+      const inv = await this.findByToken(token);
+      if (!inv || inv.status !== 'pending') return null;
+      await _fs().collection('invitations').doc(token).update({
+        status: 'rejected',
+        rejectedAt: Date.now()
+      });
+      return { ...inv, status: 'rejected' };
+    },
+
+    // ── GET PENDING OR REJECTED INVITATIONS FOR GROUP (email-only members)
+    // Returns invitations that have NOT been accepted (still pending or rejected)
+    async getPendingForGroup(groupId) {
+      const snap = await _fs().collection('invitations')
+        .where('groupId', '==', groupId)
+        .get();
+      return snap.docs.map(d => d.data()).filter(inv => inv.status !== 'accepted');
     }
   },
 
