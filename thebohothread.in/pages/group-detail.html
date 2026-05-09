@@ -359,12 +359,7 @@
     }
 
     function memberName(memberId) {
-      // Handle invite:email keys (used by openSettleModal / openAddExpense)
-      if (memberId && memberId.startsWith('invite:')) {
-        const email = memberId.slice(7);
-        return email.split('@')[0];
-      }
-      // Check pending invites by token (legacy path)
+      // Check pending invites first (virtual members identified by token)
       const inv = pendingInvites.find(i => i.token === memberId);
       if (inv) return inv.invitedEmail || inv.email;
       const m = groupMembers.find(u => (u.id || u.email) === memberId || u.email === memberId);
@@ -372,10 +367,6 @@
     }
 
     function memberAvatar(memberId) {
-      // Handle invite:email keys
-      if (memberId && memberId.startsWith('invite:')) {
-        return `<div class="mini-avatar" style="background:#e6a817;color:#fff;font-size:0.9rem">@</div>`;
-      }
       // Pending invite — show @ icon with status color
       const inv = pendingInvites.find(i => i.token === memberId);
       if (inv) {
@@ -960,7 +951,20 @@
     async function sendInvite() {
       const email = document.getElementById('invite-email').value.trim().toLowerCase();
       if (!email || !email.includes('@')) { toast_('Enter a valid email.', 'error'); return; }
-      if (group.members.includes(email)) { toast_('Already a member.', 'error'); return; }
+
+      // Prevent inviting yourself
+      if (email === (currentUser.email || '').toLowerCase()) {
+        toast_("You can't invite yourself.", 'error'); return;
+      }
+
+      // Check if already a member (by email or userId lookup in groupMembers)
+      const alreadyMember = group.members.includes(email) ||
+        groupMembers.some(m => (m.email || '').toLowerCase() === email);
+      if (alreadyMember) { toast_('Already a member.', 'error'); return; }
+
+      // Prevent duplicate invites
+      const alreadyInvited = pendingInvites.some(i => (i.invitedEmail || i.email || '').toLowerCase() === email);
+      if (alreadyInvited) { toast_('Invite already sent to ' + email + '.'  , 'error'); return; }
 
       const btn = document.querySelector('#invite-modal .btn-primary');
       btn.textContent = 'Sending…';
@@ -1023,22 +1027,7 @@
     function openSettleModal() {
       const myId = currentUser.id, myEmail = currentUser.email;
       const myKey = group.members.find(m => m === myId || m === myEmail) || myEmail;
-
-      // Include pending/invited members (same pattern as openAddExpense)
-      const inviteKeys = pendingInvites.map(i => `invite:${i.invitedEmail || i.email}`);
-      const allMemberKeys = [...group.members, ...inviteKeys];
-
-      const opts = allMemberKeys.map(m => {
-        const inv = pendingInvites.find(i => `invite:${i.invitedEmail || i.email}` === m);
-        let label;
-        if (inv) {
-          label = `${inv.invitedEmail || inv.email} (${inv.status === 'rejected' ? 'declined' : 'invited'})`;
-        } else {
-          label = memberName(m) + (m === myKey ? ' (You)' : '');
-        }
-        return `<option value="${m}">${label}</option>`;
-      }).join('');
-
+      const opts = group.members.map(m => `<option value="${m}">${memberName(m)}</option>`).join('');
       document.getElementById('s-from').innerHTML = opts;
       document.getElementById('s-to').innerHTML   = opts;
       document.getElementById('s-from').value = myKey;
