@@ -813,7 +813,16 @@
       }).join('');
       // NOTE: do NOT call updateSplitDisplay() here — it would create infinite recursion
       // for 'equal' split type (updateSplitDisplay -> renderSplitMembers -> updateSplitDisplay ...)
-      if (splitType !== 'equal') updateSplitDisplay();
+      if (splitType !== 'equal') {
+        updateSplitDisplay();
+      } else {
+        // For equal, show confirmation total
+        const amount2 = parseFloat(document.getElementById('e-amount')?.value) || 0;
+        const disp2 = document.getElementById('split-total-display');
+        if (disp2 && amount2 > 0) {
+          disp2.innerHTML = '<span style="color:var(--green,#22c55e)">Total: ' + fmt(amount2) + ' ✓ (split equally)</span>';
+        } else if (disp2) { disp2.textContent = ''; }
+      }
     }
 
     function toggleSplitMember(mid, chk) {
@@ -822,12 +831,26 @@
     }
 
     function updateSplitDisplay() {
-      if (splitType === 'equal') { return; } // equal splits show amounts inline already, no total needed
+      if (splitType === 'equal') { return; }
       const amount = parseFloat(document.getElementById('e-amount')?.value) || 0;
       let total = 0;
       document.querySelectorAll('.split-member-input').forEach(i => total += parseFloat(i.value) || 0);
       const disp = document.getElementById('split-total-display');
-      if (disp) disp.textContent = splitType === 'percentage' ? `Total: ${total.toFixed(1)}% (should be 100%)` : `Split total: ${fmt(total)} of ${fmt(amount)}`;
+      if (!disp) return;
+
+      if (splitType === 'percentage') {
+        const over = total > 100.005;
+        const exact = Math.abs(total - 100) < 0.01;
+        disp.innerHTML = '<span style="color:' + (over ? '#ef4444' : exact ? 'var(--green,#22c55e)' : 'var(--text-muted)') + '">'
+          + 'Total: ' + total.toFixed(1) + '% (should be 100%)' + (over ? ' ⚠️ Exceeds 100%' : exact ? ' ✓' : '')
+          + '</span>';
+      } else {
+        const over  = total > amount + 0.005;
+        const exact = Math.abs(total - amount) < 0.01;
+        disp.innerHTML = '<span style="color:' + (over ? '#ef4444' : exact ? 'var(--green,#22c55e)' : 'var(--text-muted)') + '">'
+          + 'Split total: ' + fmt(total) + ' of ' + fmt(amount) + (over ? ' ⚠️ Exceeds expense amount' : exact ? ' ✓' : '')
+          + '</span>';
+      }
     }
 
     function buildSplitsArray() {
@@ -859,6 +882,27 @@
       if (!desc)               { toast_('Description is required.', 'error'); return; }
       if (!amount || amount<=0){ toast_('Enter a valid amount.', 'error'); return; }
       if (!selectedSplitMembers.size){ toast_('Select at least one member.', 'error'); return; }
+
+      // Validate split totals for non-equal splits
+      if (splitType === 'percentage') {
+        let totalPct = 0;
+        document.querySelectorAll('.split-member-input').forEach(i => totalPct += parseFloat(i.value) || 0);
+        if (Math.abs(totalPct - 100) > 0.5) {
+          toast_('Percentages must add up to 100%. Currently: ' + totalPct.toFixed(1) + '%', 'error');
+          return;
+        }
+      } else if (splitType === 'custom') {
+        let splitTotal = 0;
+        document.querySelectorAll('.split-member-input').forEach(i => splitTotal += parseFloat(i.value) || 0);
+        if (splitTotal > amount + 0.01) {
+          toast_('Split total (' + fmt(splitTotal) + ') exceeds expense amount (' + fmt(amount) + ')', 'error');
+          return;
+        }
+        if (splitTotal < amount - 0.01) {
+          toast_('Split total (' + fmt(splitTotal) + ') is less than expense amount (' + fmt(amount) + ')', 'error');
+          return;
+        }
+      }
 
       const myId = currentUser.id, myEmail = currentUser.email;
       const splits = buildSplitsArray();
