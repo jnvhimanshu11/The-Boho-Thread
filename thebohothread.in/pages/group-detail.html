@@ -601,8 +601,14 @@
       const bals = {};
       group.members.forEach(m => bals[m] = 0);
 
+      // Also initialise slots for pending invitees using their invite:email key
+      pendingInvites.forEach(inv => {
+        const key = `invite:${inv.invitedEmail || inv.email}`;
+        if (!(key in bals)) bals[key] = 0;
+      });
+
       expenses.filter(e => !e.isSettlement).forEach(e => {
-        // payer gets credited
+        // payer gets credited (support invite:email payer keys too)
         if (bals[e.paidBy] !== undefined) bals[e.paidBy] += (+e.amount || 0);
 
         // each share gets debited
@@ -648,25 +654,56 @@
       const el = document.getElementById('tab-balances');
       const maxAbs = Math.max(...Object.values(bals).map(Math.abs), 1);
 
-      const rows = Object.entries(bals).map(([mid, bal]) => {
-        const name = memberName(mid);
+      function makeRow(mid, bal) {
+        const isInvited = mid.startsWith('invite:');
+        const email = isInvited ? mid.slice(7) : (groupMembers.find(u => (u.id||u.email)===mid||u.email===mid)?.email || '');
+        const displayName = memberName(mid);
         const pct = (Math.abs(bal) / maxAbs) * 100;
         const cls = bal > 0.005 ? 'text-green' : bal < -0.005 ? 'text-red' : '';
         const fill = bal > 0 ? '#22c55e' : '#ef4444';
         const lbl = bal > 0.005 ? `gets back ${fmt(bal)}` : bal < -0.005 ? `owes ${fmt(Math.abs(bal))}` : 'settled up';
+        const invitedBadge = isInvited
+          ? `<span style="font-size:0.7rem;background:rgba(230,168,23,0.15);color:#e6a817;border:1px solid rgba(230,168,23,0.35);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle">Invite Pending</span>`
+          : '';
+        const emailLine = email
+          ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:1px">${email}</div>`
+          : '';
         return `<div class="member-balance-row">
           ${memberAvatar(mid)}
           <div class="member-bal-bar-wrap">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="font-size:0.9rem;font-weight:500">${name}</span>
-              <span class="${cls}" style="font-size:0.88rem;font-weight:600">${lbl}</span>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <span style="font-size:0.9rem;font-weight:500">${displayName}</span>${invitedBadge}
+                ${emailLine}
+              </div>
+              <span class="${cls}" style="font-size:0.88rem;font-weight:600;white-space:nowrap;margin-left:12px">${lbl}</span>
             </div>
-            <div class="member-bal-bar"><div class="member-bal-fill" style="width:${pct}%;background:${fill}"></div></div>
+            <div class="member-bal-bar" style="margin-top:8px"><div class="member-bal-fill" style="width:${pct}%;background:${fill}"></div></div>
           </div>
         </div>`;
-      }).join('');
+      }
 
-      el.innerHTML = `<div class="card"><div style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:16px">Member Balances</div>${rows || '<div style="color:var(--text-muted)">No balances to show.</div>'}</div>`;
+      // Accepted members rows
+      const acceptedRows = group.members.map(mid => makeRow(mid, bals[mid] || 0)).join('');
+
+      // Pending invitee rows — only those who have a non-zero balance
+      const inviteKeys = pendingInvites.map(i => `invite:${i.invitedEmail || i.email}`);
+      const inviteRows = inviteKeys
+        .filter(key => Math.abs(bals[key] || 0) > 0.005)
+        .map(key => makeRow(key, bals[key] || 0)).join('');
+
+      const inviteSection = inviteRows
+        ? `<div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)">
+             <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">Invited — pending acceptance</div>
+             ${inviteRows}
+           </div>`
+        : '';
+
+      el.innerHTML = `<div class="card">
+        <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:16px">Member Balances</div>
+        ${acceptedRows || '<div style="color:var(--text-muted)">No balances to show.</div>'}
+        ${inviteSection}
+      </div>`;
     }
 
     // ── Settle Tab ────────────────────────────────────────────────────────────
