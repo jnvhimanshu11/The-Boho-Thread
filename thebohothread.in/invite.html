@@ -214,11 +214,8 @@ async function joinGroup() {
   const user    = Auth.currentUser();
   const payload = await _jwtVerify(rawToken);
   if (!user || !payload) return;
-  await _fs().collection('groups').doc(payload.groupId).update({
-    members: firebase.firestore.FieldValue.arrayUnion(user.id || user.email)
-  });
-  await _fs().collection('invitations').doc(rawToken.slice(-20)).update({ status: 'accepted', acceptedAt: Date.now() });
-  showSuccess(payload.groupId);
+  // Delegate to acceptInvite which handles all the data migration
+  await acceptInvite();
 }
 
 async function loginAndJoin() {
@@ -265,9 +262,77 @@ async function acceptInvite() {
   const user    = Auth.currentUser();
   const payload = await _jwtVerify(rawToken);
   if (!user || !payload) return;
-  await _fs().collection('groups').doc(payload.groupId).update({
-    members: firebase.firestore.FieldValue.arrayUnion(user.id || user.email)
-  });
+
+  const groupRef = _fs().collection('groups').doc(payload.groupId);
+  const groupDoc = await groupRef.get();
+  const groupData = groupDoc.exists ? groupDoc.data() : null;
+
+  if (groupData) {
+    const userId    = user.id || user.email;
+    const userEmail = user.email;
+
+    // Replace the email placeholder with the real userId in group.members
+    const updatedMembers = (groupData.members || []).map(m => {
+      if (m === userEmail || m === ('invite:' + userEmail)) return userId;
+      return m;
+    });
+    // Also add userId if it wasn't in the list at all
+    if (!updatedMembers.includes(userId)) updatedMembers.push(userId);
+
+    await groupRef.update({ members: updatedMembers });
+
+    // Update all existing expense splits that used the email key → real userId
+    try {
+      const expSnap = await _fs().collection('expenses')
+        .where('groupId', '==', payload.groupId)
+        .get();
+      const batch = _fs().batch();
+      expSnap.docs.forEach(doc => {
+        const exp = doc.data();
+        let changed = false;
+        const newSplits = (exp.splits || []).map(s => {
+          if (s.userId === userEmail || s.userId === ('invite:' + userEmail)) {
+            changed = true;
+            return { ...s, userId };
+          }
+          return s;
+        });
+        // Also fix paidBy if it was stored as email
+        const newPaidBy = (exp.paidBy === userEmail || exp.paidBy === ('invite:' + userEmail)) ? userId : exp.paidBy;
+        if (changed || newPaidBy !== exp.paidBy) {
+          batch.update(doc.ref, { splits: newSplits, paidBy: newPaidBy });
+        }
+      });
+      await batch.commit();
+    } catch(e) {
+      console.warn('Could not update expense splits:', e);
+    }
+
+    // Update settlement records that used the email key
+    try {
+      const settleSnap = await _fs().collection('settlements')
+        .where('groupId', '==', payload.groupId)
+        .get();
+      const batch2 = _fs().batch();
+      settleSnap.docs.forEach(doc => {
+        const s = doc.data();
+        const newPaidBy = (s.paidBy === userEmail || s.paidBy === ('invite:' + userEmail)) ? userId : s.paidBy;
+        const newPaidTo = (s.paidTo === userEmail || s.paidTo === ('invite:' + userEmail)) ? userId : s.paidTo;
+        if (newPaidBy !== s.paidBy || newPaidTo !== s.paidTo) {
+          batch2.update(doc.ref, { paidBy: newPaidBy, paidTo: newPaidTo });
+        }
+      });
+      await batch2.commit();
+    } catch(e) {
+      console.warn('Could not update settlement records:', e);
+    }
+  } else {
+    // Fallback: just add userId
+    await groupRef.update({
+      members: firebase.firestore.FieldValue.arrayUnion(user.id || user.email)
+    });
+  }
+
   await _fs().collection('invitations').doc(rawToken.slice(-20)).update({ status: 'accepted', acceptedAt: Date.now() });
   showSuccess(payload.groupId);
 }

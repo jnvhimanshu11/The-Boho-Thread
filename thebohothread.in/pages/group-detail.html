@@ -362,7 +362,12 @@
       // Handle invite:email keys (used by openSettleModal / openAddExpense)
       if (memberId && memberId.startsWith('invite:')) {
         const email = memberId.slice(7);
-        return email; // show full email for pending invites
+        // If this person has since accepted, show their real name instead of email
+        const accepted = groupMembers.find(u => u.email === email && u.name);
+        if (accepted && !pendingInvites.some(i => (i.invitedEmail || i.email) === email)) {
+          return accepted.name || email;
+        }
+        return email; // still pending — show email
       }
       // Check pending invites by token (legacy path)
       const inv = pendingInvites.find(i => i.token === memberId);
