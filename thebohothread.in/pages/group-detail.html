@@ -399,8 +399,8 @@
         return `<div class="mini-avatar" style="background:${color};color:#fff;opacity:${opacity};font-size:0.9rem">@</div>`;
       }
       const m = groupMembers.find(u => (u.id || u.email) === memberId || u.email === memberId);
-      const name = m ? (m.name || m.email.split('@')[0]) : memberId.slice(0,6);
-      const initial = name[0].toUpperCase();
+      const name = (m && (m.name || m.email)) ? (m.name || m.email.split('@')[0]) : memberId.slice(0,6);
+      const initial = (name && name[0]) ? name[0].toUpperCase() : "?";
       const colors = ['#6c63ff','#22c55e','#f97316','#3b82f6','#a855f7','#ec4899','#14b8a6'];
       const color = colors[(memberId.charCodeAt(0) || 0) % colors.length];
       if (m && m.photoURL) {
@@ -444,24 +444,28 @@
         // 3. Load member profiles
         groupMembers = [];
         for (const mid of group.members) {
+          let found = null;
           try {
-            // Try 1: fetch by Firestore doc ID
+            // Try 1: fetch by Firestore doc ID (fastest)
             const udoc = await _fs().collection('users').doc(mid).get();
-            if (udoc.exists) {
-              groupMembers.push(udoc.data());
-              continue;
-            }
-            // Try 2: mid might be stored as email — query by email field
-            const snapEmail = await _fs().collection('users').where('email','==',mid).limit(1).get();
-            if (!snapEmail.empty) { groupMembers.push(snapEmail.docs[0].data()); continue; }
-            // Try 3: mid is a custom id — query by id field
-            const snapId = await _fs().collection('users').where('id','==',mid).limit(1).get();
-            if (!snapId.empty) { groupMembers.push(snapId.docs[0].data()); continue; }
-            // Fallback: unknown, store the raw mid so it's at least linkable
-            groupMembers.push({ id: mid, email: '', name: '' });
-          } catch(e) {
-            groupMembers.push({ id: mid, email: '', name: '' });
+            if (udoc.exists) { found = udoc.data(); }
+          } catch(e) {}
+          if (!found) {
+            try {
+              // Try 2: mid might be an email — query by email field
+              const snapEmail = await _fs().collection('users').where('email','==',mid).limit(1).get();
+              if (!snapEmail.empty) { found = snapEmail.docs[0].data(); }
+            } catch(e) {}
           }
+          if (!found) {
+            try {
+              // Try 3: mid is a custom id stored inside the doc — query by id field
+              const snapId = await _fs().collection('users').where('id','==',mid).limit(1).get();
+              if (!snapId.empty) { found = snapId.docs[0].data(); }
+            } catch(e) {}
+          }
+          // Always push something so the member row still appears
+          groupMembers.push(found || { id: mid, email: mid.includes('@') ? mid : '', name: '' });
         }
 
         // 4. Load expenses
