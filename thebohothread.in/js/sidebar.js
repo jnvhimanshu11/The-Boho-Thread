@@ -19,7 +19,7 @@ const Sidebar = (() => {
 
     sidebar.innerHTML = `
       <div class="sidebar-logo">
-        <span class="logo-icon">✦</span> SplitEase
+        <span class="logo-icon">✦</span> SplitMate
       </div>
 
       <nav class="sidebar-nav">
@@ -28,12 +28,17 @@ const Sidebar = (() => {
         <button class="nav-item ${activePage === 'dashboard' ? 'active' : ''}"
           onclick="window.location.href='dashboard.html'" data-href="dashboard">
           <span class="nav-icon">🏠</span> Dashboard
-          ${inviteBadge}
         </button>
 
         <button class="nav-item ${activePage === 'groups' ? 'active' : ''}"
           onclick="window.location.href='groups.html'" data-href="groups">
           <span class="nav-icon">👥</span> My Groups
+        </button>
+
+        <button class="nav-item ${activePage === 'invitations' ? 'active' : ''}"
+          onclick="window.location.href='invitations.html'" data-href="invitations">
+          <span class="nav-icon">✉️</span> Invitations
+          ${inviteBadge}
         </button>
 
         <div class="sidebar-section-title" style="margin-top:8px">Finance</div>

@@ -661,15 +661,14 @@
     });
 
     // ── Tabs ──────────────────────────────────────────────────────────────────
-    async function switchTab(tab) {
+    function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
       ['expenses','balances','settle','members','history'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
       });
       currentTab = tab;
       // Always refresh live data from Firestore, then re-render
-      await refreshData();
-      renderTab(tab);
+      refreshData().then(() => renderTab(tab));
     }
 
     // ── Live Refresh ─────────────────────────────────────────────────────────
@@ -1316,10 +1315,12 @@
         try {
           await writeExpenseLog('edited', oldExp, changes);
           await _fs().collection('expenses').doc(editingExpenseId).update(updates);
+          const idx = expenses.findIndex(e => e.id === editingExpenseId);
+          if (idx !== -1) expenses[idx] = { ...expenses[idx], ...updates };
           editingExpenseId = null;
           closeMod('add-expense-modal');
           toast_('Expense updated! ✏️', 'success');
-          await refreshData();
+          renderHeader();
           renderTab(currentTab);
         } catch(err) { toast_('Update failed: ' + err.message, 'error'); }
       } else {
@@ -1334,11 +1335,12 @@
         try {
           await _fs().collection('expenses').doc(id).set(exp);
           await writeExpenseLog('created', exp, null);
+          expenses.unshift(exp);
           closeMod('add-expense-modal');
           document.getElementById('e-desc').value = '';
           document.getElementById('e-amount').value = '';
           toast_('Expense added! 💸', 'success');
-          await refreshData();
+          renderHeader();
           renderTab(currentTab);
         } catch(err) { toast_('Save failed: ' + err.message, 'error'); }
       }
@@ -1473,8 +1475,9 @@
       try {
         if (snap) await writeExpenseLog('deleted', snap, null);
         await _fs().collection('expenses').doc(expId).delete();
+        expenses = expenses.filter(e => e.id !== expId);
         toast_('Expense deleted.', 'info');
-        await refreshData();
+        renderHeader();
         renderTab(currentTab);
       } catch(err) { toast_('Delete failed: ' + err.message, 'error'); }
     }
@@ -1576,8 +1579,9 @@
       const s = { id, groupId, paidBy: from, paidTo: to, amount: parseFloat(amount), note: 'Settled via app', createdBy: myId || myEmail, createdAt: Date.now() };
       try {
         await _fs().collection('settlements').doc(id).set(s);
+        settlements.unshift(s);
         toast_('Payment recorded! ✓', 'success');
-        await refreshData();
+        renderHeader();
         renderSettle();
       } catch(err) { toast_('Error: ' + err.message, 'error'); }
     }
@@ -1594,9 +1598,10 @@
       const s = { id, groupId, paidBy: from, paidTo: to, amount, note, createdBy: myId || myEmail, createdAt: Date.now() };
       try {
         await _fs().collection('settlements').doc(id).set(s);
+        settlements.unshift(s);
         closeMod('settle-modal');
         toast_('Payment recorded! ✓', 'success');
-        await refreshData();
+        renderHeader();
         renderTab(currentTab);
       } catch(err) { toast_('Error: ' + err.message, 'error'); }
     }
@@ -1631,9 +1636,7 @@
 
         closeMod('edit-group-modal');
         toast_('Group updated ✓', 'success');
-        await refreshData();
         renderHeader();
-        if (currentTab === 'history') renderTab('history');
       } catch(err) { toast_('Update failed: ' + err.message, 'error'); }
     }
 

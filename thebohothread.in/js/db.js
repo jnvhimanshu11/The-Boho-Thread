@@ -163,11 +163,12 @@ const DB = (() => {
   //  INVITATIONS
   // ═══════════════════════════════════════════════════════════════════
 
-  function createInvitation({ groupId, invitedEmail, invitedBy }) {
+  function createInvitation({ groupId, invitedEmail, invitedBy, type = 'email' }) {
     const invites = read(INVITES_KEY);
     const id = uid();
     invites[id] = {
       id, groupId, invitedEmail, invitedBy,
+      type,                // 'email' | 'inapp'
       status: 'pending',   // pending | accepted | declined
       createdAt: Date.now(),
     };

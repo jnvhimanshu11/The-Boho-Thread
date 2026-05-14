@@ -128,12 +128,15 @@
         const group = DB.getGroup(inv.groupId);
         if (!group) return '';
         const inviter = UI.getUserDisplay(inv.invitedBy);
+        const isInApp = inv.type === 'inapp';
         return `
           <div class="invite-card">
             <div style="font-size:1.6rem">${getCatIcon(group.category)}</div>
             <div class="invite-info">
               <div class="invite-group">${group.name}</div>
-              <div class="invite-from">Invited by ${inviter.name} · ${group.members.length} member${group.members.length !== 1 ? 's' : ''}</div>
+              <div class="invite-from">Invited by ${inviter.name} · ${group.members.length} member${group.members.length !== 1 ? 's' : ''}
+                ${isInApp ? '<span style="background:rgba(124,106,247,0.15);color:#9d8fff;font-size:0.7rem;font-weight:700;padding:1px 7px;border-radius:99px;margin-left:6px">In-App</span>' : ''}
+              </div>
             </div>
             <div class="invite-actions">
               <button class="btn-success btn-sm" onclick="acceptInvite('${inv.id}')">Accept</button>
@@ -142,6 +145,13 @@
           </div>
         `;
       }).join('');
+
+      // Add "View All" link if more than 2 pending
+      if (pending.length > 2) {
+        list.innerHTML += `<div style="text-align:center;margin-top:8px">
+          <a href="invitations.html" style="font-size:0.83rem;color:var(--accent)">View all ${pending.length} invitations →</a>
+        </div>`;
+      }
     }
 
     function acceptInvite(inviteId) {
