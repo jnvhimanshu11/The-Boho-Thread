@@ -273,6 +273,21 @@ function categoryLabel(cat) {
 
 // ---- RENDER SIDEBAR (shared HTML) ----
 function renderSidebar(activePage) {
+  // Count pending in-app invitations for badge
+  const currentUser = Auth.currentUser ? Auth.currentUser() : null;
+  let pendingCount = 0;
+  if (currentUser) {
+    try {
+      const invites = JSON.parse(localStorage.getItem('splitease_invites') || '{}');
+      pendingCount = Object.values(invites).filter(
+        i => i.invitedEmail === currentUser.email && i.status === 'pending'
+      ).length;
+    } catch(e) {}
+  }
+  const invBadge = pendingCount > 0
+    ? `<span style="margin-left:auto;background:#7c6af7;color:#fff;border-radius:99px;padding:1px 7px;font-size:0.7rem;font-weight:700">${pendingCount}</span>`
+    : '';
+
   return `
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
@@ -288,6 +303,10 @@ function renderSidebar(activePage) {
       </a>
       <a href="expenses.html" class="nav-item ${activePage==='expenses'?'active':''}">
         <span class="icon">💸</span> All Expenses
+      </a>
+      <a href="invitations.html" class="nav-item ${activePage==='invitations'?'active':''}" style="display:flex;align-items:center">
+        <span class="icon">✉️</span> Invitations
+        ${invBadge}
       </a>
       <span class="nav-label">Account</span>
       <a href="profile.html" class="nav-item ${activePage==='profile'?'active':''}">

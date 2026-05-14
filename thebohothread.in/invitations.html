@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invitations — SplitMate</title>
+<link rel="stylesheet" href="style.css">
+
+<!-- EmailJS -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<!-- JWT helpers (same secret as group.html) -->
+<script>
+const JWT_SECRET = 'REPLACE_WITH_YOUR_OWN_SECRET_32CHARS';
+async function _jwtSign(payload) {
+  const header = { alg:'HS256', typ:'JWT' };
+  const encode = obj => btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  const msg    = encode(header) + '.' + encode(payload);
+  const key    = await crypto.subtle.importKey('raw', new TextEncoder().encode(JWT_SECRET), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+  const sig    = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  return msg + '.' + sigB64;
+}
+</script>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey:            "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+    authDomain:        "thebohothread-96e2c.firebaseapp.com",
+    projectId:         "thebohothread-96e2c",
+    storageBucket:     "thebohothread-96e2c.firebasestorage.app",
+    messagingSenderId: "100688387088",
+    appId:             "1:100688387088:web:f8a6af7565d3c25952fe95",
+    measurementId:     "G-5VTK93354M"
+  };
+  firebase.initializeApp(firebaseConfig);
+</script>
+
+<style>
+/* ── Tab Bar ─────────────────────────────────────────────────── */
+.inv-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  margin-bottom: 24px;
+}
+.inv-tab {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: calc(var(--radius) - 2px);
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  font-family: var(--font);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: all 0.18s;
+}
+.inv-tab.active {
+  background: var(--surface2);
+  color: var(--text);
+  font-weight: 600;
+  border: 1px solid var(--border2);
+}
+.inv-tab-badge {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ── Invitation Cards ─────────────────────────────────────────── */
+.inv-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s;
+}
+.inv-card:hover { border-color: var(--border2); }
+.inv-card-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.inv-avatar {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; font-weight: 700; color: #fff;
+  flex-shrink: 0; letter-spacing: 0.5px;
+}
+.inv-info { flex: 1; min-width: 0; }
+.inv-name {
+  font-weight: 600; font-size: 0.95rem; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.inv-sub {
+  font-size: 0.8rem; color: var(--text3); margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.inv-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+
+.pill {
+  font-size: 0.7rem; font-weight: 700;
+  padding: 2px 9px; border-radius: 99px;
+  display: inline-block; white-space: nowrap;
+}
+.pill-inapp  { background: rgba(108,99,255,0.15); color: var(--accent2); border: 1px solid rgba(108,99,255,0.3); }
+.pill-email  { background: rgba(251,191,36,0.12);  color: #fbbf24;        border: 1px solid rgba(251,191,36,0.25); }
+.pill-ok     { background: rgba(74,222,128,0.12);  color: var(--green2);  border: 1px solid rgba(74,222,128,0.25); }
+.pill-no     { background: rgba(248,113,113,0.12); color: var(--red2);    border: 1px solid rgba(248,113,113,0.25); }
+.pill-pend   { background: rgba(251,191,36,0.12);  color: #fbbf24;        border: 1px solid rgba(251,191,36,0.25); }
+
+.inv-desc {
+  font-size: 0.83rem; color: var(--text3);
+  margin: 10px 0 14px; line-height: 1.55;
+}
+.inv-desc strong { color: var(--text2); }
+.inv-actions { display: flex; gap: 10px; }
+.inv-actions .btn { flex: 1; justify-content: center; font-size: 0.87rem; padding: 9px; }
+
+/* ── Send Form ─────────────────────────────────────────────────── */
+.method-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.method-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 14px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.18s;
+}
+.method-card:hover { border-color: var(--border2); }
+.method-card.sel { border-color: var(--accent); background: rgba(108,99,255,0.07); }
+.method-ico { font-size: 1.7rem; margin-bottom: 7px; }
+.method-lbl { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.method-desc { font-size: 0.76rem; color: var(--text3); line-height: 1.4; }
+
+.info-banner {
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 0.83rem;
+  color: var(--text3);
+  line-height: 1.55;
+  margin-bottom: 22px;
+}
+.info-email { background: rgba(251,191,36,0.06);  border: 1px solid rgba(251,191,36,0.18); }
+.info-inapp { background: rgba(108,99,255,0.06); border: 1px solid rgba(108,99,255,0.2); }
+
+.sec-lbl {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--text3); margin: 20px 0 10px;
+}
+
+/* Group picker */
+.group-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.group-pick {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  cursor: pointer; transition: all 0.15s;
+  background: var(--surface);
+}
+.group-pick:hover { border-color: var(--border2); }
+.group-pick.sel { border-color: var(--accent); background: rgba(108,99,255,0.07); }
+.group-pick-ico { font-size: 1.4rem; }
+.group-pick-info { flex: 1; }
+.group-pick-name { font-weight: 600; font-size: 0.9rem; color: var(--text); }
+.group-pick-mem  { font-size: 0.76rem; color: var(--text3); margin-top: 2px; }
+.group-pick-chk  { color: var(--accent); font-size: 1.1rem; opacity: 0; transition: opacity 0.15s; }
+.group-pick.sel .group-pick-chk { opacity: 1; }
+
+/* Empty state */
+.empty-state {
+  text-align: center; padding: 52px 20px; color: var(--text3);
+}
+.empty-ico { font-size: 2.8rem; margin-bottom: 12px; }
+.empty-txt { font-size: 0.9rem; margin-bottom: 16px; }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 11px 22px;
+  border-radius: var(--radius);
+  font-size: 0.87rem; font-weight: 500;
+  z-index: 9999; white-space: nowrap;
+  opacity: 0; transition: opacity 0.3s;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; }
+#toast.success { background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.3); color: var(--green2); }
+#toast.error   { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.3); color: var(--red2); }
+#toast.warning { background: rgba(251,191,36,0.1);   border-color: rgba(251,191,36,0.3);  color: #fbbf24; }
+</style>
+</head>
+
+<body>
+<div id="sidebar-mount"></div>
+<div class="page-wrap">
+  <div class="main-content" id="main">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-header-row">
+        <div>
+          <div class="page-title">✉️ Invitations</div>
+          <div class="page-subtitle">Send group invites & approve incoming requests</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="inv-tabs">
+      <button class="inv-tab active" id="tab-received" onclick="switchTab('received')">
+        📥 Received
+        <span class="inv-tab-badge" id="recv-badge" style="display:none">0</span>
+      </button>
+      <button class="inv-tab" id="tab-sent" onclick="switchTab('sent')">
+        📤 Sent
+      </button>
+      <button class="inv-tab" id="tab-send" onclick="switchTab('send')">
+        ✉️ Send Invite
+      </button>
+    </div>
+
+    <!-- ═══ RECEIVED ═══ -->
+    <div id="pane-received"></div>
+
+    <!-- ═══ SENT ═══ -->
+    <div id="pane-sent" style="display:none"></div>
+
+    <!-- ═══ SEND ═══ -->
+    <div id="pane-send" style="display:none">
+
+      <div class="sec-lbl">Choose Invite Method</div>
+      <div class="method-grid">
+        <div class="method-card sel" id="mc-email" onclick="setMethod('email')">
+          <div class="method-ico">📧</div>
+          <div class="method-lbl">Via Email</div>
+          <div class="method-desc">Send a secure join link — works even without an account</div>
+        </div>
+        <div class="method-card" id="mc-inapp" onclick="setMethod('inapp')">
+          <div class="method-ico">✅</div>
+          <div class="method-lbl">In-App</div>
+          <div class="method-desc">Notify a logged-in user directly — they approve here</div>
+        </div>
+      </div>
+
+      <div id="method-info" class="info-banner info-email">
+        📧 <strong style="color:var(--text2)">Email invite:</strong> A secure link is emailed to them. They can join even without an existing SplitMate account.
+      </div>
+
+      <div class="sec-lbl">Select Group</div>
+      <div class="group-list" id="group-list">
+        <div style="color:var(--text3);font-size:0.85rem;padding:8px">Loading your groups…</div>
+      </div>
+
+      <div class="sec-lbl" id="recip-lbl">Recipient Email</div>
+
+      <div id="email-field" class="mb-4">
+        <input type="email" class="form-input" id="invite-to-email" placeholder="friend@example.com" style="width:100%"/>
+        <div style="font-size:0.76rem;color:var(--text3);margin-top:6px">A secure invite link will be sent to this address.</div>
+      </div>
+
+      <div id="inapp-field" style="display:none" class="mb-4">
+        <input type="text" class="form-input" id="invite-to-inapp" placeholder="Their registered email address" style="width:100%"/>
+        <div style="font-size:0.76rem;color:var(--text3);margin-top:6px">They must already have a SplitMate account. The invite will appear on their Invitations page instantly.</div>
+      </div>
+
+      <button class="btn btn-primary btn-full btn-lg" id="send-btn" onclick="doSend()" style="margin-top:8px">
+        📧 Send Email Invitation
+      </button>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /page-wrap -->
+
+<div id="toast"></div>
+
+<!-- Scripts -->
+<script src="db.firestore.js"></script>
+<script src="auth.js"></script>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────
+const EMAILJS_SERVICE  = 'YOUR_EMAILJS_SERVICE_ID';
+const EMAILJS_TEMPLATE = 'YOUR_EMAILJS_TEMPLATE_ID';
+const EMAILJS_KEY      = 'YOUR_EMAILJS_PUBLIC_KEY';
+const SITE_URL         = window.location.origin;
+
+// ── State ───────────────────────────────────────────────────────────────────
+let currentUser   = null;
+let sendMethod    = 'email';
+let selectedGroup = null;
+
+// LocalStorage helpers (matching db.js keys)
+const INVITES_KEY = 'splitease_invites';
+const read  = k => JSON.parse(localStorage.getItem(k) || '{}');
+const write = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+const uid   = () => '_' + Math.random().toString(36).substr(2,9) + Date.now().toString(36);
+
+// Avatar colours
+const AV_COLS = ['#7c6af7','#4ade80','#f87171','#fbbf24','#60a5fa','#a78bfa','#34d399'];
+function avColor(s){ let h=0; for(let i=0;i<s.length;i++) h=s.charCodeAt(i)+((h<<5)-h); return AV_COLS[Math.abs(h)%AV_COLS.length]; }
+function initials(n){ return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function timeAgo(ts){ const d=Date.now()-ts, h=Math.floor(d/3600000); if(h<1) return 'just now'; if(h<24) return h+'h ago'; return Math.floor(h/24)+'d ago'; }
+
+const CAT_ICONS = { trip:'✈️', home:'🏠', friends:'👫', couple:'💑', work:'💼', other:'📦', general:'📦' };
+function catIco(c){ return CAT_ICONS[c] || '📦'; }
+
+// ── Init ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  currentUser = Auth.currentUser();
+  if (!currentUser) { window.location.href = 'index.html'; return; }
+
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('invitations');
+  initSidebarBehavior();
+  emailjs.init(EMAILJS_KEY);
+
+  renderGroupList();
+  switchTab('received');
+});
+
+function initSidebarBehavior() {
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) logoutBtn.onclick = () => { Auth.signOut(); window.location.href = 'index.html'; };
+
+  const avEl = document.getElementById('sidebar-avatar');
+  const nameEl = document.getElementById('sidebar-name');
+  const emailEl = document.getElementById('sidebar-email');
+  const topAv = document.getElementById('topbar-avatar');
+  if (avEl && currentUser) {
+    const i = initials(currentUser.name || currentUser.email);
+    avEl.textContent = i; avEl.style.background = avColor(currentUser.email);
+    if (nameEl)  nameEl.textContent  = currentUser.name  || currentUser.email;
+    if (emailEl) emailEl.textContent = currentUser.email || '';
+    if (topAv)   { topAv.textContent = i; topAv.style.background = avColor(currentUser.email); }
+  }
+  // Mobile menu
+  const menuBtn = document.getElementById('menu-toggle');
+  const sidebar  = document.getElementById('sidebar');
+  if (menuBtn && sidebar) {
+    menuBtn.onclick = () => sidebar.classList.toggle('open');
+    document.addEventListener('click', e => {
+      if (!sidebar.contains(e.target) && e.target !== menuBtn) sidebar.classList.remove('open');
+    });
+  }
+}
+
+// ── Tab Switch ──────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  ['received','sent','send'].forEach(t => {
+    document.getElementById('pane-'+t).style.display = 'none';
+    document.getElementById('tab-'+t).classList.remove('active');
+  });
+  document.getElementById('pane-'+tab).style.display = 'block';
+  document.getElementById('tab-'+tab).classList.add('active');
+  if (tab === 'received') renderReceived();
+  if (tab === 'sent')     renderSent();
+}
+
+// ── RECEIVED ────────────────────────────────────────────────────────────────
+function getMyPendingInvites() {
+  const all = read(INVITES_KEY);
+  return Object.values(all).filter(i => i.invitedEmail === currentUser.email && i.status === 'pending');
+}
+
+function renderReceived() {
+  const pane = document.getElementById('pane-received');
+  const pending = getMyPendingInvites();
+
+  // Badge
+  const badge = document.getElementById('recv-badge');
+  badge.textContent = pending.length;
+  badge.style.display = pending.length > 0 ? 'inline-block' : 'none';
+
+  if (!pending.length) {
+    pane.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-ico">📭</div>
+        <div class="empty-txt">No pending invitations</div>
+        <p style="font-size:0.82rem;color:var(--text3)">
+          When someone invites you to a group, it appears here.<br>
+          You can also accept via an email invite link.
+        </p>
+      </div>`;
+    return;
+  }
+
+  let html = `<div class="sec-lbl">Pending (${pending.length})</div>`;
+  pending.forEach(inv => {
+    const groups = read('splitease_groups');
+    const group  = groups[inv.groupId];
+    const gName  = group ? group.name : 'Unknown Group';
+    const gIco   = catIco(group?.category);
+    const byName = inv.invitedByName || inv.invitedBy || 'Someone';
+    const isApp  = inv.type === 'inapp';
+    const color  = avColor(byName);
+    const typePill = isApp
+      ? '<span class="pill pill-inapp">In-App</span>'
+      : '<span class="pill pill-email">Email</span>';
+    const desc = isApp
+      ? `<strong>${byName}</strong> invited you to join <strong>${gName}</strong>. Approve directly here — no email needed.`
+      : `<strong>${byName}</strong> invited you to join <strong>${gName}</strong> via email link.`;
+
+    html += `
+      <div class="inv-card" id="inv-${inv.id}">
+        <div class="inv-card-row">
+          <div class="inv-avatar" style="background:${color}">${initials(byName)}</div>
+          <div class="inv-info">
+            <div class="inv-name">${byName}</div>
+            <div class="inv-sub">${gIco} ${gName} · ${timeAgo(inv.createdAt)}</div>
+          </div>
+          ${typePill}
+        </div>
+        <div class="inv-desc">${desc}</div>
+        <div class="inv-actions">
+          <button class="btn btn-green" onclick="doAccept('${inv.id}')">✓ Accept</button>
+          <button class="btn btn-secondary" onclick="doDecline('${inv.id}')">✕ Decline</button>
+        </div>
+      </div>`;
+  });
+  pane.innerHTML = html;
+}
+
+function doAccept(id) {
+  const invites = read(INVITES_KEY);
+  const inv = invites[id];
+  if (!inv) return;
+  inv.status = 'accepted';
+  inv.acceptedAt = Date.now();
+  write(INVITES_KEY, invites);
+
+  // Add user to group
+  const groups = read('splitease_groups');
+  if (groups[inv.groupId] && !groups[inv.groupId].members.includes(currentUser.email)) {
+    groups[inv.groupId].members.push(currentUser.email);
+    write('splitease_groups', groups);
+  }
+
+  showToast('🎉 Invitation accepted! You joined the group.', 'success');
+  renderReceived();
+  // refresh sidebar badge
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('invitations');
+  initSidebarBehavior();
+}
+
+function doDecline(id) {
+  const invites = read(INVITES_KEY);
+  if (!invites[id]) return;
+  invites[id].status = 'declined';
+  write(INVITES_KEY, invites);
+  showToast('Invitation declined.', 'warning');
+  renderReceived();
+}
+
+// ── SENT ────────────────────────────────────────────────────────────────────
+function renderSent() {
+  const pane = document.getElementById('pane-sent');
+  const all = read(INVITES_KEY);
+  const mine = Object.values(all)
+    .filter(i => i.invitedBy === currentUser.name || i.invitedBy === currentUser.email || i.sentByEmail === currentUser.email)
+    .sort((a,b) => b.createdAt - a.createdAt);
+
+  if (!mine.length) {
+    pane.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-ico">📤</div>
+        <div class="empty-txt">No invitations sent yet</div>
+        <button class="btn btn-primary" onclick="switchTab('send')">+ Send Your First Invite</button>
+      </div>`;
+    return;
+  }
+
+  const groups = read('splitease_groups');
+  let html = `<div class="sec-lbl">Sent Invitations</div>`;
+  mine.forEach(inv => {
+    const g     = groups[inv.groupId];
+    const gName = g ? g.name : 'Unknown Group';
+    const gIco  = catIco(g?.category);
+    const toStr = inv.invitedEmail || '';
+    const toName= toStr.split('@')[0];
+    const color = avColor(toStr);
+    const status= inv.status || 'pending';
+    const statusPill = {
+      pending:  '<span class="pill pill-pend">Pending</span>',
+      accepted: '<span class="pill pill-ok">Accepted ✓</span>',
+      declined: '<span class="pill pill-no">Declined</span>',
+    }[status] || '';
+    const typePill = (inv.type === 'inapp')
+      ? '<span class="pill pill-inapp">In-App</span>'
+      : '<span class="pill pill-email">Email</span>';
+
+    html += `
+      <div class="inv-card">
+        <div class="inv-card-row">
+          <div class="inv-avatar" style="background:${color}">${initials(toName)}</div>
+          <div class="inv-info">
+            <div class="inv-name">${toStr}</div>
+            <div class="inv-sub">${gIco} ${gName} · ${timeAgo(inv.createdAt)}</div>
+          </div>
+          <div class="inv-badges">
+            ${statusPill}
+            ${typePill}
+          </div>
+        </div>
+      </div>`;
+  });
+  pane.innerHTML = html;
+}
+
+// ── SEND ─────────────────────────────────────────────────────────────────────
+function setMethod(m) {
+  sendMethod = m;
+  document.getElementById('mc-email').classList.toggle('sel', m === 'email');
+  document.getElementById('mc-inapp').classList.toggle('sel', m === 'inapp');
+
+  const info = document.getElementById('method-info');
+  const ef   = document.getElementById('email-field');
+  const iaf  = document.getElementById('inapp-field');
+  const lbl  = document.getElementById('recip-lbl');
+  const btn  = document.getElementById('send-btn');
+
+  if (m === 'email') {
+    info.className = 'info-banner info-email';
+    info.innerHTML = '📧 <strong style="color:var(--text2)">Email invite:</strong> A secure join link is emailed to them. Works even without an existing SplitMate account.';
+    ef.style.display  = 'block';
+    iaf.style.display = 'none';
+    lbl.textContent   = 'Recipient Email';
+    btn.innerHTML     = '📧 Send Email Invitation';
+  } else {
+    info.className = 'info-banner info-inapp';
+    info.innerHTML = '✅ <strong style="color:var(--text2)">In-App invite:</strong> The user gets a notification directly on their Invitations page. No email required — both users must be logged in.';
+    ef.style.display  = 'none';
+    iaf.style.display = 'block';
+    lbl.textContent   = 'Recipient (registered email)';
+    btn.innerHTML     = '✅ Send In-App Invitation';
+  }
+}
+
+function renderGroupList() {
+  const el = document.getElementById('group-list');
+  const groups = read('splitease_groups');
+  const myGroups = Object.values(groups).filter(g => g.members && g.members.includes(currentUser.email));
+
+  if (!myGroups.length) {
+    el.innerHTML = `<div style="color:var(--text3);font-size:0.85rem;padding:8px">
+      You have no groups yet. <a href="dashboard.html" style="color:var(--accent)">Create one →</a></div>`;
+    return;
+  }
+
+  el.innerHTML = myGroups.map(g => `
+    <div class="group-pick" id="gp-${g.id}" onclick="pickGroup('${g.id}')">
+      <div class="group-pick-ico">${catIco(g.category)}</div>
+      <div class="group-pick-info">
+        <div class="group-pick-name">${g.name}</div>
+        <div class="group-pick-mem">${g.members.length} member${g.members.length!==1?'s':''}</div>
+      </div>
+      <div class="group-pick-chk">✓</div>
+    </div>`).join('');
+}
+
+function pickGroup(id) {
+  selectedGroup = id;
+  document.querySelectorAll('.group-pick').forEach(el => el.classList.remove('sel'));
+  const el = document.getElementById('gp-'+id);
+  if (el) el.classList.add('sel');
+}
+
+async function doSend() {
+  if (!selectedGroup) { showToast('Please select a group first.', 'warning'); return; }
+
+  const toEmail = sendMethod === 'email'
+    ? document.getElementById('invite-to-email').value.trim()
+    : document.getElementById('invite-to-inapp').value.trim();
+
+  if (!toEmail || !toEmail.includes('@')) { showToast('Please enter a valid email address.', 'warning'); return; }
+
+  const groups = read('splitease_groups');
+  const group  = groups[selectedGroup];
+  if (!group) { showToast('Group not found.', 'error'); return; }
+  if (group.members && group.members.includes(toEmail)) {
+    showToast('This person is already a member of the group.', 'warning'); return;
+  }
+
+  // Check for duplicate pending invite
+  const existing = read(INVITES_KEY);
+  const dupe = Object.values(existing).some(
+    i => i.groupId === selectedGroup && i.invitedEmail === toEmail && i.status === 'pending'
+  );
+  if (dupe) { showToast('A pending invite already exists for this email.', 'warning'); return; }
+
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+
+  // Save invite to localStorage
+  const invites = read(INVITES_KEY);
+  const id = uid();
+  invites[id] = {
+    id,
+    groupId:       selectedGroup,
+    invitedEmail:  toEmail,
+    invitedBy:     currentUser.name,
+    invitedByName: currentUser.name,
+    sentByEmail:   currentUser.email,
+    type:          sendMethod,
+    status:        'pending',
+    createdAt:     Date.now(),
+  };
+  write(INVITES_KEY, invites);
+
+  if (sendMethod === 'email') {
+    try {
+      const token = await _jwtSign({
+        groupId:      selectedGroup,
+        invitedEmail: toEmail,
+        inviterName:  currentUser.name,
+        exp:          Date.now() + 7 * 24 * 3600 * 1000,
+      });
+      const link = `${SITE_URL}/invite.html?token=${token}`;
+      await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+        to_email:    toEmail,
+        from_name:   currentUser.name,
+        group_name:  group.name,
+        invite_link: link,
+        reply_to:    currentUser.email,
+      });
+      showToast('📧 Email invitation sent successfully!', 'success');
+    } catch(e) {
+      console.warn('EmailJS error:', e);
+      showToast('Invite saved! (Email delivery failed — check EmailJS config)', 'warning');
+    }
+  } else {
+    showToast('✅ In-App invitation sent! They\'ll see it on their Invitations page.', 'success');
+  }
+
+  // Reset
+  btn.disabled = false;
+  btn.innerHTML = sendMethod === 'email' ? '📧 Send Email Invitation' : '✅ Send In-App Invitation';
+  document.getElementById('invite-to-email').value = '';
+  document.getElementById('invite-to-inapp').value = '';
+  selectedGroup = null;
+  document.querySelectorAll('.group-pick').forEach(el => el.classList.remove('sel'));
+
+  setTimeout(() => switchTab('sent'), 600);
+}
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+let _toastTimer;
+function showToast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = 'show' + (type ? ' '+type : '');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.className = ''; }, 3400);
+}
+</script>
+</body>
+</html>
