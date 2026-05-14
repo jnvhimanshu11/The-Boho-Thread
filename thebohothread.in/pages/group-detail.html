@@ -357,6 +357,7 @@
     let expenses = [], settlements = [];
     let editingExpenseId = null; // null = adding new, string = editing existing
     let expenseLogs = []; // audit log entries from Firestore
+    let groupLogs   = []; // group-level change logs from Firestore
     let pendingInvites = [];   // invitations with status !== 'accepted'
     let splitType = 'equal';
     let selectedSplitMembers = new Set();
@@ -454,6 +455,18 @@
       try { Sidebar.init('groups'); } catch(e) {}
 
       await loadAll();
+
+      // Auto-refresh every 30 seconds so data stays live without manual reload
+      setInterval(() => {
+        refreshData().then(() => renderTab(currentTab));
+      }, 30000);
+
+      // Also refresh instantly when user returns to this browser tab
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          refreshData().then(() => renderTab(currentTab));
+        }
+      });
     });
 
     async function loadAll() {
@@ -561,6 +574,12 @@
           expenseLogs = logSnap.docs.map(d => d.data()).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
         } catch(e) { expenseLogs = []; }
 
+        // 5c. Load group-level change logs
+        try {
+          const gLogSnap = await _fs().collection('group_logs').where('groupId','==',groupId).get();
+          groupLogs = gLogSnap.docs.map(d => d.data()).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+        } catch(e) { groupLogs = []; }
+
         // 6. Load pending / rejected invitations (email-only virtual members)
         try {
           const invSnap = await _fs().collection('invitations')
@@ -620,6 +639,7 @@
           <div class="group-header-actions">
             <button class="btn-primary btn-sm" onclick="openAddExpense()">+ Expense</button>
             <button class="btn-ghost btn-sm" onclick="openMod('invite-modal');setTimeout(()=>document.getElementById('invite-email').focus(),50)">Invite</button>
+            <button class="btn-ghost btn-sm" title="Refresh data" onclick="refreshData().then(()=>renderTab(currentTab))" style="padding:6px 10px;font-size:1rem;line-height:1">🔄</button>
             <div class="hdr-menu-wrap">
               <button class="hdr-three-dot" onclick="toggleHdrMenu(event)" title="More options">⋮</button>
               <div class="hdr-dropdown" id="hdr-dd">
@@ -647,7 +667,60 @@
         document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
       });
       currentTab = tab;
-      renderTab(tab);
+      // Always refresh live data from Firestore, then re-render
+      refreshData().then(() => renderTab(tab));
+    }
+
+    // ── Live Refresh ─────────────────────────────────────────────────────────
+    // Re-fetches all mutable data (expenses, settlements, logs, group doc)
+    // without reloading member profiles (those rarely change).
+    async function refreshData() {
+      try {
+        // Re-fetch group doc (name / description / category may have changed)
+        const gdoc = await _fs().collection('groups').doc(groupId).get();
+        if (gdoc.exists) {
+          group = gdoc.data();
+          document.title = group.name + ' – SplitMate';
+        }
+
+        // Re-fetch expenses
+        const eSnap = await _fs().collection('expenses').where('groupId','==',groupId).get();
+        expenses = eSnap.docs.map(d => d.data()).sort((a,b) => (b.date||b.createdAt||0) - (a.date||a.createdAt||0));
+
+        // Re-fetch settlements
+        const sSnap = await _fs().collection('settlements').where('groupId','==',groupId).get();
+        settlements = sSnap.docs.map(d => d.data()).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+
+        // Re-fetch expense audit logs
+        try {
+          const logSnap = await _fs().collection('expense_logs').where('groupId','==',groupId).get();
+          expenseLogs = logSnap.docs.map(d => d.data()).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+        } catch(e) { /* keep existing */ }
+
+        // Re-fetch group change logs
+        try {
+          const gLogSnap = await _fs().collection('group_logs').where('groupId','==',groupId).get();
+          groupLogs = gLogSnap.docs.map(d => d.data()).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+        } catch(e) { /* keep existing */ }
+
+        // Re-fetch pending invites
+        try {
+          const invSnap = await _fs().collection('invitations').where('groupId','==',groupId).get();
+          const allInvites = invSnap.docs.map(d => d.data()).filter(i => i.status !== 'accepted');
+          const seenEmails = new Set();
+          pendingInvites = allInvites.filter(inv => {
+            const email = inv.invitedEmail || inv.email;
+            if (seenEmails.has(email)) return false;
+            seenEmails.add(email);
+            return true;
+          });
+        } catch(e) { /* keep existing */ }
+
+        // Always re-render the header so balance/total stays fresh
+        renderHeader();
+      } catch(err) {
+        console.warn('refreshData error:', err);
+      }
     }
 
     function renderTab(tab) {
@@ -1299,27 +1372,35 @@
     function renderHistory() {
       const el = document.getElementById('tab-history');
 
-      if (!expenseLogs.length) {
+      // Merge expense logs + group logs, sorted newest first
+      const allLogs = [
+        ...expenseLogs.map(l => ({ ...l, logType: l.logType || 'expense' })),
+        ...groupLogs.map(l =>   ({ ...l, logType: 'group' }))
+      ].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      if (!allLogs.length) {
         el.innerHTML = `<div class="card empty-state">
           <div class="empty-icon">📋</div>
           <h3>No history yet</h3>
-          <p>Changes to expenses will appear here.</p>
+          <p>Changes to expenses and group settings will appear here.</p>
         </div>`;
         return;
       }
 
-      const actionIcon  = { created: '➕', edited: '✏️', deleted: '🗑️' };
-      const actionColor = { created: '#22c55e', edited: '#6c63ff', deleted: '#ef4444' };
-      const actionLabel = { created: 'Added', edited: 'Edited', deleted: 'Deleted' };
+      // ── icons / colours per action ─────────────────────────────────────────
+      const actionIcon  = { created: '➕', edited: '✏️', deleted: '🗑️', group_edited: '⚙️' };
+      const actionColor = { created: '#22c55e', edited: '#6c63ff', deleted: '#ef4444', group_edited: '#f59e0b' };
+      const actionLabel = { created: 'Added', edited: 'Edited', deleted: 'Deleted', group_edited: 'Group Updated' };
 
-      const rows = expenseLogs.map(log => {
+      const rows = allLogs.map(log => {
         const icon  = actionIcon[log.action]  || '📝';
         const color = actionColor[log.action] || '#888';
         const label = actionLabel[log.action] || log.action;
         const ts    = fmtDate(log.timestamp) + ' ' + new Date(log.timestamp).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
 
+        // Changes diff rows (used by both expense edits and group edits)
         let changesHtml = '';
-        if (log.action === 'edited' && log.changes && log.changes.length) {
+        if (log.changes && log.changes.length) {
           changesHtml = `<div class="log-changes">
             ${log.changes.map(c => `<div class="log-change-row">
               <span class="log-field">${c.field}</span>
@@ -1330,6 +1411,7 @@
           </div>`;
         }
 
+        // Expense snapshot (only for expense logs)
         const snapshotHtml = log.snapshot ? `
           <div class="log-snapshot">
             <div class="log-snapshot-title">Expense Snapshot</div>
@@ -1342,30 +1424,37 @@
             ${Array.isArray(log.snapshot.splits) ? `<div class="log-snapshot-row"><span>Splits</span><span>${log.snapshot.splits.map(s => memberName(s.userId) + ': ' + fmt(s.amount)).join(', ')}</span></div>` : ''}
           </div>` : '';
 
-        return `<div class="log-entry" onclick="toggleLogDetail('${log.id}')">
+        // Subject label differs: expense name vs "Group Settings"
+        const subjectHtml = log.logType === 'group'
+          ? `<span class="log-expense-name" style="color:var(--text-muted);font-style:italic">Group Settings</span>`
+          : `<span class="log-expense-name">"${log.expenseName || ''}"</span>`;
+
+        // Only show expand chevron if there is detail to show
+        const hasDetail = changesHtml || snapshotHtml;
+        const chevron   = hasDetail ? `<div class="log-chevron" id="chev-${log.id}">▼</div>` : '';
+        const clickAttr = hasDetail ? `onclick="toggleLogDetail('${log.id}')"` : '';
+
+        return `<div class="log-entry" ${clickAttr}>
           <div class="log-entry-header">
             <div class="log-action-badge" style="background:${color}20;color:${color};border:1px solid ${color}40">
               ${icon} ${label}
             </div>
             <div class="log-entry-meta">
-              <span class="log-expense-name">"${log.expenseName}"</span>
+              ${subjectHtml}
               <span class="log-actor">by ${log.actorName || log.actorId}</span>
             </div>
             <div class="log-timestamp">${ts}</div>
-            <div class="log-chevron" id="chev-${log.id}">▼</div>
+            ${chevron}
           </div>
-          <div class="log-detail hidden" id="detail-${log.id}">
-            ${changesHtml}
-            ${snapshotHtml}
-          </div>
+          ${hasDetail ? `<div class="log-detail hidden" id="detail-${log.id}">${changesHtml}${snapshotHtml}</div>` : ''}
         </div>`;
       }).join('');
 
       el.innerHTML = `
         <div class="card" style="padding:0;overflow:hidden">
           <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-            <div style="font-family:var(--font-display);font-weight:700">Expense Edit History</div>
-            <span style="font-size:0.78rem;color:var(--text-muted)">${expenseLogs.length} event${expenseLogs.length !== 1 ? 's' : ''}</span>
+            <div style="font-family:var(--font-display);font-weight:700">Activity History</div>
+            <span style="font-size:0.78rem;color:var(--text-muted)">${allLogs.length} event${allLogs.length !== 1 ? 's' : ''}</span>
           </div>
           <div style="padding:8px 0">${rows}</div>
         </div>`;
@@ -1533,12 +1622,42 @@
       const cat  = document.getElementById('eg-cat').value;
       if (!name) { toast_('Group name is required.', 'error'); return; }
       try {
+        // Build a changes diff before updating
+        const changes = [];
+        if (name !== group.name)        changes.push({ field: 'Name',        before: group.name        || '—', after: name });
+        if (desc !== group.description) changes.push({ field: 'Description', before: group.description || '—', after: desc || '—' });
+        if (cat  !== group.category)    changes.push({ field: 'Category',    before: group.category    || '—', after: cat });
+
         await _fs().collection('groups').doc(groupId).update({ name, description: desc, category: cat, updatedAt: Date.now() });
         group.name = name; group.description = desc; group.category = cat;
+
+        // Write a group log entry if anything changed
+        if (changes.length) await writeGroupLog('group_edited', changes);
+
         closeMod('edit-group-modal');
         toast_('Group updated ✓', 'success');
         renderHeader();
       } catch(err) { toast_('Update failed: ' + err.message, 'error'); }
+    }
+
+    // ── Group Audit Log ───────────────────────────────────────────────────────
+    async function writeGroupLog(action, changes) {
+      const myId = currentUser.id, myEmail = currentUser.email;
+      const logId = _rid();
+      const log = {
+        id:        logId,
+        groupId,
+        logType:   'group',            // distinguish from expense logs
+        action,                        // e.g. 'group_edited'
+        actorId:   myId || myEmail,
+        actorName: currentUser.name || myEmail,
+        timestamp: Date.now(),
+        changes:   changes || []       // array of {field, before, after}
+      };
+      try {
+        await _fs().collection('group_logs').doc(logId).set(log);
+        groupLogs.unshift(log);
+      } catch(e) { console.warn('Group log write failed:', e); }
     }
 
     // ── Delete Group ──────────────────────────────────────────────────────────
