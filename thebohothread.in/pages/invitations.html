@@ -345,6 +345,24 @@
 
   <div id="toast"></div>
 
+  <!-- Firebase (needed to read groups stored by groups.html) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    if (!firebase.apps.length) {
+      firebase.initializeApp({
+        apiKey:            "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+        authDomain:        "thebohothread-96e2c.firebaseapp.com",
+        projectId:         "thebohothread-96e2c",
+        storageBucket:     "thebohothread-96e2c.firebasestorage.app",
+        messagingSenderId: "100688387088",
+        appId:             "1:100688387088:web:f8a6af7565d3c25952fe95"
+      });
+    }
+    function _fs() { return firebase.firestore(); }
+  </script>
+
   <!-- Scripts -->
   <script src="../js/db.js"></script>
   <script src="../js/auth.js"></script>
@@ -379,17 +397,17 @@
     }
 
     // ── Init ───────────────────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       currentUser = Auth.requireAuth('../pages/login.html');
       if (!currentUser) return;
       Sidebar.init('invitations');
       emailjs.init(EMAILJS_KEY);
-      renderGroupPicker();
+      await renderGroupPicker();
       switchTab('received');
     });
 
     // ── Tab Switcher ───────────────────────────────────────────────────────
-    function switchTab(tab) {
+    async function switchTab(tab) {
       activeTab = tab;
       ['received','sent','send'].forEach(t => {
         document.getElementById('pane-'+(t==='send'?'send':t)).style.display = 'none';
@@ -399,6 +417,7 @@
       document.getElementById('tab-'+tab).classList.add('active');
       if (tab === 'received') renderReceived();
       if (tab === 'sent')     renderSent();
+      if (tab === 'send')     await renderGroupPicker();
     }
 
     // ── RECEIVED TAB ───────────────────────────────────────────────────────
@@ -574,25 +593,36 @@
       }
     }
 
-    function renderGroupPicker() {
+    async function renderGroupPicker() {
       const picker = document.getElementById('group-picker');
-      const groups = DB.getGroupsForUser(currentUser.email);
+      picker.innerHTML = '<div style="color:var(--text-dim);font-size:0.85rem;padding:10px">Loading groups…</div>';
 
-      if (!groups.length) {
-        picker.innerHTML = `<div style="color:var(--text-dim);font-size:0.85rem;padding:10px">
-          You don't have any groups yet. <a href="groups.html?new=1" style="color:var(--accent)">Create one first →</a></div>`;
-        return;
+      try {
+        const userId = currentUser.id || currentUser.email;
+        const snap = await _fs().collection('groups')
+          .where('members', 'array-contains', userId)
+          .get();
+        const groups = snap.docs.map(d => d.data());
+
+        if (!groups.length) {
+          picker.innerHTML = `<div style="color:var(--text-dim);font-size:0.85rem;padding:10px">
+            You don't have any groups yet. <a href="groups.html?new=1" style="color:var(--accent)">Create one first →</a></div>`;
+          return;
+        }
+
+        picker.innerHTML = groups.map(g => `
+          <div class="group-pick-item" id="gp-${g.id}" onclick="selectGroup('${g.id}')">
+            <div class="group-pick-ico">${getCatIcon(g.category)}</div>
+            <div class="group-pick-info">
+              <div class="group-pick-name">${g.name}</div>
+              <div class="group-pick-members">${g.members.length} member${g.members.length!==1?'s':''}</div>
+            </div>
+            <div class="group-pick-check">✓</div>
+          </div>`).join('');
+      } catch(e) {
+        console.error('renderGroupPicker error:', e);
+        picker.innerHTML = '<div style="color:#ef4444;font-size:0.85rem;padding:10px">Failed to load groups.</div>';
       }
-
-      picker.innerHTML = groups.map(g => `
-        <div class="group-pick-item" id="gp-${g.id}" onclick="selectGroup('${g.id}')">
-          <div class="group-pick-ico">${getCatIcon(g.category)}</div>
-          <div class="group-pick-info">
-            <div class="group-pick-name">${g.name}</div>
-            <div class="group-pick-members">${g.members.length} member${g.members.length!==1?'s':''}</div>
-          </div>
-          <div class="group-pick-check">✓</div>
-        </div>`).join('');
     }
 
     function selectGroup(id) {
@@ -635,10 +665,9 @@
         type: sendMethod,
       });
 
-      // Store inviter name for display
+      // Store inviter name for display (do NOT overwrite invitedBy — it holds the email used for filtering)
       const invites = read('splitease_invites');
       invites[invite.id].invitedByName = currentUser.name;
-      invites[invite.id].invitedBy     = currentUser.name;
       write('splitease_invites', invites);
 
       if (sendMethod === 'email') {
