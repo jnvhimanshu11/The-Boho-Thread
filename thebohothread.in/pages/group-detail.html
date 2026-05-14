@@ -837,7 +837,7 @@
       const histHtml = settlements.length ? settlements.map(s => `
         <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:0.88rem">
           <span>✓</span>
-          <span style="flex:1">${memberName(s.paidBy)} paid ${memberName(s.paidTo)} ${fmt(s.amount)}${s.note && s.note !== 'Settled via app' ? `<span style="color:var(--text-muted);font-size:0.82rem"> · ${s.note}</span>` : ''}</span>
+          <span style="flex:1">${memberName(s.paidBy)} paid ${memberName(s.paidTo)} ${fmt(s.amount)}${s.note ? `<span style="color:var(--text-muted);font-size:0.82rem"> · ${s.note}</span>` : ''}</span>
           <span style="color:var(--text-muted)">${fmtDate(s.createdAt)}</span>
         </div>`).join('') : '<div style="color:var(--text-muted);font-size:0.85rem;padding:16px 0">No recorded payments yet.</div>';
 
