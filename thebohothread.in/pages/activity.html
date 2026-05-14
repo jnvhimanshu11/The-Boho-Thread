@@ -155,7 +155,7 @@
       list.innerHTML = Object.entries(byDate).map(([date, exps]) => `
         <div class="activity-date-header">${date}</div>
         ${exps.map(e => {
-          const payer = users[e.paidBy] || { name: e.paidBy.split('@')[0] };
+          const payer = users[e.paidBy] || { name: e.paidBy };
           const myShare = e.splits?.[currentUser.email] || 0;
           return `
             <div class="expense-item" style="cursor:pointer" onclick="window.location.href='group-detail.html?id=${e.groupId}'">

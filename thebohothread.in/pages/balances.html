@@ -144,7 +144,7 @@
       const renderPairList = (pairs, positive) => {
         if (!pairs.length) return `<div style="color:var(--text-dim);font-size:0.85rem">None — all clear!</div>`;
         return pairs.map(([email, amt]) => {
-          const u = users[email] || { name: email.split('@')[0], email };
+          const u = users[email] || { name: email, email };
           const absAmt = Math.abs(amt);
           return `
             <div class="balance-pair">
@@ -201,8 +201,8 @@
             ${myTxns.length ? `
               <div class="bgc-body">
                 ${myTxns.map(t => {
-                  const from = users[t.from] || { name: t.from.split('@')[0] };
-                  const to   = users[t.to]   || { name: t.to.split('@')[0] };
+                  const from = users[t.from] || { name: t.from };
+                  const to   = users[t.to]   || { name: t.to };
                   return `
                     <div class="balance-pair">
                       <span style="font-size:1rem">${from.name}</span>

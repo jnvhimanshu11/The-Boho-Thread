@@ -362,13 +362,28 @@
       // Handle invite:email keys (used by openSettleModal / openAddExpense)
       if (memberId && memberId.startsWith('invite:')) {
         const email = memberId.slice(7);
-        return email.split('@')[0];
+        return email; // show full email for pending invites
       }
       // Check pending invites by token (legacy path)
       const inv = pendingInvites.find(i => i.token === memberId);
-      if (inv) return inv.invitedEmail || inv.email;
+      if (inv) return inv.invitedEmail || inv.email; // show email, not name
+
+      // Check if this member has a pending invite by id or email
+      // (they are in group.members but have not accepted the invitation)
+      const memberEmail = memberId.includes('@') ? memberId : (groupMembers.find(u => (u.id || u.uid) === memberId) || {}).email;
+      if (memberEmail) {
+        const pendingByEmail = pendingInvites.find(i => (i.invitedEmail || i.email) === memberEmail);
+        if (pendingByEmail) return memberEmail; // show email until invitation accepted
+      }
+
       const m = groupMembers.find(u => (u.id || u.email) === memberId || u.email === memberId);
-      return m ? (m.name || m.email.split('@')[0]) : (memberId.includes('@') ? memberId.split('@')[0] : memberId.slice(0,8));
+      if (!m) return memberId.includes('@') ? memberId : memberId.slice(0, 8);
+
+      // Only show name if this member has actually accepted (not a pending invite)
+      const mEmail = m.email || '';
+      const isPending = pendingInvites.some(i => (i.invitedEmail || i.email) === mEmail);
+      if (isPending) return mEmail; // show email for pending members
+      return m.name || mEmail; // show name for accepted members
     }
 
     function memberAvatar(memberId) {
@@ -752,8 +767,10 @@
         </div>
         ${group.members.map(mid => {
           const m = groupMembers.find(u => (u.id || u.email) === mid || u.email === mid);
-          const name = m ? (m.name || mid.split('@')[0]) : mid.split('@')[0];
-          const email = m?.email || (mid.includes('@') ? mid : '');
+          const mEmail = m?.email || (mid.includes('@') ? mid : '');
+          const isPending = pendingInvites.some(i => (i.invitedEmail || i.email) === mEmail);
+          const name = isPending ? mEmail : (m ? (m.name || mEmail) : (mid.includes('@') ? mid : mid.slice(0,8)));
+          const email = mEmail;
           const isAdmin = group.createdBy === mid;
           const paid = expenses.filter(e => e.paidBy === mid && !e.isSettlement).reduce((s,e) => s + (+e.amount||0), 0);
           return `<div class="member-item">

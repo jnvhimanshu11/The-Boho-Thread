@@ -200,7 +200,7 @@ const UI = (() => {
     const user  = users[email];
     return user
       ? { name: user.name, email, photoURL: user.photoURL }
-      : { name: email.split('@')[0], email, photoURL: null };
+      : { name: email, email, photoURL: null }; // show full email until invitation accepted
   }
 
   // ── Public API ────────────────────────────────────────────────────────────

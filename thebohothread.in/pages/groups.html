@@ -327,6 +327,7 @@
     // ── State ─────────────────────────────────────────────────────────────────
     let currentUser, group, groupId;
     let groupMembers = [];
+    let pendingInvites = [];
     let expenses = [], settlements = [];
     let splitType = 'equal';
     let selectedSplitMembers = new Set();
@@ -358,8 +359,29 @@
     }
 
     function memberName(memberId) {
+      // Handle invite:email keys
+      if (memberId && memberId.startsWith('invite:')) {
+        return memberId.slice(7); // show full email for pending invites
+      }
+      // Check pending invites by token (legacy path)
+      const inv = pendingInvites.find(i => i.token === memberId);
+      if (inv) return inv.invitedEmail || inv.email;
+
+      // Check if this member has a pending invite by id or email
+      const memberEmail = memberId.includes('@') ? memberId : (groupMembers.find(u => (u.id || u.uid) === memberId) || {}).email;
+      if (memberEmail) {
+        const pendingByEmail = pendingInvites.find(i => (i.invitedEmail || i.email) === memberEmail);
+        if (pendingByEmail) return memberEmail; // show email until invitation accepted
+      }
+
       const m = groupMembers.find(u => (u.id || u.email) === memberId || u.email === memberId);
-      return m ? (m.name || m.email.split('@')[0]) : (memberId.includes('@') ? memberId.split('@')[0] : memberId.slice(0,8));
+      if (!m) return memberId.includes('@') ? memberId : memberId.slice(0, 8);
+
+      // Only show name if accepted (not a pending invite)
+      const mEmail = m.email || '';
+      const isPending = pendingInvites.some(i => (i.invitedEmail || i.email) === mEmail);
+      if (isPending) return mEmail;
+      return m.name || mEmail;
     }
 
     function memberAvatar(memberId) {
@@ -431,6 +453,23 @@
         // 5. Load settlements
         const sSnap = await _fs().collection('settlements').where('groupId','==',groupId).get();
         settlements = sSnap.docs.map(d => d.data()).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+
+        // 6. Load pending invitations (to distinguish accepted vs pending members)
+        try {
+          const invSnap = await _fs().collection('invitations')
+            .where('groupId', '==', groupId)
+            .get();
+          const allInvites = invSnap.docs.map(d => d.data()).filter(i => i.status !== 'accepted');
+          const seenEmails = new Set();
+          pendingInvites = allInvites.filter(inv => {
+            const email = inv.invitedEmail || inv.email;
+            if (seenEmails.has(email)) return false;
+            seenEmails.add(email);
+            return true;
+          });
+        } catch(e) {
+          pendingInvites = [];
+        }
 
         document.title = group.name + ' – SplitMate';
         renderHeader();
@@ -676,8 +715,10 @@
         </div>
         ${group.members.map(mid => {
           const m = groupMembers.find(u => (u.id || u.email) === mid || u.email === mid);
-          const name = m ? (m.name || mid.split('@')[0]) : mid.split('@')[0];
-          const email = m?.email || (mid.includes('@') ? mid : '');
+          const mEmail = m?.email || (mid.includes('@') ? mid : '');
+          const isPending = pendingInvites.some(i => (i.invitedEmail || i.email) === mEmail);
+          const name = isPending ? mEmail : (m ? (m.name || mEmail) : (mid.includes('@') ? mid : mid.split('@')[0]));
+          const email = mEmail;
           const isAdmin = group.createdBy === mid;
           const paid = expenses.filter(e => e.paidBy === mid && !e.isSettlement).reduce((s,e) => s + (+e.amount||0), 0);
           return `<div class="member-item">
