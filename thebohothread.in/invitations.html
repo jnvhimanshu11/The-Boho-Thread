@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initSidebarBehavior();
   emailjs.init(EMAILJS_KEY);
 
-  renderGroupList();
+  await renderGroupList();
   switchTab('received');
 });
 
@@ -378,7 +378,7 @@ function initSidebarBehavior() {
 }
 
 // ── Tab Switch ──────────────────────────────────────────────────────────────
-function switchTab(tab) {
+async function switchTab(tab) {
   ['received','sent','send'].forEach(t => {
     document.getElementById('pane-'+t).style.display = 'none';
     document.getElementById('tab-'+t).classList.remove('active');
@@ -387,6 +387,7 @@ function switchTab(tab) {
   document.getElementById('tab-'+tab).classList.add('active');
   if (tab === 'received') renderReceived();
   if (tab === 'sent')     renderSent();
+  if (tab === 'send')     await renderGroupList();
 }
 
 // ── RECEIVED ────────────────────────────────────────────────────────────────
@@ -419,8 +420,7 @@ function renderReceived() {
 
   let html = `<div class="sec-lbl">Pending (${pending.length})</div>`;
   pending.forEach(inv => {
-    const groups = read('splitease_groups');
-    const group  = groups[inv.groupId];
+    const group  = (window._cachedGroups || {})[inv.groupId];
     const gName  = group ? group.name : 'Unknown Group';
     const gIco   = catIco(group?.category);
     const byName = inv.invitedByName || inv.invitedBy || 'Someone';
@@ -453,7 +453,7 @@ function renderReceived() {
   pane.innerHTML = html;
 }
 
-function doAccept(id) {
+async function doAccept(id) {
   const invites = read(INVITES_KEY);
   const inv = invites[id];
   if (!inv) return;
@@ -461,11 +461,15 @@ function doAccept(id) {
   inv.acceptedAt = Date.now();
   write(INVITES_KEY, invites);
 
-  // Add user to group
-  const groups = read('splitease_groups');
-  if (groups[inv.groupId] && !groups[inv.groupId].members.includes(currentUser.email)) {
-    groups[inv.groupId].members.push(currentUser.email);
-    write('splitease_groups', groups);
+  // Add user to group in Firestore
+  try {
+    await firebase.firestore().collection('groups').doc(inv.groupId).update({
+      members: firebase.firestore.FieldValue.arrayUnion(currentUser.id)
+    });
+    // Refresh the group cache so the new membership is reflected
+    await renderGroupList();
+  } catch(e) {
+    console.warn('Could not update group membership in Firestore:', e);
   }
 
   showToast('🎉 Invitation accepted! You joined the group.', 'success');
@@ -502,10 +506,9 @@ function renderSent() {
     return;
   }
 
-  const groups = read('splitease_groups');
   let html = `<div class="sec-lbl">Sent Invitations</div>`;
   mine.forEach(inv => {
-    const g     = groups[inv.groupId];
+    const g     = (window._cachedGroups || {})[inv.groupId];
     const gName = g ? g.name : 'Unknown Group';
     const gIco  = catIco(g?.category);
     const toStr = inv.invitedEmail || '';
@@ -568,26 +571,39 @@ function setMethod(m) {
   }
 }
 
-function renderGroupList() {
+async function renderGroupList() {
   const el = document.getElementById('group-list');
-  const groups = read('splitease_groups');
-  const myGroups = Object.values(groups).filter(g => g.members && g.members.includes(currentUser.email));
+  el.innerHTML = '<div style="color:var(--text3);font-size:0.85rem;padding:8px">Loading groups…</div>';
 
-  if (!myGroups.length) {
-    el.innerHTML = `<div style="color:var(--text3);font-size:0.85rem;padding:8px">
-      You have no groups yet. <a href="dashboard.html" style="color:var(--accent)">Create one →</a></div>`;
-    return;
+  try {
+    const snap = await firebase.firestore().collection('groups')
+      .where('members', 'array-contains', currentUser.id)
+      .get();
+    const myGroups = snap.docs.map(d => d.data());
+
+    if (!myGroups.length) {
+      el.innerHTML = `<div style="color:var(--text3);font-size:0.85rem;padding:8px">
+        You have no groups yet. <a href="dashboard.html" style="color:var(--accent)">Create one →</a></div>`;
+      return;
+    }
+
+    // Cache fetched groups in memory so doSend() can look them up without another DB call
+    window._cachedGroups = {};
+    myGroups.forEach(g => window._cachedGroups[g.id] = g);
+
+    el.innerHTML = myGroups.map(g => `
+      <div class="group-pick" id="gp-${g.id}" onclick="pickGroup('${g.id}')">
+        <div class="group-pick-ico">${catIco(g.category)}</div>
+        <div class="group-pick-info">
+          <div class="group-pick-name">${g.name}</div>
+          <div class="group-pick-mem">${g.members.length} member${g.members.length!==1?'s':''}</div>
+        </div>
+        <div class="group-pick-chk">✓</div>
+      </div>`).join('');
+  } catch(e) {
+    console.error('renderGroupList error:', e);
+    el.innerHTML = '<div style="color:#ef4444;font-size:0.85rem;padding:8px">Failed to load groups.</div>';
   }
-
-  el.innerHTML = myGroups.map(g => `
-    <div class="group-pick" id="gp-${g.id}" onclick="pickGroup('${g.id}')">
-      <div class="group-pick-ico">${catIco(g.category)}</div>
-      <div class="group-pick-info">
-        <div class="group-pick-name">${g.name}</div>
-        <div class="group-pick-mem">${g.members.length} member${g.members.length!==1?'s':''}</div>
-      </div>
-      <div class="group-pick-chk">✓</div>
-    </div>`).join('');
 }
 
 function pickGroup(id) {
@@ -606,9 +622,8 @@ async function doSend() {
 
   if (!toEmail || !toEmail.includes('@')) { showToast('Please enter a valid email address.', 'warning'); return; }
 
-  const groups = read('splitease_groups');
-  const group  = groups[selectedGroup];
-  if (!group) { showToast('Group not found.', 'error'); return; }
+  const group = (window._cachedGroups || {})[selectedGroup];
+  if (!group) { showToast('Group not found. Please reload the page.', 'error'); return; }
   if (group.members && group.members.includes(toEmail)) {
     showToast('This person is already a member of the group.', 'warning'); return;
   }
