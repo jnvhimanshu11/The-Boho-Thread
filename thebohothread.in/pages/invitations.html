@@ -396,10 +396,28 @@
       return Math.floor(h/24)+'d ago';
     }
 
+    // ── Auth helpers ───────────────────────────────────────────────────────
+    // The app uses TWO auth systems:
+    //   • js/auth.js  → 'splitmate_current_user' (has .uid, used by pages/ localStorage DB)
+    //   • root auth.js → 'splitmate_session'     (has .id,  used by Firestore groups)
+    // We merge both so currentUser always has .id (Firestore key) AND .email (localStorage key).
+    function getFirestoreUserId() {
+      try {
+        const raw = localStorage.getItem('splitmate_session')
+                 || sessionStorage.getItem('splitmate_session');
+        return raw ? JSON.parse(raw).id : null;
+      } catch(e) { return null; }
+    }
+
     // ── Init ───────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
       currentUser = Auth.requireAuth('../pages/login.html');
       if (!currentUser) return;
+
+      // Merge the Firestore user ID into currentUser so Firestore queries work
+      const firestoreId = getFirestoreUserId();
+      if (firestoreId) currentUser.id = firestoreId;
+
       Sidebar.init('invitations');
       emailjs.init(EMAILJS_KEY);
       await renderGroupPicker();
@@ -598,11 +616,25 @@
       picker.innerHTML = '<div style="color:var(--text-dim);font-size:0.85rem;padding:10px">Loading groups…</div>';
 
       try {
-        const userId = currentUser.id || currentUser.email;
-        const snap = await _fs().collection('groups')
-          .where('members', 'array-contains', userId)
-          .get();
-        const groups = snap.docs.map(d => d.data());
+        // Build a set of all possible keys this user might be stored as in group members arrays.
+        // Groups created via root auth use currentUser.id (Firestore ID).
+        // Groups created via js/auth.js might use currentUser.uid or currentUser.email.
+        const possibleKeys = new Set([
+          currentUser.id,
+          currentUser.uid,
+          currentUser.email
+        ].filter(Boolean));
+
+        // Run one Firestore query per distinct key, then merge results (deduplicate by group id).
+        const groupMap = new Map();
+        await Promise.all([...possibleKeys].map(async key => {
+          const snap = await _fs().collection('groups')
+            .where('members', 'array-contains', key)
+            .get();
+          snap.docs.forEach(d => groupMap.set(d.id, d.data()));
+        }));
+
+        const groups = [...groupMap.values()];
 
         if (!groups.length) {
           picker.innerHTML = `<div style="color:var(--text-dim);font-size:0.85rem;padding:10px">
