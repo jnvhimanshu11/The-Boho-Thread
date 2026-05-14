@@ -671,36 +671,73 @@
     }
 
     // ── Balance calculation ───────────────────────────────────────────────────
+    // Build alias map: old email/invite:email keys -> canonical member key in group.members
+    // This handles Firestore expenses that still store old email keys after a user accepts invite
+    function buildKeyAliasMap() {
+      const map = {};
+      group.members.forEach(mid => {
+        const m = groupMembers.find(u => (u.id || u.email) === mid || u.email === mid);
+        if (m) {
+          const email = m.email || '';
+          if (email && email !== mid) {
+            map[email] = mid;
+            map['invite:' + email] = mid;
+          }
+          if (m.id && m.id !== mid) map[m.id] = mid;
+        }
+        if (mid.includes('@')) map['invite:' + mid] = mid;
+      });
+      return map;
+    }
+
     function calcBalances() {
       const bals = {};
       group.members.forEach(m => bals[m] = 0);
 
       // Also initialise slots for pending invitees using their invite:email key
       pendingInvites.forEach(inv => {
-        const key = `invite:${inv.invitedEmail || inv.email}`;
+        const key = 'invite:' + (inv.invitedEmail || inv.email);
         if (!(key in bals)) bals[key] = 0;
       });
 
-      expenses.filter(e => !e.isSettlement).forEach(e => {
-        // payer gets credited (support invite:email payer keys too)
-        if (bals[e.paidBy] !== undefined) bals[e.paidBy] += (+e.amount || 0);
+      // Alias map resolves old email/invite:email keys to current canonical keys
+      const alias = buildKeyAliasMap();
+      function resolve(key) {
+        if (bals[key] !== undefined) return key;
+        const a = alias[key];
+        if (a !== undefined && bals[a] !== undefined) return a;
+        if (key && key.startsWith('invite:')) {
+          const email = key.slice(7);
+          if (bals[email] !== undefined) return email;
+          const b = alias[email];
+          if (b !== undefined && bals[b] !== undefined) return b;
+        }
+        return null;
+      }
 
-        // each share gets debited
+      expenses.filter(e => !e.isSettlement).forEach(e => {
+        const payerKey = resolve(e.paidBy);
+        if (payerKey !== null) bals[payerKey] += (+e.amount || 0);
+
         if (Array.isArray(e.splits)) {
           e.splits.forEach(s => {
-            if (bals[s.userId] !== undefined) bals[s.userId] -= (+s.amount || 0);
+            const k = resolve(s.userId);
+            if (k !== null) bals[k] -= (+s.amount || 0);
           });
         } else if (e.splits && typeof e.splits === 'object') {
           Object.entries(e.splits).forEach(([uid, amt]) => {
-            if (bals[uid] !== undefined) bals[uid] -= (+amt || 0);
+            const k = resolve(uid);
+            if (k !== null) bals[k] -= (+amt || 0);
           });
         }
       });
 
-      // Apply settlements
+      // Apply settlements (also resolve old keys)
       settlements.forEach(s => {
-        if (bals[s.paidBy] !== undefined) bals[s.paidBy] += (+s.amount || 0);
-        if (bals[s.paidTo] !== undefined) bals[s.paidTo] -= (+s.amount || 0);
+        const fromKey = resolve(s.paidBy);
+        const toKey   = resolve(s.paidTo);
+        if (fromKey !== null) bals[fromKey] += (+s.amount || 0);
+        if (toKey   !== null) bals[toKey]   -= (+s.amount || 0);
       });
 
       return bals;
@@ -831,7 +868,8 @@
           const name = isPending ? mEmail : (m?.name || mEmail || mid);
           const email = mEmail;
           const isAdmin = group.createdBy === mid;
-          const paid = expenses.filter(e => e.paidBy === mid && !e.isSettlement).reduce((s,e) => s + (+e.amount||0), 0);
+          const alias2 = buildKeyAliasMap();
+          const paid = expenses.filter(e => !e.isSettlement && (e.paidBy === mid || alias2[e.paidBy] === mid)).reduce((s,e) => s + (+e.amount||0), 0);
           return `<div class="member-item">
             ${memberAvatar(mid)}
             <div class="member-info">
