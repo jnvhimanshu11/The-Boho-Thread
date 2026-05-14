@@ -443,31 +443,76 @@
 
         // 3. Load member profiles
         groupMembers = [];
+
+        // Helper: get all users ever stored in localStorage (legacy local DB)
+        function _localUsers() {
+          try {
+            const db = JSON.parse(localStorage.getItem('splitmate_db') || '{}');
+            return Object.values(db.users || {});
+          } catch(e) { return []; }
+        }
+
         for (const mid of group.members) {
           let found = null;
+
+          // Try 1: fetch by Firestore doc ID
           try {
-            // Try 1: fetch by Firestore doc ID (fastest)
             const udoc = await _fs().collection('users').doc(mid).get();
             if (udoc.exists) { found = udoc.data(); }
           } catch(e) {}
-          if (!found) {
+
+          // Try 2: query Firestore by email field (if mid looks like an email)
+          if (!found && mid.includes('@')) {
             try {
-              // Try 2: mid might be an email — query by email field
-              const snapEmail = await _fs().collection('users').where('email','==',mid).limit(1).get();
-              if (!snapEmail.empty) { found = snapEmail.docs[0].data(); }
+              const snap = await _fs().collection('users').where('email','==',mid).limit(1).get();
+              if (!snap.empty) { found = snap.docs[0].data(); }
             } catch(e) {}
           }
+
+          // Try 3: query Firestore by id field
           if (!found) {
             try {
-              // Try 3: mid is a custom id stored inside the doc — query by id field
-              const snapId = await _fs().collection('users').where('id','==',mid).limit(1).get();
-              if (!snapId.empty) { found = snapId.docs[0].data(); }
+              const snap = await _fs().collection('users').where('id','==',mid).limit(1).get();
+              if (!snap.empty) { found = snap.docs[0].data(); }
             } catch(e) {}
           }
-          // Always push something so the member row still appears
+
+          // Try 4: check localStorage (legacy user registered before Firestore was wired up)
+          if (!found) {
+            try {
+              const localDb = JSON.parse(localStorage.getItem('splitmate_db') || '{}');
+              const localUsers = Object.values(localDb.users || {});
+              const lu = localUsers.find(u => u.id === mid || u.email === mid);
+              if (lu && lu.name && lu.email) {
+                found = lu;
+                // Back-fill into Firestore so future lookups work
+                try {
+                  const saveData = { id: lu.id, email: lu.email, name: lu.name,
+                    avatarColor: lu.avatarColor || '#6c63ff', createdAt: lu.createdAt || Date.now(), groups: lu.groups || [] };
+                  await _fs().collection('users').doc(lu.id).set(saveData, { merge: true });
+                } catch(e2) {}
+              }
+            } catch(e) {}
+          }
+
+          // Try 5: check current session (the logged-in user viewing this page)
+          if (!found) {
+            try {
+              const sess = Auth.currentUser ? Auth.currentUser() : null;
+              if (sess && (sess.id === mid || sess.email === mid) && sess.name) {
+                found = sess;
+                // Back-fill into Firestore
+                try {
+                  const saveData = { id: sess.id, email: sess.email, name: sess.name,
+                    avatarColor: sess.avatarColor || '#6c63ff', createdAt: sess.createdAt || Date.now(), groups: sess.groups || [] };
+                  await _fs().collection('users').doc(sess.id).set(saveData, { merge: true });
+                } catch(e2) {}
+              }
+            } catch(e) {}
+          }
+
           groupMembers.push(found || { id: mid, email: mid.includes('@') ? mid : '', name: '' });
         }
-
         // 4. Load expenses
         const eSnap = await _fs().collection('expenses').where('groupId','==',groupId).get();
         expenses = eSnap.docs.map(d => d.data()).sort((a,b) => (b.date||b.createdAt||0) - (a.date||a.createdAt||0));
