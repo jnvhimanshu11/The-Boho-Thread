@@ -221,20 +221,30 @@ async function joinGroup() {
   showSuccess(payload.groupId);
 }
 
-function loginAndJoin() {
+async function loginAndJoin() {
   const email    = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
-  const r = Auth.login(email, password);
-  if (!r.success) { setAlert(r.error); return; }
+  // Look up user in Firestore first
+  let user = await DB.users.findByEmail(email);
+  if (!user) { setAlert('No account found with this email.'); return; }
+  if (user.password !== password) { setAlert('Invalid email or password.'); return; }
+  Auth.setSession(user);
   acceptInvite();
 }
 
-function registerAndJoin() {
+async function registerAndJoin() {
   const name     = document.getElementById('reg-name').value.trim();
   const email    = document.getElementById('reg-email').value.trim();
   const password = document.getElementById('reg-password').value;
-  const r = Auth.register(email, name, password);
-  if (!r.success) { setAlert(r.error); return; }
+  if (!name || !email || !password) { setAlert('All fields are required.'); return; }
+  if (password.length < 6) { setAlert('Password must be at least 6 characters.'); return; }
+  // Check if already exists in Firestore
+  let user = await DB.users.findByEmail(email);
+  if (user) { setAlert('An account with this email already exists.'); return; }
+  // Create user in Firestore (not localStorage)
+  user = await DB.users.create(email, name, password);
+  if (!user) { setAlert('Failed to create account.'); return; }
+  Auth.setSession(user);
   acceptInvite();
 }
 

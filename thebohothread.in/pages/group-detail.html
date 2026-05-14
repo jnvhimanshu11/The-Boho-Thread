@@ -445,19 +445,22 @@
         groupMembers = [];
         for (const mid of group.members) {
           try {
+            // Try 1: fetch by Firestore doc ID
             const udoc = await _fs().collection('users').doc(mid).get();
             if (udoc.exists) {
               groupMembers.push(udoc.data());
-            } else {
-              // mid might be an email — query by email
-              const snap = await _fs().collection('users').where('email','==',mid).limit(1).get();
-              if (!snap.empty) groupMembers.push(snap.docs[0].data());
-              const userSnap = await _fs().collection('users').where('uid', '==', mid).limit(1).get();
-if (!userSnap.empty) groupMembers.push(userSnap.docs[0].data());
-else groupMembers.push({ id: mid, email: mid, name: 'Unknown Member' });
+              continue;
             }
+            // Try 2: mid might be stored as email — query by email field
+            const snapEmail = await _fs().collection('users').where('email','==',mid).limit(1).get();
+            if (!snapEmail.empty) { groupMembers.push(snapEmail.docs[0].data()); continue; }
+            // Try 3: mid is a custom id — query by id field
+            const snapId = await _fs().collection('users').where('id','==',mid).limit(1).get();
+            if (!snapId.empty) { groupMembers.push(snapId.docs[0].data()); continue; }
+            // Fallback: unknown, store the raw mid so it's at least linkable
+            groupMembers.push({ id: mid, email: '', name: '' });
           } catch(e) {
-            groupMembers.push({ id: mid, email: mid, name: mid.split('@')[0] });
+            groupMembers.push({ id: mid, email: '', name: '' });
           }
         }
 
@@ -771,7 +774,7 @@ else groupMembers.push({ id: mid, email: mid, name: 'Unknown Member' });
           const m = groupMembers.find(u => (u.id || u.email) === mid || u.email === mid);
           const mEmail = m?.email || (mid.includes('@') ? mid : '');
           const isPending = pendingInvites.some(i => (i.invitedEmail || i.email) === mEmail);
-          const name = isPending ? mEmail : (m ? (m.name || mEmail) : (mid.includes('@') ? mid : 'Unknown Member'));
+          const name = isPending ? mEmail : (m?.name || mEmail || mid);
           const email = mEmail;
           const isAdmin = group.createdBy === mid;
           const paid = expenses.filter(e => e.paidBy === mid && !e.isSettlement).reduce((s,e) => s + (+e.amount||0), 0);
