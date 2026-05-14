@@ -452,7 +452,9 @@
               // mid might be an email — query by email
               const snap = await _fs().collection('users').where('email','==',mid).limit(1).get();
               if (!snap.empty) groupMembers.push(snap.docs[0].data());
-              else groupMembers.push({ id: mid, email: mid, name: mid.split('@')[0] });
+              const userSnap = await _fs().collection('users').where('uid', '==', mid).limit(1).get();
+if (!userSnap.empty) groupMembers.push(userSnap.docs[0].data());
+else groupMembers.push({ id: mid, email: mid, name: 'Unknown Member' });
             }
           } catch(e) {
             groupMembers.push({ id: mid, email: mid, name: mid.split('@')[0] });
@@ -769,7 +771,7 @@
           const m = groupMembers.find(u => (u.id || u.email) === mid || u.email === mid);
           const mEmail = m?.email || (mid.includes('@') ? mid : '');
           const isPending = pendingInvites.some(i => (i.invitedEmail || i.email) === mEmail);
-          const name = isPending ? mEmail : (m ? (m.name || mEmail) : (mid.includes('@') ? mid : mid.slice(0,8)));
+          const name = isPending ? mEmail : (m ? (m.name || mEmail) : (mid.includes('@') ? mid : 'Unknown Member'));
           const email = mEmail;
           const isAdmin = group.createdBy === mid;
           const paid = expenses.filter(e => e.paidBy === mid && !e.isSettlement).reduce((s,e) => s + (+e.amount||0), 0);
