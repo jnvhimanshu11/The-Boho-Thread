@@ -1594,18 +1594,16 @@
       const myId = currentUser.id, myEmail = currentUser.email;
       const myKey = group.members.find(m => m === myId || m === myEmail) || myEmail;
 
-      // Include pending/invited members (same pattern as openAddExpense)
-      const inviteKeys = pendingInvites.map(i => `invite:${i.invitedEmail || i.email}`);
+      // Only include invites that are still pending — skip declined/rejected ones
+      const activePendingInvites = pendingInvites.filter(i => i.status === 'pending');
+      const inviteKeys = activePendingInvites.map(i => `invite:${i.invitedEmail || i.email}`);
       const allMemberKeys = [...group.members, ...inviteKeys];
 
       const opts = allMemberKeys.map(m => {
-        const inv = pendingInvites.find(i => `invite:${i.invitedEmail || i.email}` === m);
-        let label;
-        if (inv) {
-          label = `${inv.invitedEmail || inv.email} (${inv.status === 'rejected' ? 'declined' : 'invited'})`;
-        } else {
-          label = memberName(m) + (m === myKey ? ' (You)' : '');
-        }
+        const inv = activePendingInvites.find(i => `invite:${i.invitedEmail || i.email}` === m);
+        const label = inv
+          ? `${inv.invitedEmail || inv.email} (invited)`
+          : memberName(m) + (m === myKey ? ' (You)' : '');
         return `<option value="${m}">${label}</option>`;
       }).join('');
 
@@ -1706,8 +1704,6 @@
         groupLogs.unshift(log);
       } catch(e) { console.warn('Group log write failed:', e); }
     }
-
-    
 
     // ── Settlement Audit Log ──────────────────────────────────────────────────
     async function writeSettlementLog(action, settlement, changes) {
