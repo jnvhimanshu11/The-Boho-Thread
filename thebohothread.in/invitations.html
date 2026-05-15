@@ -323,9 +323,9 @@ async function _jwtSign(payload) {
 
 <script>
 // ── Config ─────────────────────────────────────────────────────────────────
-const EMAILJS_SERVICE  = 'YOUR_EMAILJS_SERVICE_ID';
-const EMAILJS_TEMPLATE = 'YOUR_EMAILJS_TEMPLATE_ID';
-const EMAILJS_KEY      = 'YOUR_EMAILJS_PUBLIC_KEY';
+const EMAILJS_SERVICE  = 'service_5fhtkaj';
+const EMAILJS_TEMPLATE = 'template_i6ntai5';
+const EMAILJS_KEY      = 'BX_diJSU4apzbpE69';
 const SITE_URL         = window.location.origin;
 
 // ── State ───────────────────────────────────────────────────────────────────
@@ -764,15 +764,19 @@ async function doSend() {
       const link = `${SITE_URL}/invite.html?token=${token}`;
       await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
         to_email:    toEmail,
-        from_name:   currentUser.name,
+        to_name:     toEmail.split('@')[0],
+        from_name:   currentUser.name || currentUser.email.split('@')[0],
         group_name:  group.name,
+        invite_url:  link,
         invite_link: link,
         reply_to:    currentUser.email,
+        expiry_days: '7',
       });
       showToast('📧 Email invitation sent successfully!', 'success');
     } catch(e) {
       console.warn('EmailJS error:', e);
-      showToast('Invite saved! (Email delivery failed — check EmailJS config)', 'warning');
+      const errMsg = e?.text || e?.message || (typeof e === 'string' ? e : 'unknown error');
+      showToast('Invite saved to app! Email delivery failed: ' + errMsg, 'warning');
     }
   } else {
     showToast('✅ In-App invitation sent! They\'ll see it on their Invitations page.', 'success');
