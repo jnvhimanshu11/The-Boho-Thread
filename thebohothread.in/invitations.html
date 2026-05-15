@@ -137,6 +137,8 @@ async function _jwtSign(payload) {
 .inv-desc strong { color: var(--text2); }
 .inv-actions { display: flex; gap: 10px; }
 .inv-actions .btn { flex: 1; justify-content: center; font-size: 0.87rem; padding: 9px; }
+.btn-cancel { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 8px 16px; font-size: 0.87rem; cursor: pointer; transition: background 0.2s; }
+.btn-cancel:hover { background: rgba(239,68,68,0.25); }
 
 /* ── Send Form ─────────────────────────────────────────────────── */
 .method-grid {
@@ -348,7 +350,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   emailjs.init(EMAILJS_KEY);
 
   await renderGroupList();
-  switchTab('received');
+  await switchTab('received');
 });
 
 function initSidebarBehavior() {
@@ -385,234 +387,206 @@ async function switchTab(tab) {
   });
   document.getElementById('pane-'+tab).style.display = 'block';
   document.getElementById('tab-'+tab).classList.add('active');
-  if (tab === 'received') renderReceived();
-  if (tab === 'sent')     renderSent();
+  if (tab === 'received') await renderReceived();
+  if (tab === 'sent')     await renderSent();
   if (tab === 'send')     await renderGroupList();
 }
 
 // ── RECEIVED ────────────────────────────────────────────────────────────────
-function getMyPendingInvites() {
-  const all = read(INVITES_KEY);
-  return Object.values(all).filter(i => i.invitedEmail === currentUser.email && i.status === 'pending');
-}
-
-function renderReceived() {
-  const pane = document.getElementById('pane-received');
-  const pending = getMyPendingInvites();
-
-  // Badge
+async function renderReceived() {
+  const pane  = document.getElementById('pane-received');
   const badge = document.getElementById('recv-badge');
-  badge.textContent = pending.length;
-  badge.style.display = pending.length > 0 ? 'inline-block' : 'none';
-
-  if (!pending.length) {
-    pane.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-ico">📭</div>
-        <div class="empty-txt">No pending invitations</div>
-        <p style="font-size:0.82rem;color:var(--text3)">
-          When someone invites you to a group, it appears here.<br>
-          You can also accept via an email invite link.
-        </p>
-      </div>`;
-    return;
-  }
-
-  let html = `<div class="sec-lbl">Pending (${pending.length})</div>`;
-  pending.forEach(inv => {
-    const group  = (window._cachedGroups || {})[inv.groupId];
-    const gName  = group ? group.name : 'Unknown Group';
-    const gIco   = catIco(group?.category);
-    const byName = inv.invitedByName || inv.invitedBy || 'Someone';
-    const isApp  = inv.type === 'inapp';
-    const color  = avColor(byName);
-    const typePill = isApp
-      ? '<span class="pill pill-inapp">In-App</span>'
-      : '<span class="pill pill-email">Email</span>';
-    const desc = isApp
-      ? `<strong>${byName}</strong> invited you to join <strong>${gName}</strong>. Approve directly here — no email needed.`
-      : `<strong>${byName}</strong> invited you to join <strong>${gName}</strong> via email link.`;
-
-    html += `
-      <div class="inv-card" id="inv-${inv.id}">
-        <div class="inv-card-row">
-          <div class="inv-avatar" style="background:${color}">${initials(byName)}</div>
-          <div class="inv-info">
-            <div class="inv-name">${byName}</div>
-            <div class="inv-sub">${gIco} ${gName} · ${timeAgo(inv.createdAt)}</div>
-          </div>
-          ${typePill}
-        </div>
-        <div class="inv-desc">${desc}</div>
-        <div class="inv-actions">
-          <button class="btn btn-green" onclick="doAccept('${inv.id}')">✓ Accept</button>
-          <button class="btn btn-secondary" onclick="doDecline('${inv.id}')">✕ Decline</button>
-        </div>
-      </div>`;
-  });
-  pane.innerHTML = html;
-}
-
-async function doAccept(id) {
-  const invites = read(INVITES_KEY);
-  const inv = invites[id];
-  if (!inv) return;
-  inv.status = 'accepted';
-  inv.acceptedAt = Date.now();
-  write(INVITES_KEY, invites);
-
-  // Add user to group in Firestore
-  try {
-    await firebase.firestore().collection('groups').doc(inv.groupId).update({
-      members: firebase.firestore.FieldValue.arrayUnion(currentUser.id)
-    });
-    // Refresh the group cache so the new membership is reflected
-    await renderGroupList();
-  } catch(e) {
-    console.warn('Could not update group membership in Firestore:', e);
-  }
-
-  showToast('🎉 Invitation accepted! You joined the group.', 'success');
-  renderReceived();
-  // refresh sidebar badge
-  document.getElementById('sidebar-mount').innerHTML = renderSidebar('invitations');
-  initSidebarBehavior();
-}
-
-function doDecline(id) {
-  const invites = read(INVITES_KEY);
-  if (!invites[id]) return;
-  invites[id].status = 'declined';
-  write(INVITES_KEY, invites);
-  showToast('Invitation declined.', 'warning');
-  renderReceived();
-}
-
-// ── SENT ────────────────────────────────────────────────────────────────────
-function renderSent() {
-  const pane = document.getElementById('pane-sent');
-  const all = read(INVITES_KEY);
-  const mine = Object.values(all)
-    .filter(i => i.invitedBy === currentUser.name || i.invitedBy === currentUser.email || i.sentByEmail === currentUser.email)
-    .sort((a,b) => b.createdAt - a.createdAt);
-
-  if (!mine.length) {
-    pane.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-ico">📤</div>
-        <div class="empty-txt">No invitations sent yet</div>
-        <button class="btn btn-primary" onclick="switchTab('send')">+ Send Your First Invite</button>
-      </div>`;
-    return;
-  }
-
-  let html = `<div class="sec-lbl">Sent Invitations</div>`;
-  mine.forEach(inv => {
-    const g     = (window._cachedGroups || {})[inv.groupId];
-    const gName = g ? g.name : 'Unknown Group';
-    const gIco  = catIco(g?.category);
-    const toStr = inv.invitedEmail || '';
-    const toName= toStr.split('@')[0];
-    const color = avColor(toStr);
-    const status= inv.status || 'pending';
-    const statusPill = {
-      pending:  '<span class="pill pill-pend">Pending</span>',
-      accepted: '<span class="pill pill-ok">Accepted ✓</span>',
-      declined: '<span class="pill pill-no">Declined</span>',
-    }[status] || '';
-    const typePill = (inv.type === 'inapp')
-      ? '<span class="pill pill-inapp">In-App</span>'
-      : '<span class="pill pill-email">Email</span>';
-
-    html += `
-      <div class="inv-card">
-        <div class="inv-card-row">
-          <div class="inv-avatar" style="background:${color}">${initials(toName)}</div>
-          <div class="inv-info">
-            <div class="inv-name">${toStr}</div>
-            <div class="inv-sub">${gIco} ${gName} · ${timeAgo(inv.createdAt)}</div>
-          </div>
-          <div class="inv-badges">
-            ${statusPill}
-            ${typePill}
-          </div>
-        </div>
-      </div>`;
-  });
-  pane.innerHTML = html;
-}
-
-// ── SEND ─────────────────────────────────────────────────────────────────────
-function setMethod(m) {
-  sendMethod = m;
-  document.getElementById('mc-email').classList.toggle('sel', m === 'email');
-  document.getElementById('mc-inapp').classList.toggle('sel', m === 'inapp');
-
-  const info = document.getElementById('method-info');
-  const ef   = document.getElementById('email-field');
-  const iaf  = document.getElementById('inapp-field');
-  const lbl  = document.getElementById('recip-lbl');
-  const btn  = document.getElementById('send-btn');
-
-  if (m === 'email') {
-    info.className = 'info-banner info-email';
-    info.innerHTML = '📧 <strong style="color:var(--text2)">Email invite:</strong> A secure join link is emailed to them. Works even without an existing SplitMate account.';
-    ef.style.display  = 'block';
-    iaf.style.display = 'none';
-    lbl.textContent   = 'Recipient Email';
-    btn.innerHTML     = '📧 Send Email Invitation';
-  } else {
-    info.className = 'info-banner info-inapp';
-    info.innerHTML = '✅ <strong style="color:var(--text2)">In-App invite:</strong> The user gets a notification directly on their Invitations page. No email required — both users must be logged in.';
-    ef.style.display  = 'none';
-    iaf.style.display = 'block';
-    lbl.textContent   = 'Recipient (registered email)';
-    btn.innerHTML     = '✅ Send In-App Invitation';
-  }
-}
-
-async function renderGroupList() {
-  const el = document.getElementById('group-list');
-  el.innerHTML = '<div style="color:var(--text3);font-size:0.85rem;padding:8px">Loading groups…</div>';
+  pane.innerHTML = '<div style="color:var(--text3);font-size:0.85rem;padding:16px">Loading…</div>';
 
   try {
-    const snap = await firebase.firestore().collection('groups')
-      .where('members', 'array-contains', currentUser.id)
+    const snap = await firebase.firestore().collection('invitations')
+      .where('invitedEmail', '==', currentUser.email)
+      .where('status', '==', 'pending')
       .get();
-    const myGroups = snap.docs.map(d => d.data());
+    const pending = snap.docs.map(d => d.data());
 
-    if (!myGroups.length) {
-      el.innerHTML = `<div style="color:var(--text3);font-size:0.85rem;padding:8px">
-        You have no groups yet. <a href="dashboard.html" style="color:var(--accent)">Create one →</a></div>`;
+    badge.textContent = pending.length;
+    badge.style.display = pending.length > 0 ? 'inline-block' : 'none';
+
+    if (!pending.length) {
+      pane.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-ico">📭</div>
+          <div class="empty-txt">No pending invitations</div>
+          <p style="font-size:0.82rem;color:var(--text3)">
+            When someone invites you to a group, it appears here.<br>
+            You can also accept via an email invite link.
+          </p>
+        </div>`;
       return;
     }
 
-    // Cache fetched groups in memory so doSend() can look them up without another DB call
-    window._cachedGroups = {};
-    myGroups.forEach(g => window._cachedGroups[g.id] = g);
+    let html = `<div class="sec-lbl">Pending (${pending.length})</div>`;
+    pending.forEach(inv => {
+      const group  = (window._cachedGroups || {})[inv.groupId];
+      const gName  = group ? group.name : (inv.groupName || 'Unknown Group');
+      const gIco   = catIco(inv.groupCategory || group?.category);
+      const byName = inv.invitedByName || inv.invitedBy || 'Someone';
+      const isApp  = inv.type === 'inapp';
+      const color  = avColor(byName);
+      const typePill = isApp
+        ? '<span class="pill pill-inapp">In-App</span>'
+        : '<span class="pill pill-email">Email</span>';
+      const desc = isApp
+        ? `<strong>${byName}</strong> invited you to join <strong>${gName}</strong>. Approve directly here.`
+        : `<strong>${byName}</strong> invited you to join <strong>${gName}</strong> via email link.`;
 
-    el.innerHTML = myGroups.map(g => `
-      <div class="group-pick" id="gp-${g.id}" onclick="pickGroup('${g.id}')">
-        <div class="group-pick-ico">${catIco(g.category)}</div>
-        <div class="group-pick-info">
-          <div class="group-pick-name">${g.name}</div>
-          <div class="group-pick-mem">${g.members.length} member${g.members.length!==1?'s':''}</div>
-        </div>
-        <div class="group-pick-chk">✓</div>
-      </div>`).join('');
+      html += `
+        <div class="inv-card" id="inv-${inv.id}">
+          <div class="inv-card-row">
+            <div class="inv-avatar" style="background:${color}">${initials(byName)}</div>
+            <div class="inv-info">
+              <div class="inv-name">${byName}</div>
+              <div class="inv-sub">${gIco} ${gName} · ${timeAgo(inv.createdAt)}</div>
+            </div>
+            ${typePill}
+          </div>
+          <div class="inv-desc">${desc}</div>
+          <div class="inv-actions">
+            <button class="btn btn-green" onclick="doAccept('${inv.id}')">✓ Accept</button>
+            <button class="btn btn-secondary" onclick="doDecline('${inv.id}')">✕ Decline</button>
+          </div>
+        </div>`;
+    });
+    pane.innerHTML = html;
   } catch(e) {
-    console.error('renderGroupList error:', e);
-    el.innerHTML = '<div style="color:#ef4444;font-size:0.85rem;padding:8px">Failed to load groups.</div>';
+    console.error('renderReceived error:', e);
+    pane.innerHTML = '<div style="color:#ef4444;padding:16px">Failed to load invitations.</div>';
   }
 }
 
-function pickGroup(id) {
-  selectedGroup = id;
-  document.querySelectorAll('.group-pick').forEach(el => el.classList.remove('sel'));
-  const el = document.getElementById('gp-'+id);
-  if (el) el.classList.add('sel');
+async function doAccept(id) {
+  const fs = firebase.firestore();
+  try {
+    const doc = await fs.collection('invitations').doc(id).get();
+    if (!doc.exists) { showToast('Invitation not found.', 'error'); return; }
+    const inv = doc.data();
+
+    // Mark accepted in Firestore
+    await fs.collection('invitations').doc(id).update({
+      status: 'accepted',
+      acceptedAt: Date.now()
+    });
+
+    // Add user to group in Firestore
+    await fs.collection('groups').doc(inv.groupId).update({
+      members: firebase.firestore.FieldValue.arrayUnion(currentUser.id, currentUser.email)
+    });
+
+    // Refresh group cache
+    await renderGroupList();
+    showToast('🎉 Invitation accepted! You joined the group.', 'success');
+    renderReceived();
+    document.getElementById('sidebar-mount').innerHTML = renderSidebar('invitations');
+    initSidebarBehavior();
+  } catch(e) {
+    console.error('doAccept error:', e);
+    showToast('Failed to accept invitation.', 'error');
+  }
 }
 
+async function doDecline(id) {
+  try {
+    await firebase.firestore().collection('invitations').doc(id).update({
+      status: 'declined',
+      declinedAt: Date.now()
+    });
+    showToast('Invitation declined.', 'warning');
+    renderReceived();
+  } catch(e) {
+    console.error('doDecline error:', e);
+    showToast('Failed to decline invitation.', 'error');
+  }
+}
+
+// ── SENT ────────────────────────────────────────────────────────────────────
+async function renderSent() {
+  const pane = document.getElementById('pane-sent');
+  pane.innerHTML = '<div style="color:var(--text3);font-size:0.85rem;padding:16px">Loading…</div>';
+
+  try {
+    const snap = await firebase.firestore().collection('invitations')
+      .where('sentByEmail', '==', currentUser.email)
+      .orderBy('createdAt', 'desc')
+      .get();
+    const mine = snap.docs.map(d => d.data());
+
+    if (!mine.length) {
+      pane.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-ico">📤</div>
+          <div class="empty-txt">No invitations sent yet</div>
+          <button class="btn btn-primary" onclick="switchTab('send')">+ Send Your First Invite</button>
+        </div>`;
+      return;
+    }
+
+    const statusPillMap = {
+      pending:  '<span class="pill pill-pending">Pending</span>',
+      accepted: '<span class="pill pill-accepted">Accepted</span>',
+      declined: '<span class="pill pill-declined">Declined</span>',
+      cancelled:'<span class="pill pill-declined">Cancelled</span>',
+    };
+
+    let html = `<div class="sec-lbl">Sent Invitations</div>`;
+    mine.forEach(inv => {
+      const g      = (window._cachedGroups || {})[inv.groupId];
+      const gName  = g ? g.name : (inv.groupName || 'Unknown Group');
+      const gIco   = catIco(inv.groupCategory || g?.category);
+      const toStr  = inv.invitedEmail || '';
+      const toName = toStr.split('@')[0];
+      const color  = avColor(toStr);
+      const status = inv.status || 'pending';
+      const pill   = statusPillMap[status] || statusPillMap.pending;
+      const typePill = inv.type === 'inapp'
+        ? '<span class="pill pill-inapp">In-App</span>'
+        : '<span class="pill pill-email">Email</span>';
+
+      const cancelBtn = status === 'pending'
+        ? `<button class="btn btn-cancel" onclick="doCancel('${inv.id}')">✕ Cancel</button>`
+        : '';
+
+      html += `
+        <div class="inv-card" id="inv-${inv.id}">
+          <div class="inv-card-row">
+            <div class="inv-avatar" style="background:${color}">${initials(toName)}</div>
+            <div class="inv-info">
+              <div class="inv-name">${toStr}</div>
+              <div class="inv-sub">${gIco} ${gName} · ${timeAgo(inv.createdAt)}</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">${pill}${typePill}</div>
+          </div>
+          ${cancelBtn ? `<div class="inv-actions">${cancelBtn}</div>` : ''}
+        </div>`;
+    });
+    pane.innerHTML = html;
+  } catch(e) {
+    console.error('renderSent error:', e);
+    pane.innerHTML = '<div style="color:#ef4444;padding:16px">Failed to load sent invitations.</div>';
+  }
+}
+
+async function doCancel(id) {
+  if (!confirm('Cancel this invitation?')) return;
+  try {
+    await firebase.firestore().collection('invitations').doc(id).update({
+      status: 'cancelled',
+      cancelledAt: Date.now()
+    });
+    showToast('Invitation cancelled.', 'warning');
+    renderSent();
+  } catch(e) {
+    console.error('doCancel error:', e);
+    showToast('Failed to cancel invitation.', 'error');
+  }
+}
+
+// ── SEND ─────────────────────────────────────────────────────────────────────
 async function doSend() {
   if (!selectedGroup) { showToast('Please select a group first.', 'warning'); return; }
 
@@ -628,31 +602,43 @@ async function doSend() {
     showToast('This person is already a member of the group.', 'warning'); return;
   }
 
-  // Check for duplicate pending invite
-  const existing = read(INVITES_KEY);
-  const dupe = Object.values(existing).some(
-    i => i.groupId === selectedGroup && i.invitedEmail === toEmail && i.status === 'pending'
-  );
-  if (dupe) { showToast('A pending invite already exists for this email.', 'warning'); return; }
+  // Duplicate check in Firestore
+  const dupeSnap = await firebase.firestore().collection('invitations')
+    .where('groupId', '==', selectedGroup)
+    .where('invitedEmail', '==', toEmail)
+    .where('status', '==', 'pending')
+    .get();
+  if (!dupeSnap.empty) { showToast('A pending invite already exists for this email.', 'warning'); return; }
 
   const btn = document.getElementById('send-btn');
   btn.disabled = true; btn.textContent = 'Sending…';
 
-  // Save invite to localStorage
-  const invites = read(INVITES_KEY);
-  const id = uid();
-  invites[id] = {
+  // Save invite to Firestore
+  const id  = uid();
+  const inv = {
     id,
     groupId:       selectedGroup,
+    groupName:     group.name,
+    groupCategory: group.category || '',
     invitedEmail:  toEmail,
     invitedBy:     currentUser.name,
     invitedByName: currentUser.name,
     sentByEmail:   currentUser.email,
+    sentById:      currentUser.id,
     type:          sendMethod,
     status:        'pending',
     createdAt:     Date.now(),
   };
-  write(INVITES_KEY, invites);
+
+  try {
+    await firebase.firestore().collection('invitations').doc(id).set(inv);
+  } catch(e) {
+    console.error('Firestore save error:', e);
+    showToast('Failed to save invitation. Check Firestore rules.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = sendMethod === 'email' ? '📧 Send Email Invitation' : '✅ Send In-App Invitation';
+    return;
+  }
 
   if (sendMethod === 'email') {
     try {
