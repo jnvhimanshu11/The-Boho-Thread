@@ -866,7 +866,19 @@
 
       // Alias map resolves old email/invite:email keys to current canonical keys
       const alias = buildKeyAliasMap();
+
+      // Build a reverse map: bare email → invite:email  for pending-only members
+      const pendingEmailToKey = {};
+      pendingInvites.forEach(inv => {
+        const email = inv.invitedEmail || inv.email;
+        const invKey = 'invite:' + email;
+        if (email && !(email in bals) && (invKey in bals)) {
+          pendingEmailToKey[email] = invKey;
+        }
+      });
+
       function resolve(key) {
+        if (key === null || key === undefined) return null;
         if (bals[key] !== undefined) return key;
         const a = alias[key];
         if (a !== undefined && bals[a] !== undefined) return a;
@@ -876,6 +888,8 @@
           const b = alias[email];
           if (b !== undefined && bals[b] !== undefined) return b;
         }
+        // Check if bare email belongs to a pending invitee
+        if (pendingEmailToKey[key]) return pendingEmailToKey[key];
         return null;
       }
 
@@ -961,10 +975,9 @@
       // Accepted members rows
       const acceptedRows = group.members.map(mid => makeRow(mid, bals[mid] || 0)).join('');
 
-      // Pending invitee rows — only those who have a non-zero balance
+      // Pending invitee rows — show ALL pending invitees (zero or non-zero balance)
       const inviteKeys = pendingInvites.map(i => `invite:${i.invitedEmail || i.email}`);
       const inviteRows = inviteKeys
-        .filter(key => Math.abs(bals[key] || 0) > 0.005)
         .map(key => makeRow(key, bals[key] || 0)).join('');
 
       const inviteSection = inviteRows
