@@ -478,7 +478,7 @@
       currentUser = Auth.requireAuth('../index.html');
       if (!currentUser) return;
 
-      groupId = new URLSearchParams(location.search).get('id');
+      groupId = (window.__urlParams || new URLSearchParams(location.search)).get('id');
       if (!groupId) { window.location.href = '../dashboard.html'; return; }
 
       try { Sidebar.init('groups'); } catch(e) {}
