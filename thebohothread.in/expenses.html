@@ -430,7 +430,7 @@ function exportToExcel() {
       'Group':       e.groupName   || '—',
       'Category':    catLabel(e.category) || '—',
       'Amount (₹)':  +(+e.amount || 0).toFixed(2),
-      'Paid By':     payerName(e.paidBy),
+      'Paid By':     realPayerName(e.paidBy),
       'Your Share (₹)': myShare ? +(+myShare.amount).toFixed(2) : (iPaid ? +(+e.amount / 2).toFixed(2) : 0),
       'You Paid?':   iPaid ? 'Yes' : 'No',
       'Type':        e.isSettlement ? 'Settlement' : 'Expense',
@@ -491,6 +491,17 @@ function exportToExcel() {
 function payerName(paidBy) {
   const myId    = currentUser.id, myEmail = currentUser.email;
   if (paidBy === myId || paidBy === myEmail) return 'You';
+  const u = usersMap[paidBy];
+  if (u) return u.name || u.email || paidBy;
+  return paidBy.includes('@') ? paidBy.split('@')[0] : paidBy.slice(0,8);
+}
+
+function realPayerName(paidBy) {
+  // Always returns the actual name, never "You" — used for Excel export
+  const myId = currentUser.id, myEmail = currentUser.email;
+  if (paidBy === myId || paidBy === myEmail) {
+    return currentUser.name || currentUser.email || 'Me';
+  }
   const u = usersMap[paidBy];
   if (u) return u.name || u.email || paidBy;
   return paidBy.includes('@') ? paidBy.split('@')[0] : paidBy.slice(0,8);
