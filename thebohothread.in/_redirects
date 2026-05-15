@@ -1,0 +1,36 @@
+# Netlify URL Rewrite Rules — SplitMate
+# These rules serve all pages from the root domain (thebohothread.in)
+# while still passing query params to the actual HTML files internally.
+
+# Mask /group/:id  → pages/group-detail.html?id=:id
+/group/:id    /pages/group-detail.html?id=:id    200
+
+# Mask /add-expense → add-expense.html (with any query params forwarded)
+/add-expense  /add-expense.html    200
+
+# Mask /dashboard  → pages/dashboard.html
+/dashboard    /pages/dashboard.html    200
+
+# Mask /groups     → pages/groups.html
+/groups       /pages/groups.html       200
+
+# Mask /expenses   → expenses.html
+/expenses     /expenses.html           200
+
+# Mask /invitations → pages/invitations.html
+/invitations  /pages/invitations.html  200
+
+# Mask /profile    → profile.html
+/profile      /profile.html            200
+
+# Mask /balances   → pages/balances.html
+/balances     /pages/balances.html     200
+
+# Mask /activity   → pages/activity.html
+/activity     /pages/activity.html     200
+
+# Mask /invite     → invite.html (with token param forwarded)
+/invite       /invite.html             200
+
+# Catch-all: serve index.html for any unmatched route
+/*            /index.html              200

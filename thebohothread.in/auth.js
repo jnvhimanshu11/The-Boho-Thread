@@ -182,7 +182,7 @@ function initials(name) {
 
 // ---- URL PARAMS ----
 function getParam(key) {
-  return new URLSearchParams(window.location.search).get(key);
+  return (window.__urlParams || new URLSearchParams(window.location.search)).get(key);
 }
 
 function setParam(key, value) {

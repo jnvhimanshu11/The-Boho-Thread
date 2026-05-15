@@ -1,0 +1,43 @@
+Options -MultiViews
+RewriteEngine On
+RewriteBase /
+
+# ── Serve existing files/folders as-is ───────────────────────────────────────
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# ── Clean URL → actual file rewrites ─────────────────────────────────────────
+
+# /group/abc123  →  /pages/group-detail.html?id=abc123
+RewriteRule ^group/([^/]+)/?$  /pages/group-detail.html?id=$1  [QSA,L]
+
+# /dashboard  →  /pages/dashboard.html
+RewriteRule ^dashboard/?$       /pages/dashboard.html           [QSA,L]
+
+# /groups  →  /pages/groups.html
+RewriteRule ^groups/?$          /pages/groups.html              [QSA,L]
+
+# /expenses  →  /expenses.html
+RewriteRule ^expenses/?$        /expenses.html                  [QSA,L]
+
+# /add-expense  →  /add-expense.html
+RewriteRule ^add-expense/?$     /add-expense.html               [QSA,L]
+
+# /invitations  →  /pages/invitations.html
+RewriteRule ^invitations/?$     /pages/invitations.html         [QSA,L]
+
+# /profile  →  /profile.html
+RewriteRule ^profile/?$         /profile.html                   [QSA,L]
+
+# /balances  →  /pages/balances.html
+RewriteRule ^balances/?$        /pages/balances.html            [QSA,L]
+
+# /activity  →  /pages/activity.html
+RewriteRule ^activity/?$        /pages/activity.html            [QSA,L]
+
+# /invite  →  /invite.html (token passed as query param)
+RewriteRule ^invite/?$          /invite.html                    [QSA,L]
+
+# ── Catch-all: send everything else to index.html ────────────────────────────
+RewriteRule ^(.*)$              /index.html                     [QSA,L]

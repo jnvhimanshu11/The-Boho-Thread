@@ -97,6 +97,7 @@
 
 
 <!-- Firebase SDKs -->
+<script src="url-mask.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -115,7 +116,7 @@
 <script src="db.firestore.js"></script>
 <script src="auth.js"></script>
 <script>
-const invToken = new URLSearchParams(location.search).get('invite');
+const invToken = (window.__urlParams || new URLSearchParams(location.search)).get("invite");
 if (invToken) localStorage.setItem('pending_invite', invToken);
 
 function alert_(id, msg, type='error') {
