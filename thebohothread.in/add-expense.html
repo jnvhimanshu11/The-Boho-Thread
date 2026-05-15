@@ -185,8 +185,10 @@ async function onGroupChange() {
   }
 
   // Build a unified member list:
-  // Real members get their user object; invited-but-not-accepted get a virtual object
-  const inviteVirtuals = pendingInvites.map(inv => ({
+  // Real members get their user object; only truly pending invites shown (not declined)
+  const inviteVirtuals = pendingInvites
+    .filter(inv => inv.status === 'pending')
+    .map(inv => ({
     id: inv.token,           // use token as a unique key
     name: inv.email,         // show email as name until accepted
     email: inv.email,
@@ -207,8 +209,6 @@ function populatePayerSelect() {
     let label;
     if (m.isInvitePending) {
       label = `${m.email} (invited)`;
-    } else if (m.isInviteRejected) {
-      label = `${m.email} (declined)`;
     } else {
       label = m.id === user.id ? 'You' : m.name;
     }
