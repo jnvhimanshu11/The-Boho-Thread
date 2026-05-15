@@ -1623,9 +1623,9 @@
       try {
         // Build a changes diff before updating
         const changes = [];
-        if (name !== group.name)        changes.push({ field: 'Name',        before: group.name        || '—', after: name });
-        if (desc !== group.description) changes.push({ field: 'Description', before: group.description || '—', after: desc || '—' });
-        if (cat  !== group.category)    changes.push({ field: 'Category',    before: group.category    || '—', after: cat });
+        if (name !== group.name)                                    changes.push({ field: 'Name',        before: group.name        || '—', after: name });
+        if (desc !== (group.description || ''))                     changes.push({ field: 'Description', before: group.description || '—', after: desc || '—' });
+        if (cat  !== group.category)                                changes.push({ field: 'Category',    before: group.category    || '—', after: cat });
 
         await _fs().collection('groups').doc(groupId).update({ name, description: desc, category: cat, updatedAt: Date.now() });
         group.name = name; group.description = desc; group.category = cat;
@@ -1636,6 +1636,7 @@
         closeMod('edit-group-modal');
         toast_('Group updated ✓', 'success');
         renderHeader();
+        renderTab(currentTab);
       } catch(err) { toast_('Update failed: ' + err.message, 'error'); }
     }
 
