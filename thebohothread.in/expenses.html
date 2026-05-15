@@ -32,7 +32,10 @@
           <div class="page-title">All Expenses</div>
           <div class="page-subtitle">Your complete expense history</div>
         </div>
-        <a href="add-expense.html" class="btn btn-primary">+ Add Expense</a>
+        <button class="btn btn-primary" onclick="exportToExcel()" style="display:flex;align-items:center;gap:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+          Export to Excel
+        </button>
       </div>
     </div>
 
@@ -109,6 +112,8 @@
   };
   firebase.initializeApp(firebaseConfig);
 </script>
+<!-- SheetJS for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="db.firestore.js"></script>
 <script src="auth.js"></script>
 <script>
@@ -395,6 +400,91 @@ function clearFilters() {
   document.getElementById('filter-cat').value   = 'all';
   document.getElementById('filter-month').value = 'all';
   applyFilters();
+}
+
+// ── Export to Excel ──────────────────────────────────────────────────────────
+function exportToExcel() {
+  if (!filtered.length) {
+    alert('No expenses to export. Please adjust your filters.');
+    return;
+  }
+
+  const myId    = currentUser.id;
+  const myEmail = currentUser.email;
+
+  // Build active filter labels for filename
+  const gSel  = document.getElementById('filter-group');
+  const cSel  = document.getElementById('filter-cat');
+  const mSel  = document.getElementById('filter-month');
+  const gLabel = gSel.options[gSel.selectedIndex].text;
+  const cLabel = cSel.options[cSel.selectedIndex].text;
+  const mLabel = mSel.options[mSel.selectedIndex].text;
+
+  // Build rows
+  const rows = filtered.map(e => {
+    const iPaid   = e.paidBy === myId || e.paidBy === myEmail;
+    const myShare = e.splits?.find(s => s.userId === myId || s.userId === myEmail);
+    return {
+      'Date':        fmtDate(e.date || e.createdAt) || '—',
+      'Description': e.description || '—',
+      'Group':       e.groupName   || '—',
+      'Category':    catLabel(e.category) || '—',
+      'Amount (₹)':  +(+e.amount || 0).toFixed(2),
+      'Paid By':     payerName(e.paidBy),
+      'Your Share (₹)': myShare ? +(+myShare.amount).toFixed(2) : (iPaid ? +(+e.amount / 2).toFixed(2) : 0),
+      'You Paid?':   iPaid ? 'Yes' : 'No',
+      'Type':        e.isSettlement ? 'Settlement' : 'Expense',
+    };
+  });
+
+  // Summary rows at top
+  const myId2    = currentUser.id, myEmail2 = currentUser.email;
+  const nonSettle = filtered.filter(e => !e.isSettlement);
+  const totalAmt  = nonSettle.reduce((s,e) => s + (+e.amount||0), 0);
+  const myPaid    = nonSettle.filter(e => e.paidBy === myId2 || e.paidBy === myEmail2).reduce((s,e) => s + (+e.amount||0), 0);
+  const myShareTot= nonSettle.reduce((s,e) => {
+    const sp = e.splits?.find(sp => sp.userId === myId2 || sp.userId === myEmail2);
+    return s + (sp ? +sp.amount : 0);
+  }, 0);
+  const net = myPaid - myShareTot;
+
+  const summary = [
+    { 'Filters Applied': `Group: ${gLabel}  |  Category: ${cLabel}  |  Month: ${mLabel}` },
+    { 'Filters Applied': `Total Expenses: ${filtered.length}  |  Total Spend: ₹${totalAmt.toFixed(2)}  |  You Paid: ₹${myPaid.toFixed(2)}  |  Your Share: ₹${myShareTot.toFixed(2)}  |  Net Balance: ₹${net.toFixed(2)}` },
+    {},
+  ];
+
+  const wb = XLSX.utils.book_new();
+
+  // Summary sheet
+  const summaryWs = XLSX.utils.json_to_sheet(summary, { skipHeader: true });
+  summaryWs['!cols'] = [{ wch: 120 }];
+
+  // Data rows
+  const dataWs = XLSX.utils.json_to_sheet(rows);
+  dataWs['!cols'] = [
+    { wch: 14 }, { wch: 28 }, { wch: 18 }, { wch: 16 },
+    { wch: 12 }, { wch: 18 }, { wch: 16 }, { wch: 10 }, { wch: 12 }
+  ];
+
+  // Combine: summary rows + blank + data on same sheet
+  const combined = XLSX.utils.json_to_sheet([]);
+  XLSX.utils.sheet_add_json(combined, summary, { skipHeader: true, origin: 'A1' });
+  XLSX.utils.sheet_add_json(combined, rows, { origin: 'A4' });
+  combined['!cols'] = dataWs['!cols'];
+
+  XLSX.utils.book_append_sheet(wb, combined, 'Expenses');
+
+  // Filename: SplitMate_Expenses_Group_Category_Month.xlsx
+  const parts = [
+    'SplitMate_Expenses',
+    gLabel  !== 'All Groups'      ? gLabel.replace(/\s+/g,'_')  : null,
+    cLabel  !== 'All Categories'  ? cLabel.replace(/\s+/g,'_')  : null,
+    mLabel  !== 'All Time'        ? mLabel.replace(/\s+/g,'_')  : null,
+  ].filter(Boolean);
+  const filename = parts.join('_') + '.xlsx';
+
+  XLSX.writeFile(wb, filename);
 }
 
 // ── List ─────────────────────────────────────────────────────────────────────
