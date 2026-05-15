@@ -147,11 +147,9 @@ let allGroups   = [];   // group docs
 let usersMap    = {};   // userId -> user doc
 let filtered    = [];
 
-const _fs = () => firebase.firestore();
-
 // ── Boot ─────────────────────────────────────────────────────────────────────
 firebase.auth().onAuthStateChanged(async fu => {
-  if (!fu) { window.location.href = '../index.html'; return; }
+  if (!fu) { window.location.href = 'index.html'; return; }
 
   // Resolve current user from Firestore users collection
   try {
