@@ -246,9 +246,10 @@ async function loadAll() {
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────
-function renderStats() {
+function renderStats(data) {
+  const src = data || allExpenses;
   const myId = currentUser.id, myEmail = currentUser.email;
-  const nonSettle = allExpenses.filter(e => !e.isSettlement);
+  const nonSettle = src.filter(e => !e.isSettlement);
 
   const total   = nonSettle.reduce((s,e) => s + (+e.amount||0), 0);
   const myPaid  = nonSettle.filter(e => e.paidBy === myId || e.paidBy === myEmail).reduce((s,e) => s + (+e.amount||0), 0);
@@ -282,8 +283,9 @@ function renderStats() {
 }
 
 // ── Charts ───────────────────────────────────────────────────────────────────
-function renderCharts() {
-  const nonSettle = allExpenses.filter(e => !e.isSettlement);
+function renderCharts(data) {
+  const src = data || allExpenses;
+  const nonSettle = src.filter(e => !e.isSettlement);
 
   // Category pie
   const byCat = {};
@@ -392,6 +394,8 @@ function applyFilters() {
 
   document.getElementById('result-count').textContent =
     `${filtered.length} expense${filtered.length !== 1 ? 's' : ''}`;
+  renderStats(filtered);
+  renderCharts(filtered);
   renderList();
 }
 
