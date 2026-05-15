@@ -428,23 +428,44 @@
           return;
         }
 
-        // 3. Load member profiles
-        groupMembers = [];
+        // 3. Load member profiles (deduplicate: same user may appear as both ID and email)
+        const _rawMembers = [];
         for (const mid of group.members) {
           try {
             const udoc = await _fs().collection('users').doc(mid).get();
             if (udoc.exists) {
-              groupMembers.push(udoc.data());
+              _rawMembers.push(udoc.data());
             } else {
               // mid might be an email — query by email
               const snap = await _fs().collection('users').where('email','==',mid).limit(1).get();
-              if (!snap.empty) groupMembers.push(snap.docs[0].data());
-              else groupMembers.push({ id: mid, email: mid, name: mid.split('@')[0] });
+              if (!snap.empty) _rawMembers.push(snap.docs[0].data());
+              else _rawMembers.push({ id: mid, email: mid, name: mid.includes('@') ? mid.split('@')[0] : mid });
             }
           } catch(e) {
-            groupMembers.push({ id: mid, email: mid, name: mid.split('@')[0] });
+            _rawMembers.push({ id: mid, email: mid, name: mid.includes('@') ? mid.split('@')[0] : mid });
           }
         }
+        // Deduplicate by email — keep first occurrence of each unique email
+        const _seenEmails = new Set();
+        const _seenIds    = new Set();
+        groupMembers = [];
+        for (const m of _rawMembers) {
+          const key = m.email ? m.email.toLowerCase() : (m.id || '');
+          if (key && _seenEmails.has(key)) continue;
+          if (m.id && _seenIds.has(m.id)) continue;
+          if (key) _seenEmails.add(key);
+          if (m.id) _seenIds.add(m.id);
+          groupMembers.push(m);
+        }
+        // Also deduplicate group.members array in memory for consistent count display
+        const _memberKeySet = new Set();
+        group.members = group.members.filter(mid => {
+          const resolved = groupMembers.find(u => u.id === mid || (u.email||'').toLowerCase() === mid.toLowerCase());
+          const key = resolved ? (resolved.email||resolved.id||mid).toLowerCase() : mid.toLowerCase();
+          if (_memberKeySet.has(key)) return false;
+          _memberKeySet.add(key);
+          return true;
+        });
 
         // 4. Load expenses
         const eSnap = await _fs().collection('expenses').where('groupId','==',groupId).get();
@@ -708,24 +729,30 @@
     // ── Members Tab ───────────────────────────────────────────────────────────
     function renderMembers() {
       const el = document.getElementById('tab-members');
+      // Use deduplicated groupMembers array (resolved user objects) for display
+      const displayMembers = groupMembers.length ? groupMembers : group.members.map(mid => ({
+        id: mid, email: mid.includes('@') ? mid : '', name: mid.includes('@') ? mid.split('@')[0] : mid
+      }));
+      const pendingCount = pendingInvites.length;
       el.innerHTML = `<div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-          <div style="font-family:var(--font-display);font-weight:700">${group.members.length} Member${group.members.length !== 1 ? 's' : ''}</div>
+          <div style="font-family:var(--font-display);font-weight:700">${displayMembers.length} Member${displayMembers.length !== 1 ? 's' : ''}${pendingCount ? ` + ${pendingCount} Pending` : ''}</div>
           <button class="btn-primary btn-sm" onclick="openMod('invite-modal');setTimeout(()=>document.getElementById('invite-email').focus(),50)">+ Invite</button>
         </div>
-        ${group.members.map(mid => {
-          const m = groupMembers.find(u => (u.id || u.email) === mid || u.email === mid);
-          const mEmail = m?.email || (mid.includes('@') ? mid : '');
-          const isPending = pendingInvites.some(i => (i.invitedEmail || i.email) === mEmail);
-          const name = isPending ? mEmail : (m ? (m.name || mEmail) : (mid.includes('@') ? mid : mid.split('@')[0]));
-          const email = mEmail;
-          const isAdmin = group.createdBy === mid;
-          const paid = expenses.filter(e => e.paidBy === mid && !e.isSettlement).reduce((s,e) => s + (+e.amount||0), 0);
+        ${displayMembers.map(m => {
+          const mId    = m.id || m.email || '';
+          const mEmail = (m.email || '').toLowerCase();
+          const mName  = m.name || mEmail.split('@')[0] || mId;
+          const isAdmin = group.createdBy === mId || group.createdBy === mEmail;
+          // Sum paid across all possible member keys (id and email)
+          const paid = expenses
+            .filter(e => !e.isSettlement && (e.paidBy === mId || (mEmail && e.paidBy === mEmail)))
+            .reduce((s, e) => s + (+e.amount || 0), 0);
           return `<div class="member-item">
-            ${memberAvatar(mid)}
+            ${memberAvatar(mId)}
             <div class="member-info">
-              <div class="member-name">${name}${isAdmin ? '<span class="badge-accent">Admin</span>' : ''}</div>
-              ${email ? `<div class="member-email-small">${email}</div>` : ''}
+              <div class="member-name">${mName}${isAdmin ? '<span class="badge-accent">Admin</span>' : ''}</div>
+              ${mEmail ? `<div class="member-email-small">${mEmail}</div>` : ''}
             </div>
             <div style="text-align:right;font-size:0.82rem;color:var(--text-muted)">Paid ${fmt(paid)}</div>
           </div>`;

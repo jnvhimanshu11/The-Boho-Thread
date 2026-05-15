@@ -408,7 +408,7 @@ async function renderReceived() {
 
   try {
     const snap = await firebase.firestore().collection('invitations')
-      .where('invitedEmail', '==', currentUser.email)
+      .where('invitedEmail', '==', currentUser.email.toLowerCase())
       .where('status', '==', 'pending')
       .get();
     const pending = snap.docs.map(d => d.data());
@@ -481,10 +481,19 @@ async function doAccept(id) {
       acceptedAt: Date.now()
     });
 
-    // Add user to group in Firestore
-    await fs.collection('groups').doc(inv.groupId).update({
-      members: firebase.firestore.FieldValue.arrayUnion(currentUser.id, currentUser.email)
-    });
+    // Add user to group in Firestore (store only the canonical user ID, not email)
+    // First remove any stale email-based entry, then add the proper ID
+    const groupDoc = await fs.collection('groups').doc(inv.groupId).get();
+    if (groupDoc.exists) {
+      const gData = groupDoc.data();
+      const cleanMembers = (gData.members || []).filter(m => m !== currentUser.email);
+      if (!cleanMembers.includes(currentUser.id)) cleanMembers.push(currentUser.id);
+      await fs.collection('groups').doc(inv.groupId).update({ members: cleanMembers });
+    } else {
+      await fs.collection('groups').doc(inv.groupId).update({
+        members: firebase.firestore.FieldValue.arrayUnion(currentUser.id)
+      });
+    }
 
     // Refresh group cache
     await renderGroupList();
@@ -519,7 +528,7 @@ async function renderSent() {
 
   try {
     const snap = await firebase.firestore().collection('invitations')
-      .where('sentByEmail', '==', currentUser.email)
+      .where('sentByEmail', '==', currentUser.email.toLowerCase())
       .get();
     // Sort client-side to avoid needing a composite Firestore index
     const mine = snap.docs.map(d => d.data()).sort((a,b) => b.createdAt - a.createdAt);
@@ -676,24 +685,43 @@ async function doSend() {
   if (!selectedGroup) { showToast('Please select a group first.', 'warning'); return; }
 
   const toEmail = sendMethod === 'email'
-    ? document.getElementById('invite-to-email').value.trim()
-    : document.getElementById('invite-to-inapp').value.trim();
+    ? document.getElementById('invite-to-email').value.trim().toLowerCase()
+    : document.getElementById('invite-to-inapp').value.trim().toLowerCase();
 
   if (!toEmail || !toEmail.includes('@')) { showToast('Please enter a valid email address.', 'warning'); return; }
 
   const group = (window._cachedGroups || {})[selectedGroup];
   if (!group) { showToast('Group not found. Please reload the page.', 'error'); return; }
-  if (group.members && group.members.includes(toEmail)) {
-    showToast('This person is already a member of the group.', 'warning'); return;
+
+  // Block inviting yourself
+  if (toEmail === currentUser.email.toLowerCase()) {
+    showToast('You cannot invite yourself.', 'warning'); return;
   }
 
-  // Duplicate check in Firestore
-  const dupeSnap = await firebase.firestore().collection('invitations')
+  const fs = firebase.firestore();
+
+  // Look up recipient by email in Firestore users collection
+  // Members array stores user IDs, so we need the recipient's ID to check membership
+  const userSnap = await fs.collection('users')
+    .where('email', '==', toEmail)
+    .get();
+
+  let recipientId = null;
+  if (!userSnap.empty) {
+    recipientId = userSnap.docs[0].id;
+    // Check if already a member by ID or email
+    if (group.members && (group.members.includes(recipientId) || group.members.includes(toEmail))) {
+      showToast('This person is already a member of the group.', 'warning'); return;
+    }
+  }
+
+  // Duplicate pending invite check (by groupId + invitedEmail, client-side filter to avoid composite index)
+  const existingSnap = await fs.collection('invitations')
     .where('groupId', '==', selectedGroup)
     .where('invitedEmail', '==', toEmail)
-    .where('status', '==', 'pending')
     .get();
-  if (!dupeSnap.empty) { showToast('A pending invite already exists for this email.', 'warning'); return; }
+  const hasPending = existingSnap.docs.some(d => d.data().status === 'pending');
+  if (hasPending) { showToast('A pending invite already exists for this person.', 'warning'); return; }
 
   const btn = document.getElementById('send-btn');
   btn.disabled = true; btn.textContent = 'Sending…';
@@ -705,10 +733,10 @@ async function doSend() {
     groupId:       selectedGroup,
     groupName:     group.name,
     groupCategory: group.category || '',
-    invitedEmail:  toEmail,
+    invitedEmail:  toEmail.toLowerCase(),
     invitedBy:     currentUser.name,
     invitedByName: currentUser.name,
-    sentByEmail:   currentUser.email,
+    sentByEmail:   currentUser.email.toLowerCase(),
     sentById:      currentUser.id,
     type:          sendMethod,
     status:        'pending',
@@ -792,13 +820,13 @@ async function toggleDebug() {
     // 2. Firestore invitations for this user
     lines.push('\n=== Firestore: invitations sent by me ===');
     const sentSnap = await firebase.firestore().collection('invitations')
-      .where('sentByEmail', '==', currentUser.email).get();
+      .where('sentByEmail', '==', currentUser.email.toLowerCase()).get();
     lines.push('Count: ' + sentSnap.size);
     sentSnap.docs.forEach(d => lines.push(JSON.stringify(d.data())));
 
     lines.push('\n=== Firestore: invitations for my email ===');
     const recvSnap = await firebase.firestore().collection('invitations')
-      .where('invitedEmail', '==', currentUser.email).get();
+      .where('invitedEmail', '==', currentUser.email.toLowerCase()).get();
     lines.push('Count: ' + recvSnap.size);
     recvSnap.docs.forEach(d => lines.push(JSON.stringify(d.data())));
 
