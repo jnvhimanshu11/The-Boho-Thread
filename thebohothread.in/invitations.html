@@ -308,6 +308,14 @@ async function _jwtSign(payload) {
 </div><!-- /page-wrap -->
 
 <div id="toast"></div>
+<div id="debug-panel" style="display:none;position:fixed;bottom:60px;right:16px;background:#1a1a2e;border:1px solid #7c6af7;border-radius:10px;padding:14px;font-size:0.75rem;color:#ccc;max-width:380px;z-index:9999;max-height:320px;overflow-y:auto;font-family:monospace;white-space:pre-wrap;line-height:1.5">
+  <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+    <span style="color:#7c6af7;font-weight:700">🔍 Debug Info</span>
+    <span onclick="document.getElementById('debug-panel').style.display='none'" style="cursor:pointer;color:#888">✕</span>
+  </div>
+  <div id="debug-content">Loading...</div>
+</div>
+<button onclick="toggleDebug()" style="position:fixed;bottom:16px;right:16px;background:#7c6af7;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.78rem;cursor:pointer;z-index:9999">🔍 Debug</button>
 
 <!-- Scripts -->
 <script src="db.firestore.js"></script>
@@ -512,9 +520,9 @@ async function renderSent() {
   try {
     const snap = await firebase.firestore().collection('invitations')
       .where('sentByEmail', '==', currentUser.email)
-      .orderBy('createdAt', 'desc')
       .get();
-    const mine = snap.docs.map(d => d.data());
+    // Sort client-side to avoid needing a composite Firestore index
+    const mine = snap.docs.map(d => d.data()).sort((a,b) => b.createdAt - a.createdAt);
 
     if (!mine.length) {
       pane.innerHTML = `
@@ -583,6 +591,83 @@ async function doCancel(id) {
   } catch(e) {
     console.error('doCancel error:', e);
     showToast('Failed to cancel invitation.', 'error');
+  }
+}
+
+// ── GROUP LIST ───────────────────────────────────────────────────────────────
+async function renderGroupList() {
+  const el = document.getElementById('group-list');
+  el.innerHTML = '<div style="color:var(--text3);font-size:0.85rem;padding:8px">Loading your groups…</div>';
+
+  try {
+    const userId = currentUser.id;
+    if (!userId) {
+      el.innerHTML = '<div style="color:#ef4444;font-size:0.85rem;padding:8px">Session error — please sign out and sign in again.</div>';
+      return;
+    }
+
+    const snap = await firebase.firestore().collection('groups')
+      .where('members', 'array-contains', userId)
+      .get();
+    const myGroups = snap.docs.map(d => d.data());
+
+    if (!myGroups.length) {
+      el.innerHTML = `<div style="color:var(--text3);font-size:0.85rem;padding:8px">
+        You have no groups yet. <a href="dashboard.html" style="color:var(--accent)">Create one →</a></div>`;
+      return;
+    }
+
+    // Cache for use in doSend and group name display
+    window._cachedGroups = {};
+    myGroups.forEach(g => window._cachedGroups[g.id] = g);
+
+    el.innerHTML = myGroups.map(g => `
+      <div class="group-pick" id="gp-${g.id}" onclick="pickGroup('${g.id}')">
+        <div class="group-pick-ico">${catIco(g.category)}</div>
+        <div class="group-pick-info">
+          <div class="group-pick-name">${g.name}</div>
+          <div class="group-pick-mem">${g.members.length} member${g.members.length!==1?'s':''}</div>
+        </div>
+        <div class="group-pick-chk">✓</div>
+      </div>`).join('');
+  } catch(e) {
+    console.error('renderGroupList error:', e);
+    el.innerHTML = `<div style="color:#ef4444;font-size:0.85rem;padding:8px">Failed to load groups: ${e.message}</div>`;
+  }
+}
+
+function pickGroup(id) {
+  selectedGroup = id;
+  document.querySelectorAll('.group-pick').forEach(el => el.classList.remove('sel'));
+  const el = document.getElementById('gp-'+id);
+  if (el) el.classList.add('sel');
+}
+
+function setMethod(m) {
+  sendMethod = m;
+  document.getElementById('mc-email').classList.toggle('sel', m === 'email');
+  document.getElementById('mc-inapp').classList.toggle('sel', m === 'inapp');
+
+  const info = document.getElementById('method-info');
+  const ef   = document.getElementById('email-field');
+  const iaf  = document.getElementById('inapp-field');
+  const lbl  = document.getElementById('recip-lbl');
+  const btn  = document.getElementById('send-btn');
+
+  if (m === 'email') {
+    info.className = 'info-banner info-email';
+    info.innerHTML = '📧 <strong style="color:var(--text2)">Email invite:</strong> A secure join link is emailed to them. Works even without an existing SplitMate account.';
+    ef.style.display  = 'block';
+    iaf.style.display = 'none';
+    lbl.textContent   = 'Recipient Email';
+    btn.innerHTML     = '📧 Send Email Invitation';
+  } else {
+    info.className = 'info-banner info-inapp';
+    info.innerHTML = '✅ <strong style="color:var(--text2)">In-App invite:</strong> The user gets a notification directly on their Invitations page. No email required — both users must be logged in.';
+    ef.style.display  = 'none';
+    iaf.style.display = 'block';
+    lbl.textContent   = 'Recipient (registered email)';
+    btn.innerHTML     = '✅ Send In-App Invitation';
   }
 }
 
@@ -684,6 +769,63 @@ function showToast(msg, type='') {
   el.className   = 'show' + (type ? ' '+type : '');
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => { el.className = ''; }, 3400);
+}
+
+// ── Debug ─────────────────────────────────────────────────────────────────────
+async function toggleDebug() {
+  const panel = document.getElementById('debug-panel');
+  const content = document.getElementById('debug-content');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  if (panel.style.display !== 'block') return;
+
+  try {
+    // 1. Current user info
+    const sessionRaw = localStorage.getItem('splitmate_session') || sessionStorage.getItem('splitmate_session');
+    const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+
+    let lines = [];
+    lines.push('=== currentUser (js/auth) ===');
+    lines.push(JSON.stringify(currentUser, null, 2));
+    lines.push('\n=== splitmate_session (root auth) ===');
+    lines.push(JSON.stringify(session, null, 2));
+
+    // 2. Firestore invitations for this user
+    lines.push('\n=== Firestore: invitations sent by me ===');
+    const sentSnap = await firebase.firestore().collection('invitations')
+      .where('sentByEmail', '==', currentUser.email).get();
+    lines.push('Count: ' + sentSnap.size);
+    sentSnap.docs.forEach(d => lines.push(JSON.stringify(d.data())));
+
+    lines.push('\n=== Firestore: invitations for my email ===');
+    const recvSnap = await firebase.firestore().collection('invitations')
+      .where('invitedEmail', '==', currentUser.email).get();
+    lines.push('Count: ' + recvSnap.size);
+    recvSnap.docs.forEach(d => lines.push(JSON.stringify(d.data())));
+
+    // 3. Firestore groups
+    lines.push('\n=== Firestore: my groups (by id) ===');
+    if (currentUser.id) {
+      const gSnap = await firebase.firestore().collection('groups')
+        .where('members', 'array-contains', currentUser.id).get();
+      lines.push('Count (by id): ' + gSnap.size);
+      gSnap.docs.forEach(d => {
+        const g = d.data();
+        lines.push(g.name + ' | members: ' + JSON.stringify(g.members));
+      });
+    }
+    lines.push('\n=== Firestore: my groups (by email) ===');
+    const gSnap2 = await firebase.firestore().collection('groups')
+      .where('members', 'array-contains', currentUser.email).get();
+    lines.push('Count (by email): ' + gSnap2.size);
+    gSnap2.docs.forEach(d => {
+      const g = d.data();
+      lines.push(g.name + ' | members: ' + JSON.stringify(g.members));
+    });
+
+    content.textContent = lines.join('\n');
+  } catch(e) {
+    content.textContent = 'Error: ' + e.message;
+  }
 }
 </script>
 </body>
