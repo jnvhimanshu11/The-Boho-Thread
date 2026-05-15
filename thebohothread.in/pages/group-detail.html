@@ -304,6 +304,33 @@
     </div>
   </div>
 
+  <!-- Edit Settlement Modal -->
+  <div class="modal-overlay" id="edit-settlement-modal">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Payment</h2>
+        <button class="modal-close" onclick="closeMod('edit-settlement-modal')">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">From (paid by)</label>
+        <select class="form-input" id="es-from"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">To (paid to)</label>
+        <select class="form-input" id="es-to"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount</label>
+        <input type="number" class="form-input" id="es-amount" placeholder="0" min="0" step="0.01" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note (optional)</label>
+        <input type="text" class="form-input" id="es-note" placeholder="e.g. via UPI, cash..." />
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="saveEditSettlement()">Save Changes</button>
+    </div>
+  </div>
+
   <!-- Edit Group Modal -->
   <div class="modal-overlay" id="edit-group-modal">
     <div class="modal" style="max-width:420px">
@@ -356,8 +383,9 @@
     let groupMembers = [];
     let expenses = [], settlements = [];
     let editingExpenseId = null; // null = adding new, string = editing existing
-    let expenseLogs = []; // audit log entries from Firestore
-    let groupLogs   = []; // group-level change logs from Firestore
+    let expenseLogs    = []; // audit log entries from Firestore
+    let groupLogs      = []; // group-level change logs from Firestore
+    let settlementLogs = []; // settlement audit logs from Firestore
     let pendingInvites = [];   // invitations with status !== 'accepted'
     let splitType = 'equal';
     let selectedSplitMembers = new Set();
@@ -580,6 +608,12 @@
           groupLogs = gLogSnap.docs.map(d => d.data()).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
         } catch(e) { groupLogs = []; }
 
+        // 5d. Load settlement logs
+        try {
+          const sLogSnap = await _fs().collection('settlement_logs').where('groupId','==',groupId).get();
+          settlementLogs = sLogSnap.docs.map(d => d.data()).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+        } catch(e) { settlementLogs = []; }
+
         // 6. Load pending / rejected invitations (email-only virtual members)
         try {
           const invSnap = await _fs().collection('invitations')
@@ -701,6 +735,12 @@
         try {
           const gLogSnap = await _fs().collection('group_logs').where('groupId','==',groupId).get();
           groupLogs = gLogSnap.docs.map(d => d.data()).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+        } catch(e) { /* keep existing */ }
+
+        // Re-fetch settlement logs
+        try {
+          const sLogSnap = await _fs().collection('settlement_logs').where('groupId','==',groupId).get();
+          settlementLogs = sLogSnap.docs.map(d => d.data()).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
         } catch(e) { /* keep existing */ }
 
         // Re-fetch pending invites
@@ -947,9 +987,11 @@
 
       const histHtml = settlements.length ? settlements.map(s => `
         <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:0.88rem">
-          <span>✓</span>
+          <span style="color:var(--green,#22c55e)">✓</span>
           <span style="flex:1">${memberName(s.paidBy)} paid ${memberName(s.paidTo)} ${fmt(s.amount)}${s.note ? `<span style="color:var(--text-muted);font-size:0.82rem"> · ${s.note}</span>` : ''}</span>
-          <span style="color:var(--text-muted)">${fmtDate(s.createdAt)}</span>
+          <span style="color:var(--text-muted);white-space:nowrap">${fmtDate(s.createdAt)}</span>
+          <button class="btn-ghost btn-sm" style="padding:3px 8px;font-size:0.75rem" onclick="openEditSettlement('${s.id}')">✏️</button>
+          <button class="btn-ghost btn-sm" style="padding:3px 8px;font-size:0.75rem;color:#ef4444" onclick="deleteSettlement('${s.id}')">🗑️</button>
         </div>`).join('') : '<div style="color:var(--text-muted);font-size:0.85rem;padding:16px 0">No recorded payments yet.</div>';
 
       el.innerHTML = `
@@ -1371,10 +1413,11 @@
     function renderHistory() {
       const el = document.getElementById('tab-history');
 
-      // Merge expense logs + group logs, sorted newest first
+      // Merge expense logs + group logs + settlement logs, sorted newest first
       const allLogs = [
         ...expenseLogs.map(l => ({ ...l, logType: l.logType || 'expense' })),
-        ...groupLogs.map(l =>   ({ ...l, logType: 'group' }))
+        ...groupLogs.map(l =>   ({ ...l, logType: 'group' })),
+        ...settlementLogs.map(l => ({ ...l, logType: 'settlement' }))
       ].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
       if (!allLogs.length) {
@@ -1387,9 +1430,9 @@
       }
 
       // ── icons / colours per action ─────────────────────────────────────────
-      const actionIcon  = { created: '➕', edited: '✏️', deleted: '🗑️', group_edited: '⚙️' };
-      const actionColor = { created: '#22c55e', edited: '#6c63ff', deleted: '#ef4444', group_edited: '#f59e0b' };
-      const actionLabel = { created: 'Added', edited: 'Edited', deleted: 'Deleted', group_edited: 'Group Updated' };
+      const actionIcon  = { created: '➕', edited: '✏️', deleted: '🗑️', group_edited: '⚙️', settlement_added: '💸', settlement_edited: '✏️', settlement_deleted: '🗑️' };
+      const actionColor = { created: '#22c55e', edited: '#6c63ff', deleted: '#ef4444', group_edited: '#f59e0b', settlement_added: '#22c55e', settlement_edited: '#6c63ff', settlement_deleted: '#ef4444' };
+      const actionLabel = { created: 'Added', edited: 'Edited', deleted: 'Deleted', group_edited: 'Group Updated', settlement_added: 'Payment Added', settlement_edited: 'Payment Edited', settlement_deleted: 'Payment Deleted' };
 
       const rows = allLogs.map(log => {
         const icon  = actionIcon[log.action]  || '📝';
@@ -1423,10 +1466,12 @@
             ${Array.isArray(log.snapshot.splits) ? `<div class="log-snapshot-row"><span>Splits</span><span>${log.snapshot.splits.map(s => memberName(s.userId) + ': ' + fmt(s.amount)).join(', ')}</span></div>` : ''}
           </div>` : '';
 
-        // Subject label differs: expense name vs "Group Settings"
+        // Subject label differs: expense name vs "Group Settings" vs settlement
         const subjectHtml = log.logType === 'group'
           ? `<span class="log-expense-name" style="color:var(--text-muted);font-style:italic">Group Settings</span>`
-          : `<span class="log-expense-name">"${log.expenseName || ''}"</span>`;
+          : log.logType === 'settlement'
+            ? `<span class="log-expense-name" style="color:var(--text-muted);font-style:italic">${log.settlement ? `${memberName(log.settlement.paidBy)} → ${memberName(log.settlement.paidTo)} ${fmt(log.settlement.amount)}` : 'Payment'}</span>`
+            : `<span class="log-expense-name">"${log.expenseName || ''}"</span>`;
 
         // Only show expand chevron if there is detail to show
         const hasDetail = changesHtml || snapshotHtml;
@@ -1579,6 +1624,7 @@
       try {
         await _fs().collection('settlements').doc(id).set(s);
         settlements.unshift(s);
+        await writeSettlementLog('settlement_added', s, []);
         toast_('Payment recorded! ✓', 'success');
         renderHeader();
         renderSettle();
@@ -1598,6 +1644,7 @@
       try {
         await _fs().collection('settlements').doc(id).set(s);
         settlements.unshift(s);
+        await writeSettlementLog('settlement_added', s, []);
         closeMod('settle-modal');
         toast_('Payment recorded! ✓', 'success');
         renderHeader();
@@ -1658,6 +1705,101 @@
         await _fs().collection('group_logs').doc(logId).set(log);
         groupLogs.unshift(log);
       } catch(e) { console.warn('Group log write failed:', e); }
+    }
+
+    }
+
+    // ── Settlement Audit Log ──────────────────────────────────────────────────
+    async function writeSettlementLog(action, settlement, changes) {
+      const myId = currentUser.id, myEmail = currentUser.email;
+      const logId = _rid();
+      const log = {
+        id:           logId,
+        groupId,
+        logType:      'settlement',
+        action,                         // 'settlement_added' | 'settlement_edited' | 'settlement_deleted'
+        actorId:      myId || myEmail,
+        actorName:    currentUser.name || myEmail,
+        timestamp:    Date.now(),
+        settlement:   { ...settlement }, // snapshot of settlement
+        changes:      changes || []
+      };
+      try {
+        await _fs().collection('settlement_logs').doc(logId).set(log);
+        settlementLogs.unshift(log);
+      } catch(e) { console.warn('Settlement log write failed:', e); }
+    }
+
+    // ── Edit Settlement ───────────────────────────────────────────────────────
+    let editingSettlementId = null;
+
+    function openEditSettlement(settlementId) {
+      const s = settlements.find(x => x.id === settlementId);
+      if (!s) return;
+      editingSettlementId = settlementId;
+
+      const myId = currentUser.id, myEmail = currentUser.email;
+      const myKey = group.members.find(m => m === myId || m === myEmail) || myEmail;
+      const allMemberKeys = [...group.members];
+      const opts = allMemberKeys.map(m =>
+        `<option value="${m}">${memberName(m)}${m === myKey ? ' (You)' : ''}</option>`
+      ).join('');
+
+      document.getElementById('es-from').innerHTML = opts;
+      document.getElementById('es-to').innerHTML   = opts;
+      document.getElementById('es-from').value  = s.paidBy;
+      document.getElementById('es-to').value    = s.paidTo;
+      document.getElementById('es-amount').value = s.amount;
+      document.getElementById('es-note').value   = s.note || '';
+      openMod('edit-settlement-modal');
+    }
+
+    async function saveEditSettlement() {
+      const s = settlements.find(x => x.id === editingSettlementId);
+      if (!s) return;
+
+      const from   = document.getElementById('es-from').value;
+      const to     = document.getElementById('es-to').value;
+      const amount = parseFloat(document.getElementById('es-amount').value);
+      const note   = document.getElementById('es-note').value.trim();
+
+      if (from === to)         { toast_("Payer and receiver can't be the same.", 'error'); return; }
+      if (!amount || amount <= 0) { toast_('Enter a valid amount.', 'error'); return; }
+
+      // Build diff
+      const changes = [];
+      if (from   !== s.paidBy)              changes.push({ field: 'From',   before: memberName(s.paidBy), after: memberName(from) });
+      if (to     !== s.paidTo)              changes.push({ field: 'To',     before: memberName(s.paidTo), after: memberName(to) });
+      if (amount !== s.amount)              changes.push({ field: 'Amount', before: fmt(s.amount),        after: fmt(amount) });
+      if (note   !== (s.note || ''))        changes.push({ field: 'Note',   before: s.note || '—',        after: note || '—' });
+
+      try {
+        await _fs().collection('settlements').doc(editingSettlementId).update({ paidBy: from, paidTo: to, amount, note, updatedAt: Date.now() });
+
+        // Update local array
+        const idx = settlements.findIndex(x => x.id === editingSettlementId);
+        if (idx !== -1) { settlements[idx] = { ...settlements[idx], paidBy: from, paidTo: to, amount, note }; }
+
+        if (changes.length) await writeSettlementLog('settlement_edited', settlements.find(x => x.id === editingSettlementId), changes);
+
+        closeMod('edit-settlement-modal');
+        toast_('Payment updated ✓', 'success');
+        renderHeader();
+        renderTab(currentTab);
+      } catch(err) { toast_('Update failed: ' + err.message, 'error'); }
+    }
+
+    async function deleteSettlement(settlementId) {
+      if (!confirm('Delete this recorded payment?')) return;
+      const s = settlements.find(x => x.id === settlementId);
+      try {
+        await _fs().collection('settlements').doc(settlementId).delete();
+        await writeSettlementLog('settlement_deleted', s, []);
+        settlements = settlements.filter(x => x.id !== settlementId);
+        toast_('Payment deleted.', 'success');
+        renderHeader();
+        renderTab(currentTab);
+      } catch(err) { toast_('Delete failed: ' + err.message, 'error'); }
     }
 
     // ── Delete Group ──────────────────────────────────────────────────────────
