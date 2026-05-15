@@ -975,7 +975,7 @@
         ${group.members.map(mid => {
           const m = groupMembers.find(u => (u.id || u.email) === mid || u.email === mid);
           const mEmail = m?.email || (mid.includes('@') ? mid : '');
-          const isPending = pendingInvites.some(i => (i.invitedEmail || i.email) === mEmail);
+          const isPending = pendingInvites.some(i => (i.invitedEmail || i.email) === mEmail && i.status === 'pending');
           const name = isPending ? mEmail : (m?.name || mEmail || mid);
           const email = mEmail;
           const isAdmin = group.createdBy === mid;
