@@ -490,7 +490,7 @@ async function _refreshFcmToken() {
     // Only run if Firebase messaging is loaded
     if (typeof firebase === 'undefined') return;
     const msg = firebase.messaging();
-    const VAPID_KEY = '7tS07IfMONitKyLoOe0DHgg-u7ywIErp_WgKTydlyo0';
+    const VAPID_KEY = 'BBktwVbBvH0xtvIMJHhGnYTY7UmXi6OgMKem2eEyLETLumEUqgFtDiL9KKxopdIlo4WOPL65sov8PWX5a0m2VUQ';
     const token = await msg.getToken({ vapidKey: VAPID_KEY });
     if (!token) return;
 
