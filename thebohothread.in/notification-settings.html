@@ -280,22 +280,34 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── Render UI based on current permission state ───────────────────────────────
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+function isInstalledPWA() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
 function renderPermissionUI() {
   const supported = ('Notification' in window) && ('serviceWorker' in navigator);
 
   if (!supported) {
-    setStatus('default', '🚫', 'Not Supported', 'not-supported',
-      'Your browser does not support push notifications. Try Chrome, Edge, or Firefox.');
-    document.getElementById('action-section').innerHTML = `
-      <div class="action-card">
-        <div class="action-card-body">
-          <p style="color:var(--text3);font-size:0.85rem;text-align:center;margin:8px 0">
-            Please switch to a supported browser like <strong style="color:var(--text)">Chrome</strong>,
-            <strong style="color:var(--text)">Edge</strong>, or <strong style="color:var(--text)">Firefox</strong>
-            to enable push notifications.
-          </p>
-        </div>
-      </div>`;
+    if (isIOS()) {
+      renderIOSGuide();
+    } else {
+      setStatus('default', '🚫', 'Not Supported', 'not-supported',
+        'Your browser does not support push notifications. Try Chrome, Edge, or Firefox.');
+      document.getElementById('action-section').innerHTML = `
+        <div class="action-card">
+          <div class="action-card-body">
+            <p style="color:var(--text3);font-size:0.85rem;text-align:center;margin:8px 0">
+              Please switch to a supported browser like <strong style="color:var(--text)">Chrome</strong>,
+              <strong style="color:var(--text)">Edge</strong>, or <strong style="color:var(--text)">Firefox</strong>
+              to enable push notifications.
+            </p>
+          </div>
+        </div>`;
+    }
     return;
   }
 
@@ -308,6 +320,80 @@ function renderPermissionUI() {
   } else {
     renderDefault();
   }
+}
+
+// ── iOS Guide ────────────────────────────────────────────────────────────────
+function renderIOSGuide() {
+  if (isInstalledPWA()) {
+    // Already installed as PWA — but iOS push needs iOS 16.4+
+    setStatus('default', '📱', 'Enable Notifications', 'not-asked',
+      'Tap the button below to allow push notifications from SplitMate.');
+    document.getElementById('benefits-card').style.display = 'block';
+    document.getElementById('action-section').innerHTML = `
+      <div class="action-card">
+        <div class="action-card-header">
+          <h3>Allow Notifications</h3>
+          <p>Your device supports push notifications via the installed app</p>
+        </div>
+        <div class="action-card-body">
+          <button class="enable-btn" id="enable-btn" onclick="requestPermission()">
+            <span class="bell-animated">🔔</span>
+            Enable Notifications
+          </button>
+          <div style="text-align:center;font-size:0.74rem;color:var(--text3)">
+            A permission popup will appear. Tap <strong style="color:var(--text)">"Allow"</strong> to continue.
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Not installed — show Add to Home Screen guide
+  setStatus('default', '📱', 'One Step Required', 'not-asked',
+    'On iPhone/iPad, add this site to your Home Screen first to enable push notifications.');
+  document.getElementById('benefits-card').style.display = 'block';
+  document.getElementById('action-section').innerHTML = `
+    <div class="action-card">
+      <div class="action-card-header">
+        <h3>📲 Add to Home Screen</h3>
+        <p>iOS requires the app to be installed before notifications work</p>
+      </div>
+      <div class="action-card-body" style="gap:0">
+        <div class="steps">
+          <div class="step-row">
+            <div class="step-num">1</div>
+            <div class="step-text">
+              <strong>Tap the Share button <span style="font-size:1rem">⎋</span></strong>
+              <span>At the bottom of Safari (the box with an arrow pointing up)</span>
+            </div>
+          </div>
+          <div class="step-row">
+            <div class="step-num">2</div>
+            <div class="step-text">
+              <strong>Tap "Add to Home Screen"</strong>
+              <span>Scroll down in the share sheet and tap this option</span>
+            </div>
+          </div>
+          <div class="step-row">
+            <div class="step-num">3</div>
+            <div class="step-text">
+              <strong>Tap "Add" to confirm</strong>
+              <span>The SplitMate icon will appear on your Home Screen</span>
+            </div>
+          </div>
+          <div class="step-row">
+            <div class="step-num">4</div>
+            <div class="step-text">
+              <strong>Open the app from Home Screen</strong>
+              <span>Then come back to this Notifications page and tap Enable</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:4px;padding-top:16px;border-top:1px solid var(--border);font-size:0.75rem;color:var(--text3);text-align:center;line-height:1.6">
+          ⚠️ Requires iOS 16.4 or later
+        </div>
+      </div>
+    </div>`;
 }
 
 // ── GRANTED state ─────────────────────────────────────────────────────────────
@@ -331,11 +417,11 @@ function renderGranted() {
           A test pop-up will appear on your screen right now
         </div>
         <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
-          <div style="font-size:0.8rem;color:var(--text3);line-height:1.6">
-            Want to <strong style="color:var(--red)">disable</strong> notifications?
-            You can do this from your browser's site settings:
-            click the <strong style="color:var(--text)">🔒 lock icon</strong> in the address bar →
-            <strong style="color:var(--text)">Notifications</strong> → Block.
+          <button class="test-btn" onclick="openBrowserSettings()" style="border-color:rgba(239,68,68,0.4);color:var(--red)">
+            🔕 Disable Notifications (Browser Settings)
+          </button>
+          <div style="font-size:0.75rem;color:var(--text3);line-height:1.6;margin-top:8px;text-align:center">
+            Opens your browser settings → find <strong style="color:var(--text)">thebohothread.in</strong> → set Notifications to <strong style="color:var(--text)">Block</strong>
           </div>
         </div>
       </div>
