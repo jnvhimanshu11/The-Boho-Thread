@@ -163,6 +163,21 @@
 }
 .test-btn:hover { border-color: var(--accent); color: var(--accent2); background: rgba(108,99,255,0.08); }
 
+/* Open settings button */
+.open-settings-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem; font-weight: 700;
+  font-family: var(--font-display);
+  border: 2px solid var(--accent);
+  cursor: pointer;
+  background: rgba(108,99,255,0.1);
+  color: var(--accent2);
+  transition: all 0.2s;
+}
+.open-settings-btn:hover { background: rgba(108,99,255,0.2); transform: translateY(-1px); }
+
 /* Shimmer pulse for loading */
 @keyframes shimmer {
   0%   { opacity: 0.4; }
@@ -355,24 +370,72 @@ function renderDefault() {
     </div>`;
 }
 
+// ── Detect browser ─────────────────────────────────────────────────────────────
+function detectBrowser() {
+  const ua = navigator.userAgent;
+  if (ua.includes('Edg/')) return 'edge';
+  if (ua.includes('Firefox/')) return 'firefox';
+  if (ua.includes('Safari/') && !ua.includes('Chrome')) return 'safari';
+  return 'chrome';
+}
+
+// ── Try to open browser notification settings directly ────────────────────────
+function openBrowserSettings() {
+  const browser = detectBrowser();
+  if (browser === 'chrome') {
+    window.open('chrome://settings/content/notifications');
+    setTimeout(() => {
+      showToast && showToast('If nothing opened: type  chrome://settings/content/notifications  in the address bar', 'info');
+    }, 800);
+  } else if (browser === 'edge') {
+    window.open('edge://settings/content/notifications');
+    setTimeout(() => {
+      showToast && showToast('If nothing opened: type  edge://settings/content/notifications  in the address bar', 'info');
+    }, 800);
+  } else if (browser === 'firefox') {
+    window.open('about:preferences#privacy');
+    setTimeout(() => {
+      showToast && showToast('Go to Permissions → Notifications → Settings in Firefox', 'info');
+    }, 800);
+  } else {
+    navigator.clipboard && navigator.clipboard.writeText(location.origin)
+      .then(() => showToast && showToast('Site address copied! Paste in Safari Settings → Websites → Notifications', 'info'))
+      .catch(() => {});
+  }
+}
+
 // ── DENIED state ──────────────────────────────────────────────────────────────
 function renderDenied() {
   setStatus('denied', '🚫', 'Notifications Blocked', 'denied',
-    'You previously blocked notifications. Browsers don\'t allow re-requesting — you\'ll need to manually unblock from settings.');
+    'You previously blocked notifications. Use the button below to open your browser\'s notification settings, then set this site to "Allow".');
+  const detectedBrowser = detectBrowser();
 
   document.getElementById('action-section').innerHTML = `
     <div class="action-card">
       <div class="action-card-header">
-        <h3>How to unblock notifications</h3>
-        <p>Follow the steps for your browser below</p>
+        <h3>🔓 Unblock Notifications</h3>
+        <p>Use the button below or follow the manual steps</p>
       </div>
-      <div class="action-card-body" style="gap:0">
+      <div class="action-card-body" style="gap:14px">
 
-        <div class="browser-tabs">
-          <div class="browser-tab active" onclick="showBrowser('chrome', this)">🌐 Chrome</div>
-          <div class="browser-tab" onclick="showBrowser('firefox', this)">🦊 Firefox</div>
-          <div class="browser-tab" onclick="showBrowser('safari', this)">🧭 Safari</div>
-          <div class="browser-tab" onclick="showBrowser('edge', this)">🔷 Edge</div>
+        <button class="open-settings-btn" onclick="openBrowserSettings()">
+          ⚙️ Open Browser Notification Settings
+        </button>
+        <div style="text-align:center;font-size:0.74rem;color:var(--text3);margin-top:-8px">
+          Opens browser settings → find <strong style="color:var(--text)">thebohothread.in</strong> → set to <strong style="color:var(--text)">Allow</strong>
+        </div>
+
+        <div style="position:relative;display:flex;align-items:center;gap:8px;margin:2px 0">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:0.72rem;color:var(--text3);white-space:nowrap">or follow steps manually</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+
+        <div class="browser-tabs" id="browser-tabs-row">
+          <div class="browser-tab" id="tab-chrome" onclick="showBrowser('chrome', this)">🌐 Chrome</div>
+          <div class="browser-tab" id="tab-firefox" onclick="showBrowser('firefox', this)">🦊 Firefox</div>
+          <div class="browser-tab" id="tab-safari" onclick="showBrowser('safari', this)">🧭 Safari</div>
+          <div class="browser-tab" id="tab-edge" onclick="showBrowser('edge', this)">🔷 Edge</div>
         </div>
 
         <!-- Chrome -->
@@ -518,6 +581,18 @@ function renderDenied() {
         </div>
       </div>
     </div>`;
+
+  // Auto-activate the detected browser tab
+  setTimeout(() => {
+    const tab = document.getElementById('tab-' + detectedBrowser);
+    if (tab) {
+      document.querySelectorAll('.browser-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.browser-instructions').forEach(el => el.classList.remove('active'));
+      tab.classList.add('active');
+      const instr = document.getElementById('instr-' + detectedBrowser);
+      if (instr) instr.classList.add('active');
+    }
+  }, 0);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
