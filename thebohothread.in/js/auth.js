@@ -562,7 +562,7 @@ function _showForegroundNotif(payload) {
         background:none;border:none;color:#6060a0;cursor:pointer;font-size:1rem;
         padding:0;line-height:1;flex-shrink:0;margin-top:-2px
       ">✕</button>
- xs   </div>
+    </div>
     <style>
       @keyframes slideInRight {
         from { transform: translateX(20px); opacity:0; }
@@ -573,4 +573,4 @@ function _showForegroundNotif(payload) {
   document.body.appendChild(el);
   // Auto-dismiss after 8 seconds
   setTimeout(() => { document.getElementById('__fg-notif')?.remove(); }, 8000);
-}x
+}
