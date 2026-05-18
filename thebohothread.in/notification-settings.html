@@ -163,6 +163,30 @@
 }
 .test-btn:hover { border-color: var(--accent); color: var(--accent2); background: rgba(108,99,255,0.08); }
 
+/* Toggle button */
+.toggle-btn {
+  position: relative;
+  width: 56px; height: 30px;
+  border-radius: 99px;
+  border: none; cursor: pointer;
+  padding: 0;
+  transition: background 0.25s;
+  flex-shrink: 0;
+}
+.toggle-on  { background: var(--green, #22c55e); }
+.toggle-off { background: rgba(120,120,140,0.35); }
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  transition: left 0.25s;
+}
+.toggle-on  .toggle-knob { left: 29px; }
+.toggle-off .toggle-knob { left: 3px; }
+
 /* Open settings button */
 .open-settings-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -272,191 +296,244 @@ const VAPID_KEY = '7tS07IfMONitKyLoOe0DHgg-u7ywIErp_WgKTydlyo0';
 const currentUser = Auth.requireAuth();
 if (!currentUser) { window.location.href = 'index.html'; }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() {
   document.getElementById('sidebar-mount').innerHTML = renderSidebar('notification-settings');
   initSidebar();
   renderPermissionUI();
 });
 
-// ── Render UI based on current permission state ───────────────────────────────
+// ── Detect environment ────────────────────────────────────────────────────────
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 }
-
 function isInstalledPWA() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
-
-function renderPermissionUI() {
-  const supported = ('Notification' in window) && ('serviceWorker' in navigator);
-
-  if (!supported) {
-    if (isIOS()) {
-      renderIOSGuide();
-    } else {
-      setStatus('default', '🚫', 'Not Supported', 'not-supported',
-        'Your browser does not support push notifications. Try Chrome, Edge, or Firefox.');
-      document.getElementById('action-section').innerHTML = `
-        <div class="action-card">
-          <div class="action-card-body">
-            <p style="color:var(--text3);font-size:0.85rem;text-align:center;margin:8px 0">
-              Please switch to a supported browser like <strong style="color:var(--text)">Chrome</strong>,
-              <strong style="color:var(--text)">Edge</strong>, or <strong style="color:var(--text)">Firefox</strong>
-              to enable push notifications.
-            </p>
-          </div>
-        </div>`;
-    }
-    return;
-  }
-
-  const perm = Notification.permission;
-
-  if (perm === 'granted') {
-    renderGranted();
-  } else if (perm === 'denied') {
-    renderDenied();
-  } else {
-    renderDefault();
-  }
+function isSupported() {
+  return ('Notification' in window) && ('serviceWorker' in navigator);
 }
 
-// ── iOS Guide ────────────────────────────────────────────────────────────────
-function renderIOSGuide() {
-  if (isInstalledPWA()) {
-    // Already installed as PWA — but iOS push needs iOS 16.4+
-    setStatus('default', '📱', 'Enable Notifications', 'not-asked',
-      'Tap the button below to allow push notifications from SplitMate.');
-    document.getElementById('benefits-card').style.display = 'block';
-    document.getElementById('action-section').innerHTML = `
+// ── Main render ───────────────────────────────────────────────────────────────
+function renderPermissionUI() {
+  const supported = isSupported();
+  let perm = supported ? Notification.permission : 'unsupported';
+
+  // iOS browser (not PWA) — treat as "unsupported" but show friendly guide
+  if (!supported && isIOS() && !isInstalledPWA()) {
+    perm = 'ios-browser';
+  }
+
+  renderToggleCard(perm);
+}
+
+// ── Single toggle card for all states ────────────────────────────────────────
+function renderToggleCard(perm) {
+  const wrap = document.getElementById('action-section');
+  const benefitsCard = document.getElementById('benefits-card');
+
+  const states = {
+    'granted': {
+      cardClass: 'granted',
+      iconClass: 'granted',
+      icon: '✅',
+      badge: ['badge-green', '✅ Enabled'],
+      title: 'Notifications Enabled',
+      desc: 'You will receive push notifications from SplitMate, even when the app is closed.',
+    },
+    'denied': {
+      cardClass: 'denied',
+      iconClass: 'denied',
+      icon: '🚫',
+      badge: ['badge-red', '🚫 Blocked'],
+      title: 'Notifications Blocked',
+      desc: 'You blocked notifications. Use the toggle below to open browser settings and unblock.',
+    },
+    'default': {
+      cardClass: 'default',
+      iconClass: 'default',
+      icon: '🔔',
+      badge: ['badge-purple', '⏳ Not set'],
+      title: 'Notifications Off',
+      desc: 'Tap the toggle to enable push notifications and stay updated.',
+    },
+    'ios-browser': {
+      cardClass: 'default',
+      iconClass: 'default',
+      icon: '📲',
+      badge: ['badge-purple', '📲 Safari only'],
+      title: 'Use Safari to Enable',
+      desc: 'On iPhone/iPad, open this site in Safari and add it to your Home Screen to enable notifications.',
+    },
+    'unsupported': {
+      cardClass: 'denied',
+      iconClass: 'denied',
+      icon: '🚫',
+      badge: ['badge-red', '❌ Not supported'],
+      title: 'Not Supported',
+      desc: 'Your browser does not support push notifications.',
+    }
+  };
+
+  const s = states[perm] || states['default'];
+  setStatus(s.cardClass, s.iconClass, s.icon, s.badge[0], s.badge[1], s.title, s.desc);
+
+  if (perm === 'granted') benefitsCard.style.display = 'block';
+  else benefitsCard.style.display = 'none';
+
+  // Build toggle card HTML
+  let actionHtml = '';
+
+  if (perm === 'granted') {
+    actionHtml = `
       <div class="action-card">
-        <div class="action-card-header">
-          <h3>Allow Notifications</h3>
-          <p>Your device supports push notifications via the installed app</p>
+        <div class="action-card-body" style="gap:16px">
+
+          <!-- ON/OFF Toggle -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+            <div>
+              <div style="font-weight:700;font-size:0.95rem;color:var(--text)">Push Notifications</div>
+              <div style="font-size:0.78rem;color:var(--text3);margin-top:2px">Currently <strong style="color:var(--green)">ON</strong> on this device</div>
+            </div>
+            <button onclick="handleToggle('disable')" class="toggle-btn toggle-on" title="Tap to disable">
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+
+          <button class="test-btn" onclick="sendTestNotification()">
+            <span>🧪</span> Send a Test Notification
+          </button>
+
+          <div style="font-size:0.74rem;color:var(--text3);text-align:center">
+            To disable: tap the toggle above or click the 🔒 lock icon in the address bar → Notifications → Block
+          </div>
         </div>
-        <div class="action-card-body">
+      </div>`;
+
+  } else if (perm === 'default') {
+    actionHtml = `
+      <div class="action-card">
+        <div class="action-card-body" style="gap:16px">
+
+          <!-- ON/OFF Toggle -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+            <div>
+              <div style="font-weight:700;font-size:0.95rem;color:var(--text)">Push Notifications</div>
+              <div style="font-size:0.78rem;color:var(--text3);margin-top:2px">Currently <strong style="color:var(--red)">OFF</strong> — tap toggle to enable</div>
+            </div>
+            <button onclick="handleToggle('enable')" class="toggle-btn toggle-off" title="Tap to enable">
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+
           <button class="enable-btn" id="enable-btn" onclick="requestPermission()">
             <span class="bell-animated">🔔</span>
             Enable Notifications
           </button>
           <div style="text-align:center;font-size:0.74rem;color:var(--text3)">
-            A permission popup will appear. Tap <strong style="color:var(--text)">"Allow"</strong> to continue.
+            Your browser will ask for permission — tap <strong style="color:var(--text)">"Allow"</strong>
           </div>
         </div>
       </div>`;
-    return;
+
+  } else if (perm === 'denied') {
+    actionHtml = `
+      <div class="action-card">
+        <div class="action-card-body" style="gap:16px">
+
+          <!-- ON/OFF Toggle -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+            <div>
+              <div style="font-weight:700;font-size:0.95rem;color:var(--text)">Push Notifications</div>
+              <div style="font-size:0.78rem;color:var(--text3);margin-top:2px">Currently <strong style="color:var(--red)">BLOCKED</strong> — tap toggle to fix</div>
+            </div>
+            <button onclick="handleToggle('unblock')" class="toggle-btn toggle-off" title="Tap to unblock">
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+
+          <button class="open-settings-btn" onclick="openBrowserSettings()">
+            ⚙️ Open Browser Notification Settings
+          </button>
+          <div style="text-align:center;font-size:0.74rem;color:var(--text3)">
+            In settings: find <strong style="color:var(--text)">thebohothread.in</strong> → set Notifications to <strong style="color:var(--text)">Allow</strong>, then reload
+          </div>
+
+          <button class="test-btn" onclick="location.reload()">
+            🔄 I've updated settings — Reload
+          </button>
+        </div>
+      </div>`;
+
+  } else if (perm === 'ios-browser') {
+    actionHtml = `
+      <div class="action-card">
+        <div class="action-card-header">
+          <h3>📲 How to enable on iPhone/iPad</h3>
+          <p>iOS only supports notifications via Safari + Home Screen</p>
+        </div>
+        <div class="action-card-body" style="gap:0">
+          <div class="steps">
+            <div class="step-row">
+              <div class="step-num">1</div>
+              <div class="step-text">
+                <strong>Open this page in <span style="color:var(--accent2)">Safari</span></strong>
+                <span>Copy the URL and paste it in Safari (not Chrome/Firefox)</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">2</div>
+              <div class="step-text">
+                <strong>Tap Share ⎋ → "Add to Home Screen"</strong>
+                <span>At the bottom of Safari, tap the share box</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">3</div>
+              <div class="step-text">
+                <strong>Open SplitMate from Home Screen</strong>
+                <span>Then come back to this page and tap Enable</span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <button class="test-btn" onclick="copyURL()">📋 Copy this page's URL</button>
+          </div>
+          <div style="margin-top:8px;font-size:0.72rem;color:var(--text3);text-align:center">⚠️ Requires iOS 16.4 or later</div>
+        </div>
+      </div>`;
+
+  } else {
+    actionHtml = `
+      <div class="action-card">
+        <div class="action-card-body">
+          <p style="color:var(--text3);font-size:0.85rem;text-align:center;margin:8px 0">
+            Push notifications are not supported in this browser.<br>
+            Please use <strong style="color:var(--text)">Chrome</strong>, <strong style="color:var(--text)">Edge</strong>, or <strong style="color:var(--text)">Firefox</strong> on desktop.
+          </p>
+        </div>
+      </div>`;
   }
 
-  // Not installed — show Add to Home Screen guide
-  setStatus('default', '📱', 'One Step Required', 'not-asked',
-    'On iPhone/iPad, add this site to your Home Screen first to enable push notifications.');
-  document.getElementById('benefits-card').style.display = 'block';
-  document.getElementById('action-section').innerHTML = `
-    <div class="action-card">
-      <div class="action-card-header">
-        <h3>📲 Add to Home Screen</h3>
-        <p>iOS requires the app to be installed before notifications work</p>
-      </div>
-      <div class="action-card-body" style="gap:0">
-        <div class="steps">
-          <div class="step-row">
-            <div class="step-num">1</div>
-            <div class="step-text">
-              <strong>Tap the Share button <span style="font-size:1rem">⎋</span></strong>
-              <span>At the bottom of Safari (the box with an arrow pointing up)</span>
-            </div>
-          </div>
-          <div class="step-row">
-            <div class="step-num">2</div>
-            <div class="step-text">
-              <strong>Tap "Add to Home Screen"</strong>
-              <span>Scroll down in the share sheet and tap this option</span>
-            </div>
-          </div>
-          <div class="step-row">
-            <div class="step-num">3</div>
-            <div class="step-text">
-              <strong>Tap "Add" to confirm</strong>
-              <span>The SplitMate icon will appear on your Home Screen</span>
-            </div>
-          </div>
-          <div class="step-row">
-            <div class="step-num">4</div>
-            <div class="step-text">
-              <strong>Open the app from Home Screen</strong>
-              <span>Then come back to this Notifications page and tap Enable</span>
-            </div>
-          </div>
-        </div>
-        <div style="margin-top:4px;padding-top:16px;border-top:1px solid var(--border);font-size:0.75rem;color:var(--text3);text-align:center;line-height:1.6">
-          ⚠️ Requires iOS 16.4 or later
-        </div>
-      </div>
-    </div>`;
+  wrap.innerHTML = actionHtml;
 }
 
-// ── GRANTED state ─────────────────────────────────────────────────────────────
-function renderGranted() {
-  setStatus('granted', '✅', 'Notifications Enabled', 'granted',
-    'You will receive push notifications from SplitMate, even when the app is closed.');
-
-  document.getElementById('benefits-card').style.display = 'block';
-
-  document.getElementById('action-section').innerHTML = `
-    <div class="action-card">
-      <div class="action-card-header">
-        <h3>🎉 You're all set!</h3>
-        <p>Push notifications are active on this device</p>
-      </div>
-      <div class="action-card-body">
-        <button class="test-btn" onclick="sendTestNotification()">
-          <span>🧪</span> Send a Test Notification
-        </button>
-        <div style="text-align:center;font-size:0.75rem;color:var(--text3);margin-top:4px">
-          A test pop-up will appear on your screen right now
-        </div>
-        <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
-          <button class="test-btn" onclick="openBrowserSettings()" style="border-color:rgba(239,68,68,0.4);color:var(--red)">
-            🔕 Disable Notifications (Browser Settings)
-          </button>
-          <div style="font-size:0.75rem;color:var(--text3);line-height:1.6;margin-top:8px;text-align:center">
-            Opens your browser settings → find <strong style="color:var(--text)">thebohothread.in</strong> → set Notifications to <strong style="color:var(--text)">Block</strong>
-          </div>
-        </div>
-      </div>
-    </div>`;
-
-  // Refresh FCM token silently
-  refreshToken();
+// ── Toggle handler ────────────────────────────────────────────────────────────
+async function handleToggle(action) {
+  if (action === 'enable') {
+    await requestPermission();
+  } else if (action === 'disable' || action === 'unblock') {
+    openBrowserSettings();
+  }
 }
 
-// ── DEFAULT (not yet asked) state ─────────────────────────────────────────────
-function renderDefault() {
-  setStatus('default', '<span class="bell-animated">🔔</span>', 'Permission Not Set', 'not-asked',
-    'You haven\'t allowed or blocked notifications yet. Enable them to stay updated on expenses and group activity.');
-
-  document.getElementById('benefits-card').style.display = 'block';
-
-  document.getElementById('action-section').innerHTML = `
-    <div class="action-card">
-      <div class="action-card-header">
-        <h3>Enable Push Notifications</h3>
-        <p>Tap the button below — your browser will ask for permission</p>
-      </div>
-      <div class="action-card-body">
-        <button class="enable-btn" id="enable-btn" onclick="requestPermission()">
-          <span class="bell-animated">🔔</span>
-          Enable Notifications
-        </button>
-        <div style="text-align:center;font-size:0.74rem;color:var(--text3)">
-          A browser permission popup will appear. Click <strong style="color:var(--text)">"Allow"</strong> to continue.
-        </div>
-      </div>
-    </div>`;
+// ── Copy URL helper ───────────────────────────────────────────────────────────
+function copyURL() {
+  navigator.clipboard && navigator.clipboard.writeText(location.href)
+    .then(() => showToast && showToast('URL copied! Paste it in Safari 🧭', 'success'))
+    .catch(() => {});
 }
 
-// ── Detect browser ─────────────────────────────────────────────────────────────
+// ── Detect browser for settings deep-link ────────────────────────────────────
 function detectBrowser() {
   const ua = navigator.userAgent;
   if (ua.includes('Edg/')) return 'edge';
@@ -465,276 +542,40 @@ function detectBrowser() {
   return 'chrome';
 }
 
-// ── Try to open browser notification settings directly ────────────────────────
 function openBrowserSettings() {
   const browser = detectBrowser();
   if (browser === 'chrome') {
     window.open('chrome://settings/content/notifications');
-    setTimeout(() => {
-      showToast && showToast('If nothing opened: type  chrome://settings/content/notifications  in the address bar', 'info');
-    }, 800);
+    setTimeout(() => showToast && showToast('Type  chrome://settings/content/notifications  in the address bar if nothing opened', 'info'), 800);
   } else if (browser === 'edge') {
     window.open('edge://settings/content/notifications');
-    setTimeout(() => {
-      showToast && showToast('If nothing opened: type  edge://settings/content/notifications  in the address bar', 'info');
-    }, 800);
+    setTimeout(() => showToast && showToast('Type  edge://settings/content/notifications  if nothing opened', 'info'), 800);
   } else if (browser === 'firefox') {
     window.open('about:preferences#privacy');
-    setTimeout(() => {
-      showToast && showToast('Go to Permissions → Notifications → Settings in Firefox', 'info');
-    }, 800);
+    setTimeout(() => showToast && showToast('Go to Permissions → Notifications → Settings', 'info'), 800);
   } else {
-    navigator.clipboard && navigator.clipboard.writeText(location.origin)
-      .then(() => showToast && showToast('Site address copied! Paste in Safari Settings → Websites → Notifications', 'info'))
-      .catch(() => {});
+    // Safari — open Settings app (can't deep-link, guide instead)
+    showToast && showToast('Go to iOS Settings → Safari → Notifications → find thebohothread.in', 'info');
   }
 }
 
-// ── DENIED state ──────────────────────────────────────────────────────────────
-function renderDenied() {
-  setStatus('denied', '🚫', 'Notifications Blocked', 'denied',
-    'You previously blocked notifications. Use the button below to open your browser\'s notification settings, then set this site to "Allow".');
-  const detectedBrowser = detectBrowser();
-
-  document.getElementById('action-section').innerHTML = `
-    <div class="action-card">
-      <div class="action-card-header">
-        <h3>🔓 Unblock Notifications</h3>
-        <p>Use the button below or follow the manual steps</p>
-      </div>
-      <div class="action-card-body" style="gap:14px">
-
-        <button class="open-settings-btn" onclick="openBrowserSettings()">
-          ⚙️ Open Browser Notification Settings
-        </button>
-        <div style="text-align:center;font-size:0.74rem;color:var(--text3);margin-top:-8px">
-          Opens browser settings → find <strong style="color:var(--text)">thebohothread.in</strong> → set to <strong style="color:var(--text)">Allow</strong>
-        </div>
-
-        <div style="position:relative;display:flex;align-items:center;gap:8px;margin:2px 0">
-          <div style="flex:1;height:1px;background:var(--border)"></div>
-          <span style="font-size:0.72rem;color:var(--text3);white-space:nowrap">or follow steps manually</span>
-          <div style="flex:1;height:1px;background:var(--border)"></div>
-        </div>
-
-        <div class="browser-tabs" id="browser-tabs-row">
-          <div class="browser-tab" id="tab-chrome" onclick="showBrowser('chrome', this)">🌐 Chrome</div>
-          <div class="browser-tab" id="tab-firefox" onclick="showBrowser('firefox', this)">🦊 Firefox</div>
-          <div class="browser-tab" id="tab-safari" onclick="showBrowser('safari', this)">🧭 Safari</div>
-          <div class="browser-tab" id="tab-edge" onclick="showBrowser('edge', this)">🔷 Edge</div>
-        </div>
-
-        <!-- Chrome -->
-        <div class="browser-instructions active" id="instr-chrome">
-          <div class="steps">
-            <div class="step-row">
-              <div class="step-num">1</div>
-              <div class="step-text">
-                <strong>Click the 🔒 lock icon</strong>
-                <span>in the address bar at the top of your browser</span>
-              </div>
-            </div>
-            <div class="step-row">
-              <div class="step-num">2</div>
-              <div class="step-text">
-                <strong>Click "Site settings"</strong>
-                <span>in the dropdown that appears</span>
-              </div>
-            </div>
-            <div class="step-row">
-              <div class="step-num">3</div>
-              <div class="step-text">
-                <strong>Find "Notifications" and set to "Allow"</strong>
-                <span>Change from Blocked → Allow in the dropdown</span>
-              </div>
-            </div>
-            <div class="step-row">
-              <div class="step-num">4</div>
-              <div class="step-text">
-                <strong>Reload this page</strong>
-                <span>Come back here and click "Enable Notifications"</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Firefox -->
-        <div class="browser-instructions" id="instr-firefox">
-          <div class="steps">
-            <div class="step-row">
-              <div class="step-num">1</div>
-              <div class="step-text">
-                <strong>Click the 🔒 lock icon</strong>
-                <span>to the left of the address bar</span>
-              </div>
-            </div>
-            <div class="step-row">
-              <div class="step-num">2</div>
-              <div class="step-text">
-                <strong>Click "Connection secure" → "More information"</strong>
-                <span>This opens the Page Info window</span>
-              </div>
-            </div>
-            <div class="step-row">
-              <div class="step-num">3</div>
-              <div class="step-text">
-                <strong>Go to "Permissions" tab</strong>
-                <span>Find "Send Notifications" and uncheck "Block"</span>
-              </div>
-            </div>
-            <div class="step-row">
-              <div class="step-num">4</div>
-              <div class="step-text">
-                <strong>Reload this page</strong>
-                <span>Then click "Enable Notifications" above</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Safari -->
-        <div class="browser-instructions" id="instr-safari">
-          <div class="steps">
-            <div class="step-row">
-              <div class="step-num">1</div>
-              <div class="step-text">
-                <strong>Open Safari menu → Settings (or Preferences)</strong>
-                <span>From the top menu bar on Mac</span>
-              </div>
-            </div>
-            <div class="step-row">
-              <div class="step-num">2</div>
-              <div class="step-text">
-                <strong>Go to "Websites" tab</strong>
-                <span>Then click "Notifications" in the left sidebar</span>
-              </div>
-            </div>
-            <div class="step-row">
-              <div class="step-num">3</div>
-              <div class="step-text">
-                <strong>Find this website and set to "Allow"</strong>
-                <span>Change the dropdown from Deny → Allow</span>
-              </div>
-            </div>
-            <div class="step-row">
-              <div class="step-num">4</div>
-              <div class="step-text">
-                <strong>Reload this page</strong>
-                <span>Then click "Enable Notifications"</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Edge -->
-        <div class="browser-instructions" id="instr-edge">
-          <div class="steps">
-            <div class="step-row">
-              <div class="step-num">1</div>
-              <div class="step-text">
-                <strong>Click the 🔒 lock icon</strong>
-                <span>in the address bar</span>
-              </div>
-            </div>
-            <div class="step-row">
-              <div class="step-num">2</div>
-              <div class="step-text">
-                <strong>Click "Permissions for this site"</strong>
-                <span>A panel will open on the right side</span>
-              </div>
-            </div>
-            <div class="step-row">
-              <div class="step-num">3</div>
-              <div class="step-text">
-                <strong>Find "Notifications" and set to "Allow"</strong>
-                <span>Toggle from Block → Allow</span>
-              </div>
-            </div>
-            <div class="step-row">
-              <div class="step-num">4</div>
-              <div class="step-text">
-                <strong>Reload this page</strong>
-                <span>Come back and click "Enable Notifications"</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-          <button class="test-btn" onclick="location.reload()" style="gap:8px">
-            🔄 I've updated settings — Reload page
-          </button>
-        </div>
-      </div>
-    </div>`;
-
-  // Auto-activate the detected browser tab
-  setTimeout(() => {
-    const tab = document.getElementById('tab-' + detectedBrowser);
-    if (tab) {
-      document.querySelectorAll('.browser-tab').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.browser-instructions').forEach(el => el.classList.remove('active'));
-      tab.classList.add('active');
-      const instr = document.getElementById('instr-' + detectedBrowser);
-      if (instr) instr.classList.add('active');
-    }
-  }, 0);
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function setStatus(state, iconHtml, title, badgeKey, desc) {
-  const card     = document.getElementById('status-card');
-  const iconWrap = document.getElementById('status-icon-wrap');
-  const icon     = document.getElementById('status-icon');
-  const badge    = document.getElementById('status-badge');
-  const titleEl  = document.getElementById('status-title');
-  const descEl   = document.getElementById('status-desc');
-
-  card.className     = 'status-card ' + state;
-  iconWrap.className = 'status-icon-wrap ' + state;
-  iconWrap.classList.remove('loading-pulse');
-  icon.innerHTML     = iconHtml;
-  titleEl.textContent = title;
-  descEl.textContent  = desc;
-
-  const badges = {
-    'granted':     ['badge-green',  '✅ Enabled'],
-    'denied':      ['badge-red',    '🚫 Blocked'],
-    'not-asked':   ['badge-purple', '⏳ Not set'],
-    'not-supported':['badge-red',   '❌ Not supported'],
-  };
-  const [cls, label] = badges[badgeKey] || ['badge-purple', badgeKey];
-  badge.className  = 'status-badge ' + cls;
-  badge.textContent = label;
-}
-
-function showBrowser(browser, btn) {
-  document.querySelectorAll('.browser-tab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.browser-instructions').forEach(el => el.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('instr-' + browser).classList.add('active');
-}
-
+// ── Enable (request permission) ───────────────────────────────────────────────
 async function requestPermission() {
   const btn = document.getElementById('enable-btn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳</span> Waiting for browser…'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳</span> Waiting…'; }
 
   try {
     const result = await Notification.requestPermission();
     if (result === 'granted') {
       await refreshToken();
-      // Show success notification immediately
       new Notification('🎉 Notifications Enabled!', {
-        body: 'You\'ll now get push notifications from SplitMate.',
-        icon: '/icon-192.png',
-        tag: 'welcome-notif'
+        body: "You'll now get push notifications from SplitMate.",
+        icon: '/icon-192.png', tag: 'welcome-notif'
       });
       showToast && showToast('Notifications enabled! 🔔', 'success');
-      setTimeout(() => renderPermissionUI(), 400);
-    } else if (result === 'denied') {
-      renderPermissionUI();
+      setTimeout(() => renderPermissionUI(), 300);
     } else {
-      if (btn) { btn.disabled = false; btn.innerHTML = '<span class="bell-animated">🔔</span> Enable Notifications'; }
+      setTimeout(() => renderPermissionUI(), 300);
     }
   } catch(e) {
     console.warn('Permission error:', e);
@@ -742,6 +583,7 @@ async function requestPermission() {
   }
 }
 
+// ── Refresh FCM token ─────────────────────────────────────────────────────────
 async function refreshToken() {
   try {
     await navigator.serviceWorker.register('/firebase-messaging-sw.js');
@@ -749,8 +591,21 @@ async function refreshToken() {
     const token = await msg.getToken({ vapidKey: VAPID_KEY });
     if (token && currentUser) {
       await firebase.firestore().collection('users').doc(currentUser.id).set({
-        fcmToken: token, fcmUpdatedAt: Date.now()
+        fcmToken: token, fcmUpdatedAt: Date.now(), email: currentUser.email
       }, { merge: true });
+
+      // Sync token to any other user doc with same email (dual-auth fallback)
+      if (currentUser.email) {
+        try {
+          const snap = await firebase.firestore().collection('users')
+            .where('email', '==', currentUser.email).get();
+          for (const doc of snap.docs) {
+            if (doc.id !== currentUser.id) {
+              await doc.ref.set({ fcmToken: token, fcmUpdatedAt: Date.now() }, { merge: true });
+            }
+          }
+        } catch(e2) { console.warn('Cross-sync error:', e2); }
+      }
     }
   } catch(e) {
     console.warn('Token refresh error:', e);
@@ -760,11 +615,29 @@ async function refreshToken() {
 function sendTestNotification() {
   if (Notification.permission !== 'granted') return;
   new Notification('🔔 Test from SplitMate', {
-    body: 'Push notifications are working perfectly on your device!',
-    icon: '/icon-192.png',
-    tag: 'test-notif'
+    body: 'Push notifications are working perfectly!',
+    icon: '/icon-192.png', tag: 'test-notif'
   });
-  showToast && showToast('Test notification sent! Check your screen 👆', 'success');
+  showToast && showToast('Test notification sent! 👆', 'success');
+}
+
+// ── Status card helper ────────────────────────────────────────────────────────
+function setStatus(cardState, iconState, iconHtml, badgeCls, badgeLabel, title, desc) {
+  const card     = document.getElementById('status-card');
+  const iconWrap = document.getElementById('status-icon-wrap');
+  const icon     = document.getElementById('status-icon');
+  const badge    = document.getElementById('status-badge');
+  const titleEl  = document.getElementById('status-title');
+  const descEl   = document.getElementById('status-desc');
+
+  card.className     = 'status-card ' + cardState;
+  iconWrap.className = 'status-icon-wrap ' + iconState;
+  iconWrap.classList.remove('loading-pulse');
+  icon.innerHTML     = iconHtml;
+  titleEl.textContent = title;
+  descEl.textContent  = desc;
+  badge.className    = 'status-badge ' + badgeCls;
+  badge.textContent  = badgeLabel;
 }
 </script>
 </body>

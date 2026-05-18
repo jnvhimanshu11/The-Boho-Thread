@@ -309,11 +309,11 @@ function renderSidebar(activePage) {
         ${invBadge}
       </a>
       <a href="notifications.html" class="nav-item ${activePage==='notifications'?'active':''}">
-        <span class="icon">🔔</span> Send Notification
+        <span class="icon">📣</span> Send Notification
       </a>
       <span class="nav-label">Account</span>
       <a href="notification-settings.html" class="nav-item ${activePage==='notification-settings'?'active':''}">
-        <span class="icon">🔔</span> Notification Settings
+        <span class="icon">🔕</span> Notification Settings
       </a>
       <a href="profile.html" class="nav-item ${activePage==='profile'?'active':''}">
         <span class="icon">👤</span> Profile
@@ -501,8 +501,25 @@ async function _refreshFcmToken() {
     // Use set+merge so it works even if the document field doesn't exist yet
     await firebase.firestore().collection('users').doc(user.id).set({
       fcmToken: token,
-      fcmUpdatedAt: Date.now()
+      fcmUpdatedAt: Date.now(),
+      email: user.email  // always store email so cross-system lookup works
     }, { merge: true });
+
+    // Also update any OTHER user doc with the same email (dual-auth system fallback)
+    if (user.email) {
+      try {
+        const snap = await firebase.firestore().collection('users')
+          .where('email', '==', user.email)
+          .get();
+        for (const doc of snap.docs) {
+          if (doc.id !== user.id) {
+            await doc.ref.set({ fcmToken: token, fcmUpdatedAt: Date.now() }, { merge: true });
+          }
+        }
+      } catch(e2) {
+        console.warn('Cross-system token sync error:', e2);
+      }
+    }
 
     // Also listen for foreground messages (user is ON the site)
     msg.onMessage(function(payload) {
