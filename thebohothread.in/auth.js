@@ -309,11 +309,11 @@ function renderSidebar(activePage) {
         ${invBadge}
       </a>
       <a href="notifications.html" class="nav-item ${activePage==='notifications'?'active':''}">
-        <span class="icon">🔔</span> Send Notification
+        <span class="icon">📣</span> Send Notification
       </a>
       <span class="nav-label">Account</span>
       <a href="notification-settings.html" class="nav-item ${activePage==='notification-settings'?'active':''}">
-        <span class="icon">🔔</span> Notification Settings
+        <span class="icon">🔕</span> Notification Settings
       </a>
       <a href="profile.html" class="nav-item ${activePage==='profile'?'active':''}">
         <span class="icon">👤</span> Profile
@@ -347,22 +347,28 @@ function renderSidebar(activePage) {
 (function initPushPermission() {
   // Only run if user is logged in
   if (!Auth.isLoggedIn()) return;
-  // Only run if browser supports notifications
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-  // Don't prompt if already decided
-  if (Notification.permission === 'granted') {
-    _refreshFcmToken(); // Silently refresh token in case it changed
+
+  // Check support — on iOS PWA, Notification exists but serviceWorker may not
+  const hasNotification = ('Notification' in window);
+  const hasSW = ('serviceWorker' in navigator);
+
+  // If already granted (desktop OR iOS PWA), always try to refresh/save the token
+  if (hasNotification && Notification.permission === 'granted' && hasSW) {
+    _refreshFcmToken(); // Silently refresh token on every page load
     return;
   }
+
+  // If browser doesn't support notifications at all (iOS Safari not installed as PWA)
+  if (!hasNotification || !hasSW) return;
+
   if (Notification.permission === 'denied') {
-    // Show a subtle persistent hint in the corner pointing to settings page
     window.addEventListener('load', function() {
       setTimeout(_showDeniedHint, 3000);
     });
     return;
   }
 
-  // Wait until page is idle then show a gentle custom banner
+  // Default: show banner after page load
   window.addEventListener('load', function() {
     setTimeout(_showNotifBanner, 2000);
   });
@@ -484,7 +490,7 @@ async function _refreshFcmToken() {
     // Only run if Firebase messaging is loaded
     if (typeof firebase === 'undefined') return;
     const msg = firebase.messaging();
-    const VAPID_KEY = '7tS07IfMONitKyLoOe0DHgg-u7ywIErp_WgKTydlyo0';
+    const VAPID_KEY = 'BBktwVbBvH0xtvIMJHhGnYTY7UmXi6OgMKem2eEyLETLumEUqgFtDiL9KKxopdIlo4WOPL65sov8PWX5a0m2VUQ';
     const token = await msg.getToken({ vapidKey: VAPID_KEY });
     if (!token) return;
 
@@ -492,10 +498,28 @@ async function _refreshFcmToken() {
     if (!user) return;
 
     // Save token to Firestore
-    await firebase.firestore().collection('users').doc(user.id).update({
+    // Use set+merge so it works even if the document field doesn't exist yet
+    await firebase.firestore().collection('users').doc(user.id).set({
       fcmToken: token,
-      fcmUpdatedAt: Date.now()
-    });
+      fcmUpdatedAt: Date.now(),
+      email: user.email  // always store email so cross-system lookup works
+    }, { merge: true });
+
+    // Also update any OTHER user doc with the same email (dual-auth system fallback)
+    if (user.email) {
+      try {
+        const snap = await firebase.firestore().collection('users')
+          .where('email', '==', user.email)
+          .get();
+        for (const doc of snap.docs) {
+          if (doc.id !== user.id) {
+            await doc.ref.set({ fcmToken: token, fcmUpdatedAt: Date.now() }, { merge: true });
+          }
+        }
+      } catch(e2) {
+        console.warn('Cross-system token sync error:', e2);
+      }
+    }
 
     // Also listen for foreground messages (user is ON the site)
     msg.onMessage(function(payload) {
