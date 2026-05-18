@@ -748,9 +748,9 @@ async function refreshToken() {
     const msg   = firebase.messaging();
     const token = await msg.getToken({ vapidKey: VAPID_KEY });
     if (token && currentUser) {
-      await firebase.firestore().collection('users').doc(currentUser.id).update({
+      await firebase.firestore().collection('users').doc(currentUser.id).set({
         fcmToken: token, fcmUpdatedAt: Date.now()
-      });
+      }, { merge: true });
     }
   } catch(e) {
     console.warn('Token refresh error:', e);

@@ -216,7 +216,15 @@
           <div id="member-picker" style="display:none">
             <div class="select-all-row">
               <span class="text-sm" style="color:var(--text3)" id="eligible-label"></span>
-              <button class="select-all-btn" id="select-all-btn" onclick="toggleSelectAll()">Select All</button>
+              <div style="display:flex;gap:8px;align-items:center">
+                <button onclick="reloadMembers()" title="Refresh after members enable notifications" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:0.75rem;color:var(--text3);cursor:pointer;font-family:var(--font);transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">🔄 Refresh</button>
+                <button class="select-all-btn" id="select-all-btn" onclick="toggleSelectAll()">Select All</button>
+              </div>
+            </div>
+            <div id="no-token-warning" style="display:none;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:0.78rem;color:#ca9a04;line-height:1.6">
+              ⚠️ <strong>Some members haven't enabled notifications.</strong>
+              They need to visit <strong>Notification Settings</strong> on their device and tap <strong>Enable Notifications</strong>.
+              Ask them to do this, then click 🔄 Refresh above.
             </div>
             <div class="member-list" id="member-list"></div>
           </div>
@@ -459,15 +467,29 @@ async function loadAcceptedMembers() {
     pickerEl.style.display = 'block';
     renderMemberList();
 
-    // Update eligible label
+    // Update eligible label + show warning if any member has no token
     const eligible = members.filter(m => m.fcmToken).length;
     document.getElementById('eligible-label').textContent =
       eligible + ' of ' + members.length + ' can receive push notifications';
+    const noTokenWarning = document.getElementById('no-token-warning');
+    if (noTokenWarning) {
+      noTokenWarning.style.display = eligible < members.length ? 'block' : 'none';
+    }
 
   } catch(e) {
     loadEl.textContent = 'Error loading members: ' + e.message;
     console.error(e);
   }
+}
+
+function reloadMembers() {
+  acceptedMembers = [];
+  selectedIds.clear();
+  document.getElementById('member-picker').style.display = 'none';
+  document.getElementById('members-loading').style.display = 'block';
+  document.getElementById('members-loading').textContent = 'Refreshing…';
+  document.getElementById('no-token-warning') && (document.getElementById('no-token-warning').style.display = 'none');
+  loadAcceptedMembers();
 }
 
 function renderMemberList() {
