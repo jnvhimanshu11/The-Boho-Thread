@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notification Settings — SplitMate</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* ── Page layout ─────────────────────────────────── */
+.settings-wrap {
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Status card ─────────────────────────────────── */
+.status-card {
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  transition: border-color 0.3s;
+}
+.status-card.granted  { border-color: rgba(34,197,94,0.45);  background: rgba(34,197,94,0.06); }
+.status-card.denied   { border-color: rgba(239,68,68,0.4);   background: rgba(239,68,68,0.06); }
+.status-card.default  { border-color: rgba(108,99,255,0.4);  background: rgba(108,99,255,0.06); }
+
+.status-icon-wrap {
+  width: 64px; height: 64px;
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+.status-icon-wrap.granted { background: rgba(34,197,94,0.15); }
+.status-icon-wrap.denied  { background: rgba(239,68,68,0.12); }
+.status-icon-wrap.default { background: rgba(108,99,255,0.12); }
+
+.status-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.status-desc {
+  font-size: 0.82rem;
+  color: var(--text3);
+  line-height: 1.5;
+  margin: 0;
+}
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 99px;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.badge-green  { background: rgba(34,197,94,0.18);  color: var(--green); }
+.badge-red    { background: rgba(239,68,68,0.15);  color: var(--red); }
+.badge-purple { background: rgba(108,99,255,0.18); color: var(--accent2); }
+
+/* ── Action card ─────────────────────────────────── */
+.action-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.action-card-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.action-card-header h3 { font-size: 0.95rem; margin-bottom: 3px; }
+.action-card-header p  { font-size: 0.78rem; color: var(--text3); margin: 0; }
+
+.action-card-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+
+/* Big enable button */
+.enable-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 16px;
+  border-radius: var(--radius-sm);
+  font-size: 1rem; font-weight: 700;
+  font-family: var(--font-display);
+  border: none; cursor: pointer;
+  background: linear-gradient(135deg, #6c63ff, #8b85ff);
+  color: white;
+  box-shadow: 0 4px 20px rgba(108,99,255,0.35);
+  transition: all 0.2s;
+  position: relative; overflow: hidden;
+}
+.enable-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(108,99,255,0.45); }
+.enable-btn:active { transform: translateY(0); }
+.enable-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Pulse animation on the bell icon */
+@keyframes bellRing {
+  0%,100% { transform: rotate(0deg); }
+  15%      { transform: rotate(12deg); }
+  30%      { transform: rotate(-10deg); }
+  45%      { transform: rotate(8deg); }
+  60%      { transform: rotate(-6deg); }
+}
+.bell-animated { display: inline-block; animation: bellRing 2.5s ease-in-out infinite; }
+
+/* Steps for denied state */
+.steps { display: flex; flex-direction: column; gap: 0; }
+.step-row {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.step-row:last-child { border-bottom: none; }
+.step-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(108,99,255,0.15); color: var(--accent2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 800;
+  flex-shrink: 0;
+}
+.step-text { flex: 1; }
+.step-text strong { display: block; font-size: 0.85rem; margin-bottom: 2px; color: var(--text); }
+.step-text span   { font-size: 0.76rem; color: var(--text3); line-height: 1.5; }
+
+/* Browser icons */
+.browser-tabs {
+  display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.browser-tab {
+  padding: 6px 14px; border-radius: 99px;
+  font-size: 0.75rem; font-weight: 600;
+  border: 1.5px solid var(--border);
+  cursor: pointer; background: var(--bg3);
+  color: var(--text2); transition: all 0.15s;
+}
+.browser-tab.active { border-color: var(--accent); color: var(--accent2); background: rgba(108,99,255,0.1); }
+
+.browser-instructions { display: none; }
+.browser-instructions.active { display: block; }
+
+/* Info rows */
+.info-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 0; border-bottom: 1px solid var(--border);
+}
+.info-row:last-child { border-bottom: none; }
+.info-icon { font-size: 1.1rem; width: 24px; text-align: center; flex-shrink: 0; }
+.info-text { flex: 1; font-size: 0.82rem; color: var(--text2); }
+.info-text strong { color: var(--text); }
+
+/* Test notification button */
+.test-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: var(--radius-sm);
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); font-size: 0.85rem; font-weight: 600;
+  cursor: pointer; font-family: var(--font);
+  transition: all 0.15s; width: 100%; justify-content: center;
+}
+.test-btn:hover { border-color: var(--accent); color: var(--accent2); background: rgba(108,99,255,0.08); }
+
+/* Shimmer pulse for loading */
+@keyframes shimmer {
+  0%   { opacity: 0.4; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+.loading-pulse { animation: shimmer 1.5s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div id="sidebar-mount"></div>
+<div class="page-wrap">
+  <div class="main-content">
+
+    <div class="page-header">
+      <div class="page-header-row">
+        <div>
+          <div class="page-title">🔔 Notification Settings</div>
+          <div class="page-subtitle">Manage your push notification permission</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-wrap">
+
+      <!-- ── STATUS CARD ── -->
+      <div class="status-card" id="status-card">
+        <div class="status-icon-wrap loading-pulse" id="status-icon-wrap" style="background:var(--surface2)">
+          <span id="status-icon">⏳</span>
+        </div>
+        <div style="flex:1">
+          <div class="status-badge badge-purple" id="status-badge">Checking…</div>
+          <div class="status-title" id="status-title">Loading…</div>
+          <p class="status-desc" id="status-desc">Checking notification permission status.</p>
+        </div>
+      </div>
+
+      <!-- ── ACTION CARD — changes based on state ── -->
+      <div id="action-section"></div>
+
+      <!-- ── WHAT YOU GET card ── -->
+      <div class="action-card" id="benefits-card" style="display:none">
+        <div class="action-card-header">
+          <h3>What you'll receive</h3>
+          <p>Push notifications arrive even when the app is closed</p>
+        </div>
+        <div class="action-card-body" style="gap:0;padding:8px 20px">
+          <div class="info-row">
+            <div class="info-icon">💸</div>
+            <div class="info-text"><strong>New expenses</strong> — when someone adds an expense to your group</div>
+          </div>
+          <div class="info-row">
+            <div class="info-icon">💬</div>
+            <div class="info-text"><strong>Group messages</strong> — notifications sent by group admins</div>
+          </div>
+          <div class="info-row">
+            <div class="info-icon">✅</div>
+            <div class="info-text"><strong>Settlement alerts</strong> — when a balance is settled</div>
+          </div>
+          <div class="info-row">
+            <div class="info-icon">📩</div>
+            <div class="info-text"><strong>Invitations</strong> — when someone invites you to a group</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /settings-wrap -->
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey:            "AIzaSyCLz4cXKGxILS5Use2KPe4XaUnLRhcrIyg",
+    authDomain:        "thebohothread-96e2c.firebaseapp.com",
+    projectId:         "thebohothread-96e2c",
+    storageBucket:     "thebohothread-96e2c.firebasestorage.app",
+    messagingSenderId: "100688387088",
+    appId:             "1:100688387088:web:f8a6af7565d3c25952fe95",
+    measurementId:     "G-5VTK93354M"
+  };
+  firebase.initializeApp(firebaseConfig);
+</script>
+<script src="db.firestore.js"></script>
+<script src="auth.js"></script>
+<script>
+const VAPID_KEY = '7tS07IfMONitKyLoOe0DHgg-u7ywIErp_WgKTydlyo0';
+const currentUser = Auth.requireAuth();
+if (!currentUser) { window.location.href = 'index.html'; }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('notification-settings');
+  initSidebar();
+  renderPermissionUI();
+});
+
+// ── Render UI based on current permission state ───────────────────────────────
+function renderPermissionUI() {
+  const supported = ('Notification' in window) && ('serviceWorker' in navigator);
+
+  if (!supported) {
+    setStatus('default', '🚫', 'Not Supported', 'not-supported',
+      'Your browser does not support push notifications. Try Chrome, Edge, or Firefox.');
+    document.getElementById('action-section').innerHTML = `
+      <div class="action-card">
+        <div class="action-card-body">
+          <p style="color:var(--text3);font-size:0.85rem;text-align:center;margin:8px 0">
+            Please switch to a supported browser like <strong style="color:var(--text)">Chrome</strong>,
+            <strong style="color:var(--text)">Edge</strong>, or <strong style="color:var(--text)">Firefox</strong>
+            to enable push notifications.
+          </p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const perm = Notification.permission;
+
+  if (perm === 'granted') {
+    renderGranted();
+  } else if (perm === 'denied') {
+    renderDenied();
+  } else {
+    renderDefault();
+  }
+}
+
+// ── GRANTED state ─────────────────────────────────────────────────────────────
+function renderGranted() {
+  setStatus('granted', '✅', 'Notifications Enabled', 'granted',
+    'You will receive push notifications from SplitMate, even when the app is closed.');
+
+  document.getElementById('benefits-card').style.display = 'block';
+
+  document.getElementById('action-section').innerHTML = `
+    <div class="action-card">
+      <div class="action-card-header">
+        <h3>🎉 You're all set!</h3>
+        <p>Push notifications are active on this device</p>
+      </div>
+      <div class="action-card-body">
+        <button class="test-btn" onclick="sendTestNotification()">
+          <span>🧪</span> Send a Test Notification
+        </button>
+        <div style="text-align:center;font-size:0.75rem;color:var(--text3);margin-top:4px">
+          A test pop-up will appear on your screen right now
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+          <div style="font-size:0.8rem;color:var(--text3);line-height:1.6">
+            Want to <strong style="color:var(--red)">disable</strong> notifications?
+            You can do this from your browser's site settings:
+            click the <strong style="color:var(--text)">🔒 lock icon</strong> in the address bar →
+            <strong style="color:var(--text)">Notifications</strong> → Block.
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  // Refresh FCM token silently
+  refreshToken();
+}
+
+// ── DEFAULT (not yet asked) state ─────────────────────────────────────────────
+function renderDefault() {
+  setStatus('default', '<span class="bell-animated">🔔</span>', 'Permission Not Set', 'not-asked',
+    'You haven\'t allowed or blocked notifications yet. Enable them to stay updated on expenses and group activity.');
+
+  document.getElementById('benefits-card').style.display = 'block';
+
+  document.getElementById('action-section').innerHTML = `
+    <div class="action-card">
+      <div class="action-card-header">
+        <h3>Enable Push Notifications</h3>
+        <p>Tap the button below — your browser will ask for permission</p>
+      </div>
+      <div class="action-card-body">
+        <button class="enable-btn" id="enable-btn" onclick="requestPermission()">
+          <span class="bell-animated">🔔</span>
+          Enable Notifications
+        </button>
+        <div style="text-align:center;font-size:0.74rem;color:var(--text3)">
+          A browser permission popup will appear. Click <strong style="color:var(--text)">"Allow"</strong> to continue.
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── DENIED state ──────────────────────────────────────────────────────────────
+function renderDenied() {
+  setStatus('denied', '🚫', 'Notifications Blocked', 'denied',
+    'You previously blocked notifications. Browsers don\'t allow re-requesting — you\'ll need to manually unblock from settings.');
+
+  document.getElementById('action-section').innerHTML = `
+    <div class="action-card">
+      <div class="action-card-header">
+        <h3>How to unblock notifications</h3>
+        <p>Follow the steps for your browser below</p>
+      </div>
+      <div class="action-card-body" style="gap:0">
+
+        <div class="browser-tabs">
+          <div class="browser-tab active" onclick="showBrowser('chrome', this)">🌐 Chrome</div>
+          <div class="browser-tab" onclick="showBrowser('firefox', this)">🦊 Firefox</div>
+          <div class="browser-tab" onclick="showBrowser('safari', this)">🧭 Safari</div>
+          <div class="browser-tab" onclick="showBrowser('edge', this)">🔷 Edge</div>
+        </div>
+
+        <!-- Chrome -->
+        <div class="browser-instructions active" id="instr-chrome">
+          <div class="steps">
+            <div class="step-row">
+              <div class="step-num">1</div>
+              <div class="step-text">
+                <strong>Click the 🔒 lock icon</strong>
+                <span>in the address bar at the top of your browser</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">2</div>
+              <div class="step-text">
+                <strong>Click "Site settings"</strong>
+                <span>in the dropdown that appears</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">3</div>
+              <div class="step-text">
+                <strong>Find "Notifications" and set to "Allow"</strong>
+                <span>Change from Blocked → Allow in the dropdown</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">4</div>
+              <div class="step-text">
+                <strong>Reload this page</strong>
+                <span>Come back here and click "Enable Notifications"</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Firefox -->
+        <div class="browser-instructions" id="instr-firefox">
+          <div class="steps">
+            <div class="step-row">
+              <div class="step-num">1</div>
+              <div class="step-text">
+                <strong>Click the 🔒 lock icon</strong>
+                <span>to the left of the address bar</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">2</div>
+              <div class="step-text">
+                <strong>Click "Connection secure" → "More information"</strong>
+                <span>This opens the Page Info window</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">3</div>
+              <div class="step-text">
+                <strong>Go to "Permissions" tab</strong>
+                <span>Find "Send Notifications" and uncheck "Block"</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">4</div>
+              <div class="step-text">
+                <strong>Reload this page</strong>
+                <span>Then click "Enable Notifications" above</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Safari -->
+        <div class="browser-instructions" id="instr-safari">
+          <div class="steps">
+            <div class="step-row">
+              <div class="step-num">1</div>
+              <div class="step-text">
+                <strong>Open Safari menu → Settings (or Preferences)</strong>
+                <span>From the top menu bar on Mac</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">2</div>
+              <div class="step-text">
+                <strong>Go to "Websites" tab</strong>
+                <span>Then click "Notifications" in the left sidebar</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">3</div>
+              <div class="step-text">
+                <strong>Find this website and set to "Allow"</strong>
+                <span>Change the dropdown from Deny → Allow</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">4</div>
+              <div class="step-text">
+                <strong>Reload this page</strong>
+                <span>Then click "Enable Notifications"</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edge -->
+        <div class="browser-instructions" id="instr-edge">
+          <div class="steps">
+            <div class="step-row">
+              <div class="step-num">1</div>
+              <div class="step-text">
+                <strong>Click the 🔒 lock icon</strong>
+                <span>in the address bar</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">2</div>
+              <div class="step-text">
+                <strong>Click "Permissions for this site"</strong>
+                <span>A panel will open on the right side</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">3</div>
+              <div class="step-text">
+                <strong>Find "Notifications" and set to "Allow"</strong>
+                <span>Toggle from Block → Allow</span>
+              </div>
+            </div>
+            <div class="step-row">
+              <div class="step-num">4</div>
+              <div class="step-text">
+                <strong>Reload this page</strong>
+                <span>Come back and click "Enable Notifications"</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+          <button class="test-btn" onclick="location.reload()" style="gap:8px">
+            🔄 I've updated settings — Reload page
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function setStatus(state, iconHtml, title, badgeKey, desc) {
+  const card     = document.getElementById('status-card');
+  const iconWrap = document.getElementById('status-icon-wrap');
+  const icon     = document.getElementById('status-icon');
+  const badge    = document.getElementById('status-badge');
+  const titleEl  = document.getElementById('status-title');
+  const descEl   = document.getElementById('status-desc');
+
+  card.className     = 'status-card ' + state;
+  iconWrap.className = 'status-icon-wrap ' + state;
+  iconWrap.classList.remove('loading-pulse');
+  icon.innerHTML     = iconHtml;
+  titleEl.textContent = title;
+  descEl.textContent  = desc;
+
+  const badges = {
+    'granted':     ['badge-green',  '✅ Enabled'],
+    'denied':      ['badge-red',    '🚫 Blocked'],
+    'not-asked':   ['badge-purple', '⏳ Not set'],
+    'not-supported':['badge-red',   '❌ Not supported'],
+  };
+  const [cls, label] = badges[badgeKey] || ['badge-purple', badgeKey];
+  badge.className  = 'status-badge ' + cls;
+  badge.textContent = label;
+}
+
+function showBrowser(browser, btn) {
+  document.querySelectorAll('.browser-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.browser-instructions').forEach(el => el.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('instr-' + browser).classList.add('active');
+}
+
+async function requestPermission() {
+  const btn = document.getElementById('enable-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳</span> Waiting for browser…'; }
+
+  try {
+    const result = await Notification.requestPermission();
+    if (result === 'granted') {
+      await refreshToken();
+      // Show success notification immediately
+      new Notification('🎉 Notifications Enabled!', {
+        body: 'You\'ll now get push notifications from SplitMate.',
+        icon: '/icon-192.png',
+        tag: 'welcome-notif'
+      });
+      showToast && showToast('Notifications enabled! 🔔', 'success');
+      setTimeout(() => renderPermissionUI(), 400);
+    } else if (result === 'denied') {
+      renderPermissionUI();
+    } else {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<span class="bell-animated">🔔</span> Enable Notifications'; }
+    }
+  } catch(e) {
+    console.warn('Permission error:', e);
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="bell-animated">🔔</span> Enable Notifications'; }
+  }
+}
+
+async function refreshToken() {
+  try {
+    await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    const msg   = firebase.messaging();
+    const token = await msg.getToken({ vapidKey: VAPID_KEY });
+    if (token && currentUser) {
+      await firebase.firestore().collection('users').doc(currentUser.id).update({
+        fcmToken: token, fcmUpdatedAt: Date.now()
+      });
+    }
+  } catch(e) {
+    console.warn('Token refresh error:', e);
+  }
+}
+
+function sendTestNotification() {
+  if (Notification.permission !== 'granted') return;
+  new Notification('🔔 Test from SplitMate', {
+    body: 'Push notifications are working perfectly on your device!',
+    icon: '/icon-192.png',
+    tag: 'test-notif'
+  });
+  showToast && showToast('Test notification sent! Check your screen 👆', 'success');
+}
+</script>
+</body>
+</html>

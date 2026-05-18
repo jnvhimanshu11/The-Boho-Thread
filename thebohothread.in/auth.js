@@ -312,6 +312,9 @@ function renderSidebar(activePage) {
         <span class="icon">🔔</span> Send Notification
       </a>
       <span class="nav-label">Account</span>
+      <a href="notification-settings.html" class="nav-item ${activePage==='notification-settings'?'active':''}">
+        <span class="icon">🔔</span> Notification Settings
+      </a>
       <a href="profile.html" class="nav-item ${activePage==='profile'?'active':''}">
         <span class="icon">👤</span> Profile
       </a>
@@ -351,7 +354,13 @@ function renderSidebar(activePage) {
     _refreshFcmToken(); // Silently refresh token in case it changed
     return;
   }
-  if (Notification.permission === 'denied') return;
+  if (Notification.permission === 'denied') {
+    // Show a subtle persistent hint in the corner pointing to settings page
+    window.addEventListener('load', function() {
+      setTimeout(_showDeniedHint, 3000);
+    });
+    return;
+  }
 
   // Wait until page is idle then show a gentle custom banner
   window.addEventListener('load', function() {
@@ -436,6 +445,38 @@ async function _grantNotifPermission() {
 function _dismissNotifBanner() {
   const el = document.getElementById('__notif-banner');
   if (el) el.remove();
+}
+
+function _showDeniedHint() {
+  // Don't show if already on the settings page
+  if (window.location.pathname.includes('notification-settings.html')) return;
+  if (document.getElementById('__notif-denied-hint')) return;
+
+  const hint = document.createElement('div');
+  hint.id = '__notif-denied-hint';
+  hint.innerHTML = `
+    <a href="notification-settings.html" style="
+      position:fixed; bottom:20px; right:20px;
+      background:#22222e; border:1px solid rgba(239,68,68,0.35);
+      border-radius:12px; padding:10px 14px;
+      box-shadow:0 4px 20px rgba(0,0,0,0.4);
+      display:flex; align-items:center; gap:10px;
+      z-index:9999; text-decoration:none;
+      font-family:'DM Sans',sans-serif;
+      animation:slideUpBanner 0.3s ease;
+      max-width:260px;
+    ">
+      <span style="font-size:1.2rem">🔕</span>
+      <div>
+        <div style="font-size:0.78rem;font-weight:700;color:#f0f0f8;margin-bottom:1px">Notifications blocked</div>
+        <div style="font-size:0.7rem;color:#6c63ff;">Tap to fix in settings →</div>
+      </div>
+      <button onclick="event.preventDefault();event.stopPropagation();this.closest('#__notif-denied-hint').remove()" style="
+        background:none;border:none;color:#6060a0;cursor:pointer;font-size:0.9rem;
+        padding:0;margin-left:4px;flex-shrink:0;line-height:1;
+      ">✕</button>
+    </a>`;
+  document.body.appendChild(hint);
 }
 
 async function _refreshFcmToken() {
