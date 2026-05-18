@@ -487,9 +487,10 @@ function _showDeniedHint() {
 
 async function _refreshFcmToken() {
   try {
-    // Only run if Firebase messaging is loaded
+    // Only run if Firebase messaging SDK is loaded and supported
     if (typeof firebase === 'undefined') return;
-    const msg = firebase.messaging();
+    if (typeof firebase.messaging !== 'function') return; // SDK not loaded on this page
+    if (!('serviceWorker' in navigator)) return;
     const VAPID_KEY = 'BBktwVbBvH0xtvIMJHhGnYTY7UmXi6OgMKem2eEyLETLumEUqgFtDiL9KKxopdIlo4WOPL65sov8PWX5a0m2VUQ';
     const token = await msg.getToken({ vapidKey: VAPID_KEY });
     if (!token) return;
