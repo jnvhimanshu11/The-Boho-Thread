@@ -487,31 +487,31 @@ function _showDeniedHint() {
 
 async function _refreshFcmToken() {
   try {
-    // Only run if Firebase messaging SDK is loaded and supported
     if (typeof firebase === 'undefined') return;
-    if (typeof firebase.messaging !== 'function') return; // SDK not loaded on this page
+    if (typeof firebase.messaging !== 'function') return;
     if (!('serviceWorker' in navigator)) return;
+
+    const msg = firebase.messaging();
     const VAPID_KEY = 'BBktwVbBvH0xtvIMJHhGnYTY7UmXi6OgMKem2eEyLETLumEUqgFtDiL9KKxopdIlo4WOPL65sov8PWX5a0m2VUQ';
+
+    await navigator.serviceWorker.register('/firebase-messaging-sw.js');
     const token = await msg.getToken({ vapidKey: VAPID_KEY });
     if (!token) return;
 
     const user = Auth.currentUser ? Auth.currentUser() : null;
     if (!user) return;
 
-    // Save token to Firestore
-    // Use set+merge so it works even if the document field doesn't exist yet
     await firebase.firestore().collection('users').doc(user.id).set({
       fcmToken: token,
       fcmUpdatedAt: Date.now(),
-      email: user.email  // always store email so cross-system lookup works
+      email: user.email
     }, { merge: true });
 
-    // Also update any OTHER user doc with the same email (dual-auth system fallback)
+    // Sync to any other doc with same email (dual-auth fallback)
     if (user.email) {
       try {
         const snap = await firebase.firestore().collection('users')
-          .where('email', '==', user.email)
-          .get();
+          .where('email', '==', user.email).get();
         for (const doc of snap.docs) {
           if (doc.id !== user.id) {
             await doc.ref.set({ fcmToken: token, fcmUpdatedAt: Date.now() }, { merge: true });
@@ -522,7 +522,6 @@ async function _refreshFcmToken() {
       }
     }
 
-    // Also listen for foreground messages (user is ON the site)
     msg.onMessage(function(payload) {
       _showForegroundNotif(payload);
     });
