@@ -308,6 +308,9 @@ function renderSidebar(activePage) {
         <span class="icon">✉️</span> Invitations
         ${invBadge}
       </a>
+      <a href="notifications.html" class="nav-item ${activePage==='notifications'?'active':''}">
+        <span class="icon">🔔</span> Send Notification
+      </a>
       <span class="nav-label">Account</span>
       <a href="profile.html" class="nav-item ${activePage==='profile'?'active':''}">
         <span class="icon">👤</span> Profile
@@ -331,4 +334,178 @@ function renderSidebar(activePage) {
     <span class="font-display font-bold">SplitMate</span>
     <a href="profile.html"><div class="avatar" id="topbar-avatar" style="background:#6c63ff">?</div></a>
   </div>`;
+}
+
+// ============================================================
+// 🔔 PUSH NOTIFICATION PERMISSION — Auto-prompt on page load
+// Asks every logged-in user to allow notifications.
+// Saves FCM token to Firestore so others can send push to them.
+// ============================================================
+(function initPushPermission() {
+  // Only run if user is logged in
+  if (!Auth.isLoggedIn()) return;
+  // Only run if browser supports notifications
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  // Don't prompt if already decided
+  if (Notification.permission === 'granted') {
+    _refreshFcmToken(); // Silently refresh token in case it changed
+    return;
+  }
+  if (Notification.permission === 'denied') return;
+
+  // Wait until page is idle then show a gentle custom banner
+  window.addEventListener('load', function() {
+    setTimeout(_showNotifBanner, 2000);
+  });
+})();
+
+function _showNotifBanner() {
+  // Don't show if already granted or on notification page (has its own UI)
+  if (Notification.permission === 'granted') return;
+  if (window.location.pathname.includes('notifications.html')) return;
+  if (document.getElementById('__notif-banner')) return;
+
+  const banner = document.createElement('div');
+  banner.id = '__notif-banner';
+  banner.innerHTML = `
+    <div style="
+      position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+      background:#22222e; border:1px solid rgba(108,99,255,0.4);
+      border-radius:14px; padding:16px 20px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(108,99,255,0.15);
+      display:flex; align-items:center; gap:14px;
+      max-width:420px; width:calc(100vw - 48px);
+      z-index:9999; animation:slideUpBanner 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      font-family:'DM Sans',sans-serif;
+    ">
+      <div style="font-size:1.6rem;flex-shrink:0">🔔</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:0.88rem;color:#f0f0f8;margin-bottom:2px">
+          Enable Push Notifications
+        </div>
+        <div style="font-size:0.75rem;color:#6060a0;line-height:1.4">
+          Get notified when group members send you messages or add expenses
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+        <button onclick="_grantNotifPermission()" style="
+          background:#6c63ff;color:white;border:none;border-radius:8px;
+          padding:7px 14px;font-size:0.78rem;font-weight:700;cursor:pointer;
+          font-family:inherit;white-space:nowrap;transition:background 0.15s;
+        " onmouseover="this.style.background='#8b85ff'" onmouseout="this.style.background='#6c63ff'">
+          Allow
+        </button>
+        <button onclick="_dismissNotifBanner()" style="
+          background:transparent;color:#6060a0;border:none;border-radius:8px;
+          padding:5px 14px;font-size:0.75rem;cursor:pointer;font-family:inherit;
+          white-space:nowrap;
+        ">
+          Not now
+        </button>
+      </div>
+    </div>
+    <style>
+      @keyframes slideUpBanner {
+        from { transform: translateX(-50%) translateY(20px); opacity:0; }
+        to   { transform: translateX(-50%) translateY(0);   opacity:1; }
+      }
+    </style>
+  `;
+  document.body.appendChild(banner);
+}
+
+async function _grantNotifPermission() {
+  _dismissNotifBanner();
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      await _refreshFcmToken();
+      // Show a welcome notification
+      new Notification('🎉 Notifications Enabled!', {
+        body: 'You\'ll now receive push notifications from SplitMate.',
+        icon: '/icon-192.png',
+        tag: 'welcome'
+      });
+      showToast && showToast('Notifications enabled! ✓', 'success');
+    }
+  } catch(e) {
+    console.warn('Notification permission error:', e);
+  }
+}
+
+function _dismissNotifBanner() {
+  const el = document.getElementById('__notif-banner');
+  if (el) el.remove();
+}
+
+async function _refreshFcmToken() {
+  try {
+    // Only run if Firebase messaging is loaded
+    if (typeof firebase === 'undefined') return;
+    const msg = firebase.messaging();
+    const VAPID_KEY = '7tS07IfMONitKyLoOe0DHgg-u7ywIErp_WgKTydlyo0';
+    const token = await msg.getToken({ vapidKey: VAPID_KEY });
+    if (!token) return;
+
+    const user = Auth.currentUser ? Auth.currentUser() : null;
+    if (!user) return;
+
+    // Save token to Firestore
+    await firebase.firestore().collection('users').doc(user.id).update({
+      fcmToken: token,
+      fcmUpdatedAt: Date.now()
+    });
+
+    // Also listen for foreground messages (user is ON the site)
+    msg.onMessage(function(payload) {
+      _showForegroundNotif(payload);
+    });
+  } catch(e) {
+    console.warn('FCM token refresh error:', e);
+  }
+}
+
+// Show in-app popup when a push arrives while user is on the site
+function _showForegroundNotif(payload) {
+  const title = payload.notification?.title || payload.data?.title || 'SplitMate';
+  const body  = payload.notification?.body  || payload.data?.body  || '';
+  const url   = payload.data?.url || 'dashboard.html';
+
+  const el = document.createElement('div');
+  el.innerHTML = `
+    <div id="__fg-notif" style="
+      position:fixed; top:24px; right:24px;
+      background:#22222e; border:1px solid rgba(108,99,255,0.45);
+      border-radius:14px; padding:14px 16px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.55);
+      display:flex; align-items:flex-start; gap:12px;
+      max-width:340px; width:calc(100vw - 48px);
+      z-index:9999; animation:slideInRight 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      font-family:'DM Sans',sans-serif; cursor:pointer;
+    " onclick="window.location.href='${url}'">
+      <div style="
+        width:38px;height:38px;border-radius:10px;
+        background:linear-gradient(135deg,#6c63ff,#8b85ff);
+        display:flex;align-items:center;justify-content:center;
+        font-size:1.1rem;flex-shrink:0
+      ">💸</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:0.85rem;color:#f0f0f8;margin-bottom:2px">${title}</div>
+        <div style="font-size:0.78rem;color:#a0a0c0;line-height:1.4;word-break:break-word">${body}</div>
+      </div>
+      <button onclick="event.stopPropagation();this.closest('#__fg-notif').remove()" style="
+        background:none;border:none;color:#6060a0;cursor:pointer;font-size:1rem;
+        padding:0;line-height:1;flex-shrink:0;margin-top:-2px
+      ">✕</button>
+    </div>
+    <style>
+      @keyframes slideInRight {
+        from { transform: translateX(20px); opacity:0; }
+        to   { transform: translateX(0);    opacity:1; }
+      }
+    </style>
+  `;
+  document.body.appendChild(el);
+  // Auto-dismiss after 8 seconds
+  setTimeout(() => { document.getElementById('__fg-notif')?.remove(); }, 8000);
 }
