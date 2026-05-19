@@ -591,47 +591,45 @@ async function sendNotifications() {
   let successCount = 0;
   let failCount = 0;
 
-  // Save notification to Firestore for each recipient
-  // (In production you'd call a Cloud Function to send via FCM HTTP API)
-  const batch = db.batch();
-  for (const member of targets) {
-    const notifRef = db.collection('notifications').doc();
-    batch.set(notifRef, {
-      fromUserId:   currentUser.id,
-      fromUserName: currentUser.name || 'Someone',
-      toUserId:     member.id,
-      fcmToken:     member.fcmToken,
-      title:        title,
-      body:         body,
-      url:          url,
-      sentAt:       Date.now(),
-      status:       'pending'
-    });
-    successCount++;
-  }
-
   try {
-    await batch.commit();
+    // ── Call Netlify function to actually send FCM push ──────────────────────
+    const fcmTokens = targets.map(m => m.fcmToken);
+    const response  = await fetch('https://splitmate-server.onrender.com/send-notification', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ tokens: fcmTokens, title, body, url })
+    });
 
-    // Also show a local notification to yourself as confirmation
-    if (Notification.permission === 'granted' && successCount > 0) {
-      new Notification('✅ Notification Sent', {
-        body: 'Delivered to ' + successCount + ' member' + (successCount !== 1 ? 's' : ''),
-        icon: '/icon-192.png',
-        tag: 'send-confirm'
+    const result = await response.json();
+    successCount = result.sent   || 0;
+    failCount    = result.failed || 0;
+
+    // ── Also save to Firestore log ───────────────────────────────────────────
+    const batch = db.batch();
+    for (const member of targets) {
+      const notifRef = db.collection('notifications').doc();
+      batch.set(notifRef, {
+        fromUserId:   currentUser.id,
+        fromUserName: currentUser.name || 'Someone',
+        toUserId:     member.id,
+        fcmToken:     member.fcmToken,
+        title, body, url,
+        sentAt: Date.now(),
+        status: successCount > 0 ? 'sent' : 'failed'
       });
     }
+    await batch.commit();
 
-    // Log the send
-    addToLog({
-      status:  'success',
-      title:   title,
-      body:    body,
-      count:   successCount,
-      time:    new Date().toLocaleTimeString()
-    });
-
-    showToast('🔔 Sent to ' + successCount + ' member' + (successCount !== 1 ? 's' : '') + '!', 'success');
+    if (successCount > 0) {
+      addToLog({ status: 'success', title, body, count: successCount, time: new Date().toLocaleTimeString() });
+      showToast('🔔 Sent to ' + successCount + ' member' + (successCount !== 1 ? 's' : '') + '!', 'success');
+    }
+    if (failCount > 0) {
+      const errMsg = (result.errors || []).join(', ');
+      addToLog({ status: 'fail', title, body: 'Partial failure: ' + errMsg, count: failCount, time: new Date().toLocaleTimeString() });
+      showToast('⚠️ ' + failCount + ' failed to deliver. Check console.', 'error');
+      console.warn('FCM errors:', result.errors);
+    }
 
     // Clear form
     document.getElementById('notif-title').value = '';
@@ -645,8 +643,9 @@ async function sendNotifications() {
 
   } catch(e) {
     failCount++;
-    addToLog({ status: 'fail', title: title, body: 'Send failed: ' + e.message, count: 0, time: new Date().toLocaleTimeString() });
+    addToLog({ status: 'fail', title, body: 'Send failed: ' + e.message, count: 0, time: new Date().toLocaleTimeString() });
     showToast('Failed to send: ' + e.message, 'error');
+    console.error('Send error:', e);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<span>🚀</span> Send Notification';
