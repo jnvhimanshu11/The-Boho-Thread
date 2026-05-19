@@ -506,6 +506,7 @@ async function _refreshFcmToken() {
       fcmUpdatedAt: Date.now(),
       email: user.email
     }, { merge: true });
+    console.log('[DEBUG] FCM token saved for user:', user.id, 'email:', user.email, 'token:', token.substring(0,20)+'...');
 
     // Sync to any other doc with same email (dual-auth fallback)
     if (user.email) {

@@ -430,6 +430,8 @@ async function loadAcceptedMembers() {
     }
 
     // For each memberId, load their profile and fcmToken
+    console.log('[DEBUG] Member IDs from groups:', [...memberIdSet]);
+    console.log('[DEBUG] Current user ID:', currentUser.id, 'email:', currentUser.email);
     const members = [];
     for (const uid of memberIdSet) {
       try {
@@ -437,6 +439,7 @@ async function loadAcceptedMembers() {
         if (userDoc.exists) {
           const udata = userDoc.data();
           let fcmToken = udata.fcmToken || null;
+          console.log('[DEBUG] User doc', uid, '→ email:', udata.email, '| fcmToken:', fcmToken ? fcmToken.substring(0,20)+'...' : 'NONE');
 
           // If no token found by ID, search by email as fallback
           // (handles case where user registered via a different auth system)
