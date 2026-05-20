@@ -21,12 +21,18 @@ messaging.onBackgroundMessage(function(payload) {
   console.log('[SW] Background message received:', payload);
 
   const notificationTitle = payload.notification?.title || payload.data?.title || 'SplitMate';
+  // Pull url from multiple possible locations in the payload
+  const clickUrl = payload.fcmOptions?.link
+    || payload.data?.url
+    || payload.notification?.click_action
+    || 'https://thebohothread.in/dashboard.html';
+
   const notificationOptions = {
     body: payload.notification?.body || payload.data?.body || 'You have a new notification.',
     icon: '/icon-192.png',
     badge: '/icon-72.png',
     tag: payload.data?.tag || 'splitmate-notification',
-    data: payload.data || {},
+    data: { url: clickUrl },
     actions: [
       { action: 'open', title: '📂 Open App' },
       { action: 'dismiss', title: 'Dismiss' }
@@ -44,17 +50,15 @@ self.addEventListener('notificationclick', function(event) {
 
   if (event.action === 'dismiss') return;
 
-  const url = event.notification.data?.url || '/dashboard.html';
+  const url = event.notification.data?.url || 'https://thebohothread.in/dashboard.html';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-      // Focus existing tab if open
       for (const client of clientList) {
         if (client.url.includes('thebohothread') || client.url.includes('localhost')) {
           return client.focus().then(() => client.navigate(url));
         }
       }
-      // Otherwise open new tab
       return clients.openWindow(url);
     })
   );
