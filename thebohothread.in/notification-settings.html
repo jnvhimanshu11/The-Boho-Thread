@@ -594,18 +594,7 @@ async function refreshToken() {
         fcmToken: token, fcmUpdatedAt: Date.now(), email: currentUser.email
       }, { merge: true });
 
-      // Sync token to any other user doc with same email (dual-auth fallback)
-      if (currentUser.email) {
-        try {
-          const snap = await firebase.firestore().collection('users')
-            .where('email', '==', currentUser.email).get();
-          for (const doc of snap.docs) {
-            if (doc.id !== currentUser.id) {
-              await doc.ref.set({ fcmToken: token, fcmUpdatedAt: Date.now() }, { merge: true });
-            }
-          }
-        } catch(e2) { console.warn('Cross-sync error:', e2); }
-      }
+      // Deduplication handled in notifications.html by email — no cross-sync needed
     }
   } catch(e) {
     console.warn('Token refresh error:', e);

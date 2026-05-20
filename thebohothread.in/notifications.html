@@ -413,14 +413,21 @@ async function loadAcceptedMembers() {
   const emptyEl = document.getElementById('members-empty');
 
   try {
-    // Get all groups where current user is creator
-    const groupsSnap = await db.collection('groups')
-      .where('createdBy', '==', currentUser.id)
-      .get();
+    // Get ALL groups where current user is a member (not just creator)
+    const [createdSnap, memberSnap] = await Promise.all([
+      db.collection('groups').where('createdBy', '==', currentUser.id).get(),
+      db.collection('groups').where('members', 'array-contains', currentUser.id).get()
+    ]);
+
+    // Merge both result sets
+    const allGroupDocs = [...createdSnap.docs];
+    for (const doc of memberSnap.docs) {
+      if (!allGroupDocs.find(d => d.id === doc.id)) allGroupDocs.push(doc);
+    }
 
     // Collect all unique member IDs (excluding self)
     const memberIdSet = new Set();
-    for (const doc of groupsSnap.docs) {
+    for (const doc of allGroupDocs) {
       const data = doc.data();
       (data.members || []).forEach(id => {
         if (id !== currentUser.id && !id.includes('@')) {
@@ -429,43 +436,45 @@ async function loadAcceptedMembers() {
       });
     }
 
-    // For each memberId, load their profile and fcmToken
-    console.log('[DEBUG] Member IDs from groups:', [...memberIdSet]);
-    console.log('[DEBUG] Current user ID:', currentUser.id, 'email:', currentUser.email);
+    // For each memberId, load profile + find best FCM token (deduplicated by email)
+    const seenEmails = new Set(); // prevent duplicate tokens for same person
     const members = [];
     for (const uid of memberIdSet) {
       try {
         const userDoc = await db.collection('users').doc(uid).get();
-        if (userDoc.exists) {
-          const udata = userDoc.data();
-          let fcmToken = udata.fcmToken || null;
-          console.log('[DEBUG] User doc', uid, '→ email:', udata.email, '| fcmToken:', fcmToken ? fcmToken.substring(0,20)+'...' : 'NONE');
+        if (!userDoc.exists) continue;
 
-          // If no token found by ID, search by email as fallback
-          // (handles case where user registered via a different auth system)
-          if (!fcmToken && udata.email) {
-            try {
-              const emailSnap = await db.collection('users')
-                .where('email', '==', udata.email)
-                .get();
-              for (const altDoc of emailSnap.docs) {
-                if (altDoc.id !== uid && altDoc.data().fcmToken) {
-                  fcmToken = altDoc.data().fcmToken;
-                  break;
-                }
+        const udata = userDoc.data();
+        const email = udata.email || '';
+
+        // Skip duplicate — same person registered under two auth systems
+        if (email && seenEmails.has(email)) continue;
+        if (email) seenEmails.add(email);
+
+        let fcmToken = udata.fcmToken || null;
+
+        // If no token, search by email across all user docs
+        if (!fcmToken && email) {
+          try {
+            const emailSnap = await db.collection('users')
+              .where('email', '==', email).get();
+            for (const altDoc of emailSnap.docs) {
+              if (altDoc.data().fcmToken) {
+                fcmToken = altDoc.data().fcmToken;
+                break;
               }
-            } catch(e2) {
-              console.warn('Email fallback lookup failed for', udata.email, e2);
             }
+          } catch(e2) {
+            console.warn('Email fallback failed for', email, e2);
           }
-
-          members.push({
-            id:       uid,
-            name:     udata.name || udata.email || uid,
-            email:    udata.email || '',
-            fcmToken: fcmToken
-          });
         }
+
+        members.push({
+          id:       uid,
+          name:     udata.name || email || uid,
+          email:    email,
+          fcmToken: fcmToken
+        });
       } catch(e) {
         console.warn('Could not load user', uid, e);
       }

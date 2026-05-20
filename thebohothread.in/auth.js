@@ -508,20 +508,8 @@ async function _refreshFcmToken() {
     }, { merge: true });
     console.log('[DEBUG] FCM token saved for user:', user.id, 'email:', user.email, 'token:', token.substring(0,20)+'...');
 
-    // Sync to any other doc with same email (dual-auth fallback)
-    if (user.email) {
-      try {
-        const snap = await firebase.firestore().collection('users')
-          .where('email', '==', user.email).get();
-        for (const doc of snap.docs) {
-          if (doc.id !== user.id) {
-            await doc.ref.set({ fcmToken: token, fcmUpdatedAt: Date.now() }, { merge: true });
-          }
-        }
-      } catch(e2) {
-        console.warn('Cross-system token sync error:', e2);
-      }
-    }
+    // NOTE: We intentionally do NOT sync to other docs with same email
+    // to avoid duplicate notifications. The notifications.html deduplicates by email.
 
     msg.onMessage(function(payload) {
       _showForegroundNotif(payload);
