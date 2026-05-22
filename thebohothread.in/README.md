@@ -145,6 +145,8 @@ cd backend
 cp .env.example .env
 ```
 
+
+sd
 Edit `.env`:
 
 ```env
