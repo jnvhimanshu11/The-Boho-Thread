@@ -106,7 +106,7 @@ school-crm/
         └── utils/
             └── seed.js                     ← Demo data seeder
 ```
-
+d
 ---
 
 ## 🚀 Quick Start
