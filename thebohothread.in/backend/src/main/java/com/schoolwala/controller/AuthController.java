@@ -20,7 +20,10 @@ public class AuthController {
         try {
             return ResponseEntity.ok(authService.schoolLogin(req));
         } catch (Exception e) {
-            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
+            // 400 Bad Request for login failures (wrong credentials, school not found, etc.)
+            // Using 401 here caused the axios interceptor to hijack the response
+            // and redirect to '/' before the error body could be read by the login form.
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -29,7 +32,7 @@ public class AuthController {
         try {
             return ResponseEntity.ok(authService.teacherLogin(req));
         } catch (Exception e) {
-            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -38,7 +41,7 @@ public class AuthController {
         try {
             return ResponseEntity.ok(authService.studentLogin(req));
         } catch (Exception e) {
-            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
