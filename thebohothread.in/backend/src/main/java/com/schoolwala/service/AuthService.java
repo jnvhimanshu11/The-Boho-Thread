@@ -9,6 +9,7 @@ import com.schoolwala.security.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +20,7 @@ public class AuthService {
     private final JwtUtils jwtUtils;
     private final PasswordEncoder passwordEncoder;
 
+    @Transactional(readOnly = true)
     public AuthDto.LoginResponse schoolLogin(AuthDto.SchoolLoginRequest req) {
         School school = schoolRepo.findBySchoolCode(req.getSchoolCode())
                 .orElseThrow(() -> new RuntimeException("School not found with code: " + req.getSchoolCode()));
@@ -49,6 +51,7 @@ public class AuthService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public AuthDto.LoginResponse teacherLogin(AuthDto.UserLoginRequest req) {
         User user = userRepo.findByUniqueId(req.getUniqueId())
                 .orElseThrow(() -> new RuntimeException("Teacher not found with ID: " + req.getUniqueId()));
@@ -87,6 +90,7 @@ public class AuthService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public AuthDto.LoginResponse studentLogin(AuthDto.UserLoginRequest req) {
         User user = userRepo.findByUniqueId(req.getUniqueId())
                 .orElseThrow(() -> new RuntimeException("Student not found with ID: " + req.getUniqueId()));
