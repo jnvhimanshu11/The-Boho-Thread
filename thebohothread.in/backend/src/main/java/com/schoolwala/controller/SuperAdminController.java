@@ -15,6 +15,7 @@ public class SuperAdminController {
 
     private final SuperAdminService superAdminService;
 
+    // ── Create school ─────────────────────────────────────────────
     @PostMapping
     public ResponseEntity<?> createSchool(@RequestBody SuperAdminDto.CreateSchoolRequest req) {
         try {
@@ -24,11 +25,13 @@ public class SuperAdminController {
         }
     }
 
+    // ── Get all schools ───────────────────────────────────────────
     @GetMapping
     public ResponseEntity<?> getAllSchools() {
         return ResponseEntity.ok(superAdminService.getAllSchools());
     }
 
+    // ── Get single school ─────────────────────────────────────────
     @GetMapping("/{schoolCode}")
     public ResponseEntity<?> getSchool(@PathVariable String schoolCode) {
         try {
@@ -38,6 +41,7 @@ public class SuperAdminController {
         }
     }
 
+    // ── Update school ─────────────────────────────────────────────
     @PutMapping("/{schoolCode}")
     public ResponseEntity<?> updateSchool(@PathVariable String schoolCode,
                                           @RequestBody SuperAdminDto.UpdateSchoolRequest req) {
@@ -48,6 +52,7 @@ public class SuperAdminController {
         }
     }
 
+    // ── Reset password ────────────────────────────────────────────
     @PatchMapping("/{schoolCode}/reset-password")
     public ResponseEntity<?> resetPassword(@PathVariable String schoolCode,
                                            @RequestBody Map<String, String> body) {
@@ -63,11 +68,27 @@ public class SuperAdminController {
         }
     }
 
+    // ── Delete single ─────────────────────────────────────────────
     @DeleteMapping("/{schoolCode}")
     public ResponseEntity<?> deleteSchool(@PathVariable String schoolCode) {
         try {
             superAdminService.deleteSchool(schoolCode);
             return ResponseEntity.ok(Map.of("message", "School deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ── Delete bulk ───────────────────────────────────────────────
+    // DELETE /api/super-admin/schools/bulk
+    // Body: { "schoolCodes": ["SCH001", "SCH002", "SCH003"] }
+    @DeleteMapping("/bulk")
+    public ResponseEntity<?> deleteSchoolsBulk(@RequestBody SuperAdminDto.BulkDeleteRequest req) {
+        try {
+            if (req.getSchoolCodes() == null || req.getSchoolCodes().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "schoolCodes list is required"));
+            }
+            return ResponseEntity.ok(superAdminService.deleteSchoolsBulk(req.getSchoolCodes()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

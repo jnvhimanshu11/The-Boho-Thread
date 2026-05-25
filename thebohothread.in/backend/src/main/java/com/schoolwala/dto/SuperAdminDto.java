@@ -1,6 +1,7 @@
 package com.schoolwala.dto;
 
 import lombok.*;
+import java.util.List;
 
 public class SuperAdminDto {
 
@@ -54,5 +55,25 @@ public class SuperAdminDto {
         private boolean hasLogo;
         private String createdAt;
         private String updatedAt;
+    }
+
+    // ==================== Bulk Delete ====================
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class BulkDeleteRequest {
+        private List<String> schoolCodes; // e.g. ["SCH001", "SCH002", "SCH003"]
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class BulkDeleteResponse {
+        private List<String> deleted;
+        private List<String> notFound;
+        private int deletedCount;
+        private int notFoundCount;
     }
 }
