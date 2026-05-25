@@ -71,10 +71,34 @@ public class SuperAdminService {
         return toResponse(schoolRepo.save(school));
     }
 
+    // ==================== Delete Single ====================
     public void deleteSchool(String schoolCode) {
         School school = schoolRepo.findBySchoolCode(schoolCode)
                 .orElseThrow(() -> new RuntimeException("School not found: " + schoolCode));
         schoolRepo.delete(school);
+    }
+
+    // ==================== Delete Bulk ====================
+    public SuperAdminDto.BulkDeleteResponse deleteSchoolsBulk(List<String> schoolCodes) {
+        List<String> deleted = new java.util.ArrayList<>();
+        List<String> notFound = new java.util.ArrayList<>();
+
+        for (String code : schoolCodes) {
+            schoolRepo.findBySchoolCode(code).ifPresentOrElse(
+                school -> {
+                    schoolRepo.delete(school);
+                    deleted.add(code);
+                },
+                () -> notFound.add(code)
+            );
+        }
+
+        return SuperAdminDto.BulkDeleteResponse.builder()
+                .deleted(deleted)
+                .notFound(notFound)
+                .deletedCount(deleted.size())
+                .notFoundCount(notFound.size())
+                .build();
     }
 
     public void resetPassword(String schoolCode, String newPassword) {
