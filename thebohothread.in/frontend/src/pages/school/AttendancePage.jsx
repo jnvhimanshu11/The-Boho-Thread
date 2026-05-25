@@ -9,7 +9,7 @@ const STATUS_COLORS = {
   ABSENT: 'bg-rose-100 text-rose-600',
   LATE: 'bg-yellow-100 text-yellow-700',
   HALF_DAY: 'bg-blue-100 text-blue-600',
-
+}
 
 export default function AttendancePage() {
   const [students, setStudents] = useState([])
