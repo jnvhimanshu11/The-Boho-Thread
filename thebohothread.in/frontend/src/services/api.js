@@ -1,24 +1,26 @@
 import axios from 'axios'
 
 const api = axios.create({
- baseURL: 'https://the-boho-thread.onrender.com/api',
+  baseURL: 'https://the-boho-thread.onrender.com/api',
   headers: { 'Content-Type': 'application/json' },
 })
 
 // Attach JWT token to every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('sw_token')
+  const token = sessionStorage.getItem('sw_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
 // Handle 401 - auto logout
+let isRedirecting = false
 api.interceptors.response.use(
   (res) => res,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('sw_token')
-      localStorage.removeItem('sw_user')
+    if (error.response?.status === 401 && !isRedirecting) {
+      isRedirecting = true
+      sessionStorage.removeItem('sw_token')
+      sessionStorage.removeItem('sw_user')
       window.location.href = '/'
     }
     return Promise.reject(error)

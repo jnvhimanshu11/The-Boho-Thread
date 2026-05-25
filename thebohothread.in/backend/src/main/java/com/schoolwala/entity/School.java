@@ -3,7 +3,6 @@ package com.schoolwala.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "schools")
@@ -27,6 +26,9 @@ public class School {
     private String phone;
     private String email;
     private String logoUrl;
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
     private String logoBase64; // Store logo as base64 for easy retrieval
 
     @Column(nullable = false)

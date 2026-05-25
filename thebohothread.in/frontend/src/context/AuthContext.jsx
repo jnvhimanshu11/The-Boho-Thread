@@ -7,8 +7,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const stored = localStorage.getItem('sw_user')
-    const token = localStorage.getItem('sw_token')
+    const stored = sessionStorage.getItem('sw_user')
+    const token = sessionStorage.getItem('sw_token')
     if (stored && token) {
       setUser(JSON.parse(stored))
     }
@@ -16,20 +16,20 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = (userData, token) => {
-    localStorage.setItem('sw_token', token)
-    localStorage.setItem('sw_user', JSON.stringify(userData))
+    sessionStorage.setItem('sw_token', token)
+    sessionStorage.setItem('sw_user', JSON.stringify(userData))
     setUser(userData)
   }
 
   const logout = () => {
-    localStorage.removeItem('sw_token')
-    localStorage.removeItem('sw_user')
+    sessionStorage.removeItem('sw_token')
+    sessionStorage.removeItem('sw_user')
     setUser(null)
   }
 
   const updateLogo = (logoBase64) => {
     const updated = { ...user, logoBase64 }
-    localStorage.setItem('sw_user', JSON.stringify(updated))
+    sessionStorage.setItem('sw_user', JSON.stringify(updated))
     setUser(updated)
   }
 
