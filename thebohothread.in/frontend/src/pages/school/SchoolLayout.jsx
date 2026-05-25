@@ -1,0 +1,41 @@
+import { useState, useEffect } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import Sidebar from '../../components/layout/Sidebar.jsx'
+import { LayoutDashboard, Users, GraduationCap, BookOpen, CreditCard, BarChart3, Settings, CalendarCheck } from 'lucide-react'
+import SchoolDashboard from './SchoolDashboard.jsx'
+import TeachersList from './TeachersList.jsx'
+import StudentsList from './StudentsList.jsx'
+import AttendancePage from './AttendancePage.jsx'
+import FeesPage from './FeesPage.jsx'
+import ReportsPage from './ReportsPage.jsx'
+import SettingsPage from './SettingsPage.jsx'
+
+const NAV = [
+  { path: '/school', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/school/teachers', label: 'Teachers', icon: BookOpen },
+  { path: '/school/students', label: 'Students', icon: GraduationCap },
+  { path: '/school/attendance', label: 'Attendance', icon: CalendarCheck },
+  { path: '/school/fees', label: 'Fee Management', icon: CreditCard },
+  { path: '/school/reports', label: 'Reports', icon: BarChart3 },
+  { path: '/school/settings', label: 'Settings', icon: Settings },
+]
+
+export default function SchoolLayout() {
+  return (
+    <div className="flex min-h-screen bg-slate-50">
+      <Sidebar navItems={NAV} roleColor="bg-orange-500/20 text-orange-300" roleLabel="School Admin" />
+      <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
+        <Routes>
+          <Route index element={<SchoolDashboard />} />
+          <Route path="teachers" element={<TeachersList />} />
+          <Route path="students" element={<StudentsList />} />
+          <Route path="attendance" element={<AttendancePage />} />
+          <Route path="fees" element={<FeesPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/school" replace />} />
+        </Routes>
+      </main>
+    </div>
+  )
+}

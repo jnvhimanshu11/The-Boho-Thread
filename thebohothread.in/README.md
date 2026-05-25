@@ -1,310 +1,224 @@
-# 🎓 StudyHub — Student Help Hub + School CRM
+# 🎓 SchoolWala — School ERP/CRM System
 
-A full-stack platform for Indian students with **class notes**, **AI tools**, and a complete **School CRM** (students, fees, attendance, reports).
+A full-stack School Management System built with **React + Spring Boot + JWT Authentication**.
 
 ---
 
 ## 📁 Project Structure
 
 ```
-school-crm/
-├── frontend/                    ← Next.js 14 + Tailwind CSS
-│   └── src/
-│       ├── app/
-│       │   ├── page.tsx                    ← Homepage
-│       │   ├── auth/
-│       │   │   ├── login/page.tsx          ← Login
-│       │   │   └── register/page.tsx       ← Register
-│       │   ├── notes/
-│       │   │   ├── page.tsx                ← Notes listing
-│       │   │   └── [id]/page.tsx           ← Note detail
-│       │   ├── tools/
-│       │   │   └── page.tsx                ← AI Tools (4 tools)
-│       │   └── dashboard/
-│       │       ├── student/page.tsx        ← Student dashboard
-│       │       ├── admin/
-│       │       │   ├── page.tsx            ← Admin overview
-│       │       │   ├── notes/page.tsx      ← Upload/manage notes
-│       │       │   └── users/page.tsx      ← Manage users
-│       │       └── crm/
-│       │           ├── page.tsx            ← CRM dashboard
-│       │           ├── students/page.tsx   ← Student management
-│       │           ├── fees/page.tsx       ← Fee collection
-│       │           ├── attendance/page.tsx ← Attendance marking
-│       │           ├── reports/page.tsx    ← Reports & charts
-│       │           └── settings/page.tsx   ← CRM settings
-│       ├── components/
-│       │   ├── layout/
-│       │   │   └── Sidebar.tsx             ← Shared sidebar (all roles)
-│       │   ├── shared/
-│       │   │   ├── QueryProvider.tsx
-│       │   │   ├── SearchBar.tsx
-│       │   │   ├── StatsBar.tsx
-│       │   │   └── FeatureCard.tsx
-│       │   ├── notes/
-│       │   │   ├── ClassSelector.tsx
-│       │   │   └── PopularNotes.tsx
-│       │   ├── ai/
-│       │   │   └── AIToolsPreview.tsx
-│       │   └── crm/
-│       │       └── StudentFormModal.tsx
-│       ├── lib/
-│       │   ├── api-client.ts               ← Axios with JWT interceptor
-│       │   ├── auth-api.ts                 ← Auth API calls
-│       │   ├── notes-api.ts                ← Notes & questions API
-│       │   ├── crm-api.ts                  ← CRM API (students, fees, attendance)
-│       │   ├── ai-api.ts                   ← AI tools API
-│       │   └── utils.ts                    ← Helpers, cn(), formatCurrency()
-│       ├── store/
-│       │   └── auth-store.ts               ← Zustand auth state
-│       ├── hooks/
-│       │   ├── useAuth.ts
-│       │   └── useDarkMode.ts
-│       └── types/
-│           └── index.ts                    ← All TypeScript types
+schoolwala/
+├── backend/                    # Spring Boot (Java 17)
+│   ├── src/main/java/com/schoolwala/
+│   │   ├── config/             # Security, CORS, DataInitializer
+│   │   ├── controller/         # REST API controllers
+│   │   ├── dto/                # Request/Response DTOs
+│   │   ├── entity/             # JPA Entities
+│   │   ├── repository/         # Spring Data JPA
+│   │   ├── security/           # JWT Filter & Utils
+│   │   └── service/            # Business logic
+│   └── src/main/resources/
+│       └── application.properties
 │
-└── backend/                     ← Node.js + Express + MongoDB
-    └── src/
-        ├── server.js                       ← Express app entry
-        ├── config/
-        │   ├── database.js
-        │   ├── cloudinary.js
-        │   └── multer.js
-        ├── models/
-        │   ├── User.model.js
-        │   ├── Note.model.js
-        │   ├── Question.model.js
-        │   ├── School.model.js
-        │   ├── Student.model.js
-        │   ├── FeeStructure.model.js
-        │   ├── FeePayment.model.js
-        │   └── Attendance.model.js
-        ├── controllers/
-        │   ├── auth.controller.js
-        │   ├── notes.controller.js
-        │   ├── questions.controller.js
-        │   ├── ai.controller.js
-        │   ├── crm.students.controller.js
-        │   └── crm.fees.controller.js
-        ├── routes/
-        │   ├── auth.routes.js
-        │   ├── notes.routes.js
-        │   ├── questions.routes.js
-        │   ├── ai.routes.js
-        │   ├── crm.routes.js               ← Aggregates all CRM routes
-        │   ├── crm.students.routes.js
-        │   ├── crm.fees.routes.js
-        │   ├── crm.feestructure.routes.js
-        │   ├── crm.attendance.routes.js
-        │   ├── crm.dashboard.routes.js
-        │   ├── admin.routes.js
-        │   └── upload.routes.js
-        ├── middleware/
-        │   ├── auth.middleware.js           ← JWT protect + authorize
-        │   ├── errorHandler.js
-        │   └── notFound.js
-        └── utils/
-            └── seed.js                     ← Demo data seeder
+├── frontend/                   # React + Vite + Tailwind CSS
+│   └── src/
+│       ├── components/         # Shared components
+│       ├── context/            # AuthContext (JWT storage)
+│       ├── pages/
+│       │   ├── school/         # School Admin pages
+│       │   ├── teacher/        # Teacher pages
+│       │   └── student/        # Student pages
+│       └── services/           # Axios API calls
+│
+├── docker-compose.yml
+└── README.md
 ```
 
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Node.js 18+
-- MongoDB (local or Atlas)
-- OpenAI API key
-- Razorpay account (for fee payments)
-- Cloudinary account (for PDF/image uploads)
-
----
-
-### 1. Clone & Install
+### Option 1: Docker Compose (Recommended)
 
 ```bash
-git clone <your-repo-url> school-crm
-cd school-crm
-
-# Install root deps
-npm install
-
-# Install frontend deps
-cd frontend && npm install && cd ..
-
-# Install backend deps
-cd backend && npm install && cd ..
+docker-compose up --build
 ```
+
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8080/api
+- H2 Console: http://localhost:8080/api/h2-console (dev only)
 
 ---
 
-### 2. Backend Environment
+### Option 2: Manual Setup
+
+#### Backend (Spring Boot)
+
+**Prerequisites:** Java 17+, Maven 3.8+
 
 ```bash
 cd backend
-cp .env.example .env
+mvn spring-boot:run
 ```
 
-Edit `.env`:
+Backend starts on **http://localhost:8080/api**
 
-```env
-PORT=5000
-NODE_ENV=development
-MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/school-crm
+#### Frontend (React)
 
-JWT_SECRET=change_this_to_a_long_random_string_in_production
-JWT_EXPIRE=7d
-
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-
-OPENAI_API_KEY=sk-your-openai-key
-
-RAZORPAY_KEY_ID=rzp_test_xxxx
-RAZORPAY_KEY_SECRET=your_secret
-
-FRONTEND_URL=http://localhost:3000
-```
-
----
-
-### 3. Frontend Environment
+**Prerequisites:** Node.js 18+, npm
 
 ```bash
 cd frontend
-cp .env.example .env.local
-```
-
-Edit `.env.local`:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-NEXT_PUBLIC_RAZORPAY_KEY=rzp_test_xxxx
-```
-
----
-
-### 4. Seed Demo Data
-
-```bash
-cd backend
-npm run seed
-```
-
-This creates:
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@studyhub.in | admin123 |
-| School Admin | school@dps.edu.in | school123 |
-| Student | student@example.com | student123 |
-
----
-
-### 5. Run Development
-
-```bash
-# From project root — runs both frontend and backend
+npm install
 npm run dev
-
-# Or individually:
-npm run dev:frontend    # → http://localhost:3000
-npm run dev:backend     # → http://localhost:5000
 ```
+
+Frontend starts on **http://localhost:3000**
 
 ---
 
-## 🌐 Pages & Routes
+## 🔐 Authentication & Roles
 
-| URL | Description |
-|-----|-------------|
-| `/` | Homepage with search, class selector, AI tools |
-| `/auth/login` | Login page |
-| `/auth/register` | Register (student or school admin) |
-| `/notes` | Browse all notes with filters |
-| `/notes/[id]` | Note detail with PDF download |
-| `/tools` | AI Tools (Doubt Solver, Summarizer, Homework, Essay) |
-| `/dashboard/student` | Student dashboard |
-| `/dashboard/admin` | Super admin dashboard |
-| `/dashboard/admin/notes` | Upload & manage notes |
-| `/dashboard/admin/users` | Manage all users |
-| `/dashboard/crm` | School CRM dashboard |
-| `/dashboard/crm/students` | Student management + CRUD |
-| `/dashboard/crm/fees` | Fee collection + Razorpay |
-| `/dashboard/crm/attendance` | Daily attendance marking |
-| `/dashboard/crm/reports` | Charts + Excel export |
-| `/dashboard/crm/settings` | School settings |
+### 3 Login Portals (No self-registration)
+
+| Portal | Login Fields | Route |
+|--------|-------------|-------|
+| **School Login** | School Code + Username + Password | `/auth/school/login` |
+| **Teacher Login** | Teacher ID (e.g. TCH001-SCH001) + Password | `/auth/teacher/login` |
+| **Student Login** | Student ID (e.g. STU0001-SCH001) + Password | `/auth/student/login` |
+
+### Demo Credentials (Auto-seeded)
+
+| Role | School Code | Username/ID | Password |
+|------|-------------|-------------|----------|
+| School Admin | SCH001 | admin | admin123 |
+| School Admin | SCH002 | miadmin | mis2024 |
 
 ---
 
-## 🔌 API Endpoints
+## 🏫 Role Permissions
 
-### Auth
-```
-POST /api/auth/register
-POST /api/auth/login
-GET  /api/auth/me
-POST /api/auth/logout
-POST /api/auth/forgot-password
-POST /api/auth/reset-password
+### School Admin (Full Access)
+| Feature | Access |
+|---------|--------|
+| Create Teacher accounts | ✅ |
+| Create Student accounts | ✅ |
+| View & manage all teachers | ✅ |
+| View & manage all students | ✅ |
+| Mark attendance | ✅ |
+| Manage fees & collect payments | ✅ |
+| View financial reports | ✅ |
+| Upload/update school logo | ✅ |
+| Activate/deactivate accounts | ✅ |
+
+### Teacher (Limited Access)
+| Feature | Access |
+|---------|--------|
+| Create Student accounts | ✅ |
+| View students in school | ✅ |
+| Mark attendance | ✅ |
+| View school logo | ✅ |
+| Create teacher accounts | ❌ |
+| Manage fees | ❌ |
+| View reports | ❌ |
+| Update school logo | ❌ |
+
+### Student (View Only)
+| Feature | Access |
+|---------|--------|
+| View own attendance | ✅ |
+| View own fee records | ✅ |
+| View school logo | ✅ |
+| View own profile | ✅ |
+| Mark attendance | ❌ |
+| Access other student data | ❌ |
+
+---
+
+## 🖼️ School Logo Feature
+
+- School Admin can upload a logo (JPG/PNG, max 2MB) from **Settings** page
+- Logo is stored as **Base64** in the database
+- Automatically visible to all **Teachers** and **Students** of that school
+- Logo updates in real-time — no page reload needed
+
+---
+
+## 🔑 JWT Implementation
+
+- Token generated on login with **claims**: `uniqueId`, `role`, `schoolCode`, `fullName`
+- Token expiry: **24 hours**
+- Stored in **localStorage**
+- Auto-attached to all API requests via Axios interceptor
+- Auto-logout on 401 response
+- Role-based route guards on both frontend and backend
+
+---
+
+## 🗄️ Database
+
+### Development: H2 (In-memory/file-based)
+No setup needed. Data persists in `./schoolwala-db.mv.db`.
+
+### Production: MySQL
+Uncomment MySQL config in `application.properties`:
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/schoolwala_db
+spring.datasource.username=root
+spring.datasource.password=your_password
 ```
 
-### Notes
+### Entities
+- **School** — schoolCode (unique), admin credentials, logo
+- **User** — uniqueId (auto-generated), role (TEACHER/STUDENT), schoolCode FK
+- **Attendance** — studentUniqueId, date, status (PRESENT/ABSENT/LATE/HALF_DAY)
+- **Fee** — studentUniqueId, feeType, totalAmount, paidAmount, status
+
+---
+
+## 📡 API Endpoints
+
+### Auth (Public)
 ```
-GET    /api/notes              ?class=&subject=&search=&page=
-GET    /api/notes/:id
-POST   /api/notes              (admin, multipart/form-data with PDF)
-PUT    /api/notes/:id
-DELETE /api/notes/:id
-POST   /api/notes/:id/view
+POST /api/auth/school/login
+POST /api/auth/teacher/login
+POST /api/auth/student/login
 ```
 
-### Questions
+### School Admin (JWT + ROLE_SCHOOL_ADMIN)
 ```
-GET    /api/questions          ?class=&subject=&type=&isPYQ=
-POST   /api/questions
-PUT    /api/questions/:id
-DELETE /api/questions/:id
-```
-
-### AI Tools
-```
-POST /api/ai/solve-doubt        { question, imageBase64? }
-POST /api/ai/summarize          { text }
-POST /api/ai/homework           { subject, question }
-POST /api/ai/essay              { topic, wordCount, style }
-POST /api/ai/generate-quiz      { subject, class, chapter, count }
-```
-
-### CRM – Students
-```
-GET    /api/crm/students        ?class=&section=&search=&page=
-GET    /api/crm/students/:id
-POST   /api/crm/students
-PUT    /api/crm/students/:id
-DELETE /api/crm/students/:id
-GET    /api/crm/students/export (→ Excel file)
+GET    /api/school/admin/dashboard
+POST   /api/school/admin/teachers
+GET    /api/school/admin/teachers
+POST   /api/school/admin/students
+GET    /api/school/admin/students
+PATCH  /api/school/admin/users/{id}/toggle
+PUT    /api/school/admin/logo
+GET    /api/school/admin/logo
+POST   /api/school/admin/attendance
+GET    /api/school/admin/attendance?date=YYYY-MM-DD
+POST   /api/school/admin/fees
+PATCH  /api/school/admin/fees/{id}/collect
+GET    /api/school/admin/fees
+GET    /api/school/admin/reports/summary
 ```
 
-### CRM – Fees
+### Teacher (JWT + ROLE_TEACHER)
 ```
-GET  /api/crm/fee-payments      ?studentId=&status=&month=
-POST /api/crm/fee-payments/create-order
-POST /api/crm/fee-payments/verify
-POST /api/crm/fee-payments/cash
-GET  /api/crm/fee-payments/summary
-```
-
-### CRM – Attendance
-```
-GET  /api/crm/attendance               ?date=&class=
-POST /api/crm/attendance/bulk
-GET  /api/crm/attendance/student/:id   ?month=YYYY-MM
+GET    /api/teacher/profile
+GET    /api/teacher/logo
+POST   /api/teacher/students
+GET    /api/teacher/students
+POST   /api/teacher/attendance
+GET    /api/teacher/attendance?date=YYYY-MM-DD
 ```
 
-### CRM – Dashboard
+### Student (JWT + ROLE_STUDENT)
 ```
-GET /api/crm/dashboard/stats
+GET    /api/student/profile
+GET    /api/student/logo
+GET    /api/student/attendance?from=YYYY-MM-DD&to=YYYY-MM-DD
+GET    /api/student/fees
 ```
 
 ---
@@ -313,73 +227,15 @@ GET /api/crm/dashboard/stats
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 14, React 18, TypeScript |
-| Styling | Tailwind CSS, Custom design system |
-| State | Zustand (auth), TanStack Query (server state) |
-| Forms | React Hook Form + Zod |
+| Frontend | React 18 + Vite |
+| Styling | Tailwind CSS |
 | Charts | Recharts |
-| Backend | Node.js, Express.js |
-| Database | MongoDB + Mongoose |
-| Auth | JWT + bcryptjs |
-| File Upload | Multer + Cloudinary |
-| AI | OpenAI GPT-4o-mini |
-| Payments | Razorpay |
-| Export | ExcelJS |
-
----
-
-## ☁️ Deployment
-
-### Frontend → Vercel
-```bash
-cd frontend
-npx vercel --prod
-```
-
-### Backend → Render / Railway
-- Set all `.env` variables in the dashboard
-- Start command: `node src/server.js`
-- Build command: `npm install`
-
-### Database → MongoDB Atlas
-- Free tier supports up to 512MB
-- Whitelist `0.0.0.0/0` for Render/Railway IPs
-
----
-
-## 📲 Monetization Setup
-
-1. **School CRM Subscriptions** — charge ₹2,000–5,000/month per school
-2. **Premium Notes** — gate revision notes behind subscription
-3. **AI Credits** — free 20 queries/day, premium for unlimited
-4. **Paid Test Series** — upload paid question banks
-
----
-
-## 🎨 Design System
-
-Colors defined in `tailwind.config.js`:
-- **Primary**: Indigo (`#4f46e5`)
-- **Accent**: Orange (`#f97316`)
-
-Key CSS classes (in `globals.css`):
-- `.card` — white rounded card with border
-- `.btn-primary` — indigo button
-- `.btn-secondary` — white bordered button
-- `.input-field` — styled input
-- `.badge`, `.badge-success`, `.badge-error` — status badges
-- `.stat-card` — icon + number stat card
-- `.sidebar-link` — nav item
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/your-feature`
-3. Commit: `git commit -m 'Add your feature'`
-4. Push and open a Pull Request
-
----
-
-Made with ❤️ for Indian students — Class 6 to College
+| HTTP Client | Axios |
+| Routing | React Router v6 |
+| Notifications | React Hot Toast |
+| Backend | Spring Boot 3.2 |
+| Security | Spring Security + JWT (jjwt) |
+| ORM | Spring Data JPA + Hibernate |
+| Database (Dev) | H2 |
+| Database (Prod) | MySQL 8 |
+| Containerization | Docker + Docker Compose |
