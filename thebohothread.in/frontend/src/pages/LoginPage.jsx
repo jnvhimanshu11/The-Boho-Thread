@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { authAPI } from '../services/api'
-import { School, BookOpen, GraduationCap, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { School, BookOpen, GraduationCap, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const LOGIN_TYPES = [
@@ -12,23 +12,31 @@ const LOGIN_TYPES = [
 ]
 
 const colorMap = {
-  school: { bg: 'bg-orange-500', light: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-400', ring: 'focus:ring-orange-400' },
-  teacher: { bg: 'bg-sky-500', light: 'bg-sky-50', text: 'text-sky-600', border: 'border-sky-400', ring: 'focus:ring-sky-400' },
+  school:  { bg: 'bg-orange-500',  light: 'bg-orange-50',  text: 'text-orange-600',  border: 'border-orange-400',  ring: 'focus:ring-orange-400'  },
+  teacher: { bg: 'bg-sky-500',     light: 'bg-sky-50',     text: 'text-sky-600',     border: 'border-sky-400',     ring: 'focus:ring-sky-400'     },
   student: { bg: 'bg-emerald-500', light: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-400', ring: 'focus:ring-emerald-400' },
 }
 
 export default function LoginPage() {
   const [activeType, setActiveType] = useState('school')
-  const [form, setForm] = useState({ schoolCode: '', username: '', uniqueId: '', password: '' })
-  const [showPwd, setShowPwd] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [form, setForm]             = useState({ schoolCode: '', username: '', uniqueId: '', password: '' })
+  const [showPwd, setShowPwd]       = useState(false)
+  const [loading, setLoading]       = useState(false)
+  const [errorMsg, setErrorMsg]     = useState('')   // ← inline error state
   const { login } = useAuth()
-  const navigate = useNavigate()
-  const colors = colorMap[activeType]
+  const navigate  = useNavigate()
+  const colors    = colorMap[activeType]
+
+  const switchTab = (key) => {
+    setActiveType(key)
+    setForm({ schoolCode: '', username: '', uniqueId: '', password: '' })
+    setErrorMsg('')   // clear error when switching tab
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setErrorMsg('')   // clear previous error
     try {
       let res
       if (activeType === 'school') {
@@ -43,7 +51,9 @@ export default function LoginPage() {
       toast.success(`Welcome, ${data.fullName}!`)
       navigate(activeType === 'school' ? '/school' : activeType === 'teacher' ? '/teacher' : '/student')
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Login failed. Check credentials.')
+      // Show inline error — do NOT navigate away
+      const msg = err.response?.data?.error || 'Login failed. Please check your credentials.'
+      setErrorMsg(msg)
     } finally {
       setLoading(false)
     }
@@ -72,7 +82,7 @@ export default function LoginPage() {
           {LOGIN_TYPES.map(({ key, label, icon: Icon, color, desc }) => (
             <button
               key={key}
-              onClick={() => { setActiveType(key); setForm({ schoolCode: '', username: '', uniqueId: '', password: '' }) }}
+              onClick={() => switchTab(key)}
               className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 transition-all duration-200 ${
                 activeType === key
                   ? `${colorMap[color].light} ${colorMap[color].border} ${colorMap[color].text}`
@@ -95,6 +105,14 @@ export default function LoginPage() {
           <p className="text-slate-500 text-sm mb-6">
             {LOGIN_TYPES.find(t => t.key === activeType)?.desc}
           </p>
+
+          {/* ── Inline Error Banner ── */}
+          {errorMsg && (
+            <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-5 text-sm">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {activeType === 'school' && (

@@ -12,16 +12,18 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Handle 401 - auto logout
+// Handle 401 - auto logout ONLY for authenticated requests (not login attempts)
 let isRedirecting = false
 api.interceptors.response.use(
   (res) => res,
   (error) => {
-    if (error.response?.status === 401 && !isRedirecting) {
+    const isLoginEndpoint = error.config?.url?.includes('/auth/')
+    if (error.response?.status === 401 && !isRedirecting && !isLoginEndpoint) {
       isRedirecting = true
       sessionStorage.removeItem('sw_token')
       sessionStorage.removeItem('sw_user')
       window.location.href = '/'
+      setTimeout(() => { isRedirecting = false }, 3000)
     }
     return Promise.reject(error)
   }
