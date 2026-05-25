@@ -38,32 +38,30 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String role       = jwtUtils.extractRole(token);
             String schoolCode = jwtUtils.extractSchoolCode(token);
 
-            // Check active status on every request for TEACHER and STUDENT
+            // ── SCHOOL_ADMIN: check school still exists ───────────────
+            if ("SCHOOL_ADMIN".equals(role)) {
+                if (!schoolRepo.existsBySchoolCode(schoolCode)) {
+                    sendUnauthorized(response, "School account no longer exists. Please contact the super admin.");
+                    return;
+                }
+            }
+
+            // ── TEACHER / STUDENT: check account active + school exists ──
             if ("TEACHER".equals(role) || "STUDENT".equals(role)) {
+
+                // 1. Check school still exists (auto-logout when school is deleted)
+                if (!schoolRepo.existsBySchoolCode(schoolCode)) {
+                    sendUnauthorized(response, "Your school account no longer exists. Please contact the administrator.");
+                    return;
+                }
+
+                // 2. Check user account is still active
                 boolean isActive = userRepo.findByUniqueId(uniqueId)
                         .map(user -> user.isActive())
                         .orElse(false);
 
                 if (!isActive) {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.setContentType("application/json");
-                    response.getWriter().write(
-                        "{\"error\": \"Account has been deactivated. Please contact your school admin.\"}"
-                    );
-                    return;
-                }
-            }
-
-            // Check that the school still exists for SCHOOL_ADMIN.
-            // This ensures a deleted school cannot keep using its JWT token.
-            if ("SCHOOL_ADMIN".equals(role)) {
-                boolean schoolExists = schoolRepo.existsBySchoolCode(schoolCode);
-                if (!schoolExists) {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.setContentType("application/json");
-                    response.getWriter().write(
-                        "{\"error\": \"School account no longer exists. Please contact the super admin.\"}"
-                    );
+                    sendUnauthorized(response, "Account has been deactivated. Please contact your school admin.");
                     return;
                 }
             }
@@ -75,6 +73,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void sendUnauthorized(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.getWriter().write("{\"error\": \"" + message + "\"}");
     }
 
     private String parseJwt(HttpServletRequest request) {

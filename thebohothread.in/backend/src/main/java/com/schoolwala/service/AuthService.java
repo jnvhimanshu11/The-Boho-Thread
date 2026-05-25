@@ -61,6 +61,11 @@ public class AuthService {
             throw new RuntimeException("Account is deactivated");
         }
 
+        // Block login if the school has been deleted
+        if (!schoolRepo.existsBySchoolCode(user.getSchoolCode())) {
+            throw new RuntimeException("Your school account no longer exists. Please contact the administrator.");
+        }
+
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid credentials");
         }
@@ -92,6 +97,11 @@ public class AuthService {
 
         if (!user.isActive()) {
             throw new RuntimeException("Account is deactivated");
+        }
+
+        // Block login if the school has been deleted
+        if (!schoolRepo.existsBySchoolCode(user.getSchoolCode())) {
+            throw new RuntimeException("Your school account no longer exists. Please contact the administrator.");
         }
 
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
