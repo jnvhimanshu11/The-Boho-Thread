@@ -1,5 +1,6 @@
 package com.schoolwala.security;
 
+import com.schoolwala.repository.SchoolRepository;
 import com.schoolwala.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -22,6 +23,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
     private final UserRepository userRepo;
+    private final SchoolRepository schoolRepo;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -47,6 +49,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     response.setContentType("application/json");
                     response.getWriter().write(
                         "{\"error\": \"Account has been deactivated. Please contact your school admin.\"}"
+                    );
+                    return;
+                }
+            }
+
+            // Check that the school still exists for SCHOOL_ADMIN.
+            // This ensures a deleted school cannot keep using its JWT token.
+            if ("SCHOOL_ADMIN".equals(role)) {
+                boolean schoolExists = schoolRepo.existsBySchoolCode(schoolCode);
+                if (!schoolExists) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write(
+                        "{\"error\": \"School account no longer exists. Please contact the super admin.\"}"
                     );
                     return;
                 }
