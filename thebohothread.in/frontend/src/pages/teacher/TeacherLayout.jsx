@@ -20,9 +20,16 @@ const NAV = [
 const POLL_INTERVAL_MS = 30_000 // 30 seconds
 
 export default function TeacherLayout() {
-  const { logout } = useAuth()
-  const navigate   = useNavigate()
-  const timerRef   = useRef(null)
+  const { logout, updateLogo } = useAuth()
+  const navigate               = useNavigate()
+  const timerRef               = useRef(null)
+
+  useEffect(() => {
+    // Fetch fresh logo on mount and sync to AuthContext so Sidebar shows latest
+    teacherAPI.getLogo()
+      .then(r => { if (r.data?.logoBase64) updateLogo(r.data.logoBase64) })
+      .catch(() => {}) // silently ignore — logo is non-critical
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const checkActiveStatus = async () => {

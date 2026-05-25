@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Sidebar from '../../components/layout/Sidebar.jsx'
 import { LayoutDashboard, Users, GraduationCap, BookOpen, CreditCard, BarChart3, Settings, CalendarCheck } from 'lucide-react'
@@ -9,6 +9,8 @@ import AttendancePage from './AttendancePage.jsx'
 import FeesPage from './FeesPage.jsx'
 import ReportsPage from './ReportsPage.jsx'
 import SettingsPage from './SettingsPage.jsx'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { schoolAPI } from '../../services/api.js'
 
 const NAV = [
   { path: '/school', label: 'Dashboard', icon: LayoutDashboard },
@@ -21,6 +23,15 @@ const NAV = [
 ]
 
 export default function SchoolLayout() {
+  const { updateLogo } = useAuth()
+
+  useEffect(() => {
+    // Fetch fresh logo on mount and sync to AuthContext so Sidebar always shows latest
+    schoolAPI.getLogo()
+      .then(r => { if (r.data?.logoBase64) updateLogo(r.data.logoBase64) })
+      .catch(() => {}) // silently ignore — logo is non-critical
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar navItems={NAV} roleColor="bg-orange-500/20 text-orange-300" roleLabel="School Admin" />
