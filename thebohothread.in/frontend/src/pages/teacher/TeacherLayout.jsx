@@ -1,10 +1,14 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/layout/Sidebar.jsx'
 import { LayoutDashboard, GraduationCap, CalendarCheck, User } from 'lucide-react'
 import TeacherDashboard from './TeacherDashboard.jsx'
 import TeacherStudents from './TeacherStudents.jsx'
 import TeacherAttendance from './TeacherAttendance.jsx'
 import TeacherProfile from './TeacherProfile.jsx'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { teacherAPI } from '../../services/api.js'
+import toast from 'react-hot-toast'
 
 const NAV = [
   { path: '/teacher', label: 'Dashboard', icon: LayoutDashboard },
@@ -13,7 +17,37 @@ const NAV = [
   { path: '/teacher/profile', label: 'My Profile', icon: User },
 ]
 
+const POLL_INTERVAL_MS = 30_000 // 30 seconds
+
 export default function TeacherLayout() {
+  const { logout } = useAuth()
+  const navigate   = useNavigate()
+  const timerRef   = useRef(null)
+
+  useEffect(() => {
+    const checkActiveStatus = async () => {
+      try {
+        await teacherAPI.getProfile()
+      } catch (err) {
+        if (err.response?.status === 401) {
+          clearInterval(timerRef.current)
+          toast.error('Your account has been deactivated by the school admin. Logging out...', {
+            duration: 4000,
+          })
+          setTimeout(() => {
+            logout()
+            navigate('/', { replace: true })
+          }, 3000)
+        }
+      }
+    }
+
+    timerRef.current = setInterval(checkActiveStatus, POLL_INTERVAL_MS)
+    checkActiveStatus()
+
+    return () => clearInterval(timerRef.current)
+  }, [logout, navigate])
+
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar navItems={NAV} roleColor="bg-sky-500/20 text-sky-300" roleLabel="Teacher" />

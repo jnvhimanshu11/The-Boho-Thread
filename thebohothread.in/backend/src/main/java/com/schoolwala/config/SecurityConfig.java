@@ -1,6 +1,7 @@
 package com.schoolwala.config;
 
 import com.schoolwala.security.JwtAuthFilter;
+import com.schoolwala.security.SuperAdminKeyFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -29,6 +30,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final SuperAdminKeyFilter superAdminKeyFilter;
 
     @Value("${schoolwala.cors.allowed-origins}")
     private String allowedOrigins;
@@ -45,23 +47,19 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints
                 .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/schools/logo/**").permitAll()
-                // School admin only
+                .requestMatchers("/super-admin/**").permitAll()
                 .requestMatchers("/school/admin/**").hasRole("SCHOOL_ADMIN")
-                // School admin + Teacher
                 .requestMatchers("/attendance/**").hasAnyRole("SCHOOL_ADMIN", "TEACHER")
-                // School admin only for fees
                 .requestMatchers("/fees/**").hasRole("SCHOOL_ADMIN")
-                // Reports - school admin
                 .requestMatchers("/reports/**").hasRole("SCHOOL_ADMIN")
-                // All authenticated users
                 .requestMatchers("/users/me").authenticated()
                 .anyRequest().authenticated()
             )
-            .headers(headers -> headers.frameOptions(f -> f.disable())) // For H2 console
+            .headers(headers -> headers.frameOptions(f -> f.disable()))
+            .addFilterBefore(superAdminKeyFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

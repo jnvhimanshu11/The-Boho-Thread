@@ -1,5 +1,6 @@
 package com.schoolwala.security;
 
+import com.schoolwala.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +21,7 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
+    private final UserRepository userRepo;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -30,9 +32,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = parseJwt(request);
 
         if (token != null && jwtUtils.validateToken(token)) {
-            String uniqueId = jwtUtils.extractUniqueId(token);
-            String role = jwtUtils.extractRole(token);
+            String uniqueId   = jwtUtils.extractUniqueId(token);
+            String role       = jwtUtils.extractRole(token);
             String schoolCode = jwtUtils.extractSchoolCode(token);
+
+            // Check active status on every request for TEACHER and STUDENT
+            if ("TEACHER".equals(role) || "STUDENT".equals(role)) {
+                boolean isActive = userRepo.findByUniqueId(uniqueId)
+                        .map(user -> user.isActive())
+                        .orElse(false);
+
+                if (!isActive) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write(
+                        "{\"error\": \"Account has been deactivated. Please contact your school admin.\"}"
+                    );
+                    return;
+                }
+            }
 
             var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
             var auth = new UsernamePasswordAuthenticationToken(uniqueId, null, authorities);

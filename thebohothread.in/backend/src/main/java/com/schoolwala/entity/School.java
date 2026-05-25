@@ -17,7 +17,7 @@ public class School {
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String schoolCode; // Unique ID like "SCH001"
+    private String schoolCode;
 
     @Column(nullable = false)
     private String schoolName;
@@ -29,13 +29,13 @@ public class School {
 
     @Lob
     @Column(columnDefinition = "TEXT")
-    private String logoBase64; // Store logo as base64 for easy retrieval
+    private String logoBase64;
 
     @Column(nullable = false)
     private String adminUsername;
 
     @Column(nullable = false)
-    private String adminPassword; // Encoded
+    private String adminPassword;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
