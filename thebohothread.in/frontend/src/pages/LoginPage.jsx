@@ -2,19 +2,19 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { authAPI } from '../services/api'
-import { School, BookOpen, GraduationCap, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
+import { School, BookOpen, GraduationCap, Eye, EyeOff, Loader2, AlertCircle, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const LOGIN_TYPES = [
-  { key: 'school', label: 'School Login', icon: School, color: 'school', desc: 'Admin & Management' },
-  { key: 'teacher', label: 'Teacher Login', icon: BookOpen, color: 'teacher', desc: 'Staff Portal' },
-  { key: 'student', label: 'Student Login', icon: GraduationCap, color: 'student', desc: 'Student Portal' },
+  { key: 'school',  label: 'School Admin',  icon: School,         color: 'school',  desc: 'Admin & Management' },
+  { key: 'teacher', label: 'Teacher',        icon: BookOpen,       color: 'teacher', desc: 'Staff Portal'        },
+  { key: 'student', label: 'Student',        icon: GraduationCap,  color: 'student', desc: 'Student Portal'      },
 ]
 
 const colorMap = {
-  school:  { bg: 'bg-orange-500',  light: 'bg-orange-50',  text: 'text-orange-600',  border: 'border-orange-400',  ring: 'focus:ring-orange-400'  },
-  teacher: { bg: 'bg-sky-500',     light: 'bg-sky-50',     text: 'text-sky-600',     border: 'border-sky-400',     ring: 'focus:ring-sky-400'     },
-  student: { bg: 'bg-emerald-500', light: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-400', ring: 'focus:ring-emerald-400' },
+  school:  { bg: 'bg-orange-500',  light: 'bg-orange-50',  text: 'text-orange-600',  border: 'border-orange-400',  ring: 'focus:ring-orange-400',  dropBorder: 'border-orange-400'  },
+  teacher: { bg: 'bg-sky-500',     light: 'bg-sky-50',     text: 'text-sky-600',     border: 'border-sky-400',     ring: 'focus:ring-sky-400',     dropBorder: 'border-sky-400'     },
+  student: { bg: 'bg-emerald-500', light: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-400', ring: 'focus:ring-emerald-400', dropBorder: 'border-emerald-400' },
 }
 
 export default function LoginPage() {
@@ -22,21 +22,24 @@ export default function LoginPage() {
   const [form, setForm]             = useState({ schoolCode: '', username: '', uniqueId: '', password: '' })
   const [showPwd, setShowPwd]       = useState(false)
   const [loading, setLoading]       = useState(false)
-  const [errorMsg, setErrorMsg]     = useState('')   // ← inline error state
+  const [errorMsg, setErrorMsg]     = useState('')
+  const [dropOpen, setDropOpen]     = useState(false)
   const { login } = useAuth()
   const navigate  = useNavigate()
   const colors    = colorMap[activeType]
+  const activeInfo = LOGIN_TYPES.find(t => t.key === activeType)
 
-  const switchTab = (key) => {
+  const switchRole = (key) => {
     setActiveType(key)
     setForm({ schoolCode: '', username: '', uniqueId: '', password: '' })
-    setErrorMsg('')   // clear error when switching tab
+    setErrorMsg('')
+    setDropOpen(false)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    setErrorMsg('')   // clear previous error
+    setErrorMsg('')
     try {
       let res
       if (activeType === 'school') {
@@ -51,7 +54,6 @@ export default function LoginPage() {
       toast.success(`Welcome, ${data.fullName}!`)
       navigate(activeType === 'school' ? '/school' : activeType === 'teacher' ? '/teacher' : '/student')
     } catch (err) {
-      // Show inline error — do NOT navigate away
       const msg = err.response?.data?.error || 'Login failed. Please check your credentials.'
       setErrorMsg(msg)
     } finally {
@@ -77,36 +79,60 @@ export default function LoginPage() {
           <p className="text-indigo-300 text-sm mt-1">Complete School Management System</p>
         </div>
 
-        {/* Login Type Selector */}
-        <div className="grid grid-cols-3 gap-2 mb-6">
-          {LOGIN_TYPES.map(({ key, label, icon: Icon, color, desc }) => (
-            <button
-              key={key}
-              onClick={() => switchTab(key)}
-              className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 transition-all duration-200 ${
-                activeType === key
-                  ? `${colorMap[color].light} ${colorMap[color].border} ${colorMap[color].text}`
-                  : 'border-white/10 text-white/60 hover:border-white/30 hover:bg-white/5'
-              }`}
-            >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeType === key ? colorMap[color].bg + ' text-white' : 'bg-white/10'}`}>
-                <Icon className="w-4 h-4" />
+        {/* Role Dropdown */}
+        <div className="mb-6 relative">
+          <label className="block text-xs font-semibold text-white/50 mb-2 uppercase tracking-wider">Login As</label>
+          <button
+            type="button"
+            onClick={() => setDropOpen(!dropOpen)}
+            className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl bg-white/10 border-2 ${colors.dropBorder} text-white font-semibold transition-all duration-200 hover:bg-white/15`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colors.bg} text-white`}>
+                <activeInfo.icon className="w-4 h-4" />
               </div>
-              <span className="text-xs font-semibold leading-tight text-center">{label}</span>
-            </button>
-          ))}
+              <div className="text-left">
+                <div className="text-sm font-bold text-white">{activeInfo.label}</div>
+                <div className="text-xs text-white/50">{activeInfo.desc}</div>
+              </div>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-white/60 transition-transform duration-200 ${dropOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* Dropdown menu */}
+          {dropOpen && (
+            <div className="absolute z-20 top-full mt-2 left-0 right-0 bg-slate-800 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+              {LOGIN_TYPES.map(({ key, label, icon: Icon, color, desc }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => switchRole(key)}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 transition-all duration-150 hover:bg-white/10 ${activeType === key ? 'bg-white/5' : ''}`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colorMap[color].bg} text-white shrink-0`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <div className={`text-sm font-bold ${activeType === key ? colorMap[color].text : 'text-white'}`}>{label}</div>
+                    <div className="text-xs text-white/40">{desc}</div>
+                  </div>
+                  {activeType === key && (
+                    <div className={`ml-auto w-2 h-2 rounded-full ${colorMap[color].bg}`} />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Login Card */}
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-7">
           <h2 className="font-display text-xl font-bold text-slate-800 mb-1">
-            {LOGIN_TYPES.find(t => t.key === activeType)?.label}
+            {activeInfo.label} Login
           </h2>
-          <p className="text-slate-500 text-sm mb-6">
-            {LOGIN_TYPES.find(t => t.key === activeType)?.desc}
-          </p>
+          <p className="text-slate-500 text-sm mb-6">{activeInfo.desc}</p>
 
-          {/* ── Inline Error Banner ── */}
+          {/* Inline Error Banner */}
           {errorMsg && (
             <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-5 text-sm">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -181,17 +207,15 @@ export default function LoginPage() {
               {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in...</> : 'Sign In'}
             </button>
           </form>
-
-          {/* Demo hint */}
-          {activeType === 'school' && (
-            <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <p className="text-xs text-slate-500 font-medium">Demo: Code <span className="font-mono font-bold text-slate-700">SCH001</span> · User <span className="font-mono font-bold text-slate-700">admin</span> · Pass <span className="font-mono font-bold text-slate-700">admin123</span></p>
-            </div>
-          )}
         </div>
 
         <p className="text-center text-white/30 text-xs mt-6">SchoolWala ERP v1.0 · Secured with JWT</p>
       </div>
+
+      {/* Close dropdown when clicking outside */}
+      {dropOpen && (
+        <div className="fixed inset-0 z-10" onClick={() => setDropOpen(false)} />
+      )}
     </div>
   )
 }
