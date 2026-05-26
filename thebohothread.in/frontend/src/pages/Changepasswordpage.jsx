@@ -112,7 +112,7 @@ export default function ChangePasswordPage() {
 
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-7">
           {/* Notice banner */}
-          {/* Notice banner */}
+        
           <div className={`flex items-start gap-3 rounded-xl px-4 py-3 mb-6 ${colorCls.badge}`}>
             <ShieldCheck className="w-5 h-5 mt-0.5 shrink-0" />
             <div>
