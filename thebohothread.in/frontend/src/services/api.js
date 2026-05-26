@@ -34,8 +34,6 @@ export const authAPI = {
   schoolLogin: (data) => api.post('/auth/school/login', data),
   teacherLogin: (data) => api.post('/auth/teacher/login', data),
   studentLogin: (data) => api.post('/auth/student/login', data),
-  changePasswordUser: (data) => api.post('/auth/change-password/user', data),
-  changePasswordSchool: (data) => api.post('/auth/change-password/school', data),
 }
 
 // ==================== School Admin ====================
@@ -58,7 +56,6 @@ export const schoolAPI = {
   getAllFees: () => api.get('/school/admin/fees'),
   getStudentFees: (id) => api.get(`/school/admin/fees/student/${id}`),
   getReport: () => api.get('/school/admin/reports/summary'),
-  resetUserPassword: (uniqueId, newPassword) => api.post(`/school/admin/users/${uniqueId}/reset-password`, { newPassword }),
 }
 
 // ==================== Teacher ====================

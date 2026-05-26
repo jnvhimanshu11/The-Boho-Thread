@@ -33,15 +33,8 @@ export function AuthProvider({ children }) {
     setUser(updated)
   }
 
-  // Called after successful password change to clear the mustChangePassword flag
-  const clearMustChangePassword = () => {
-    const updated = { ...user, mustChangePassword: false }
-    sessionStorage.setItem('sw_user', JSON.stringify(updated))
-    setUser(updated)
-  }
-
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, updateLogo, clearMustChangePassword }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, updateLogo }}>
       {children}
     </AuthContext.Provider>
   )

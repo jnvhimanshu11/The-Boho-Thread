@@ -36,14 +36,5 @@ public class AuthDto {
         private String fullName;
         private String schoolName;
         private String logoBase64;
-        private boolean mustChangePassword;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ChangePasswordRequest {
-        private String currentPassword;
-        private String newPassword;
     }
 }

@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import LoginPage from './pages/LoginPage.jsx'
-import ForceChangePassword from './pages/ForceChangePassword.jsx'
 import SchoolLayout from './pages/school/SchoolLayout.jsx'
 import TeacherLayout from './pages/teacher/TeacherLayout.jsx'
 import StudentLayout from './pages/student/StudentLayout.jsx'
@@ -12,8 +11,6 @@ function ProtectedRoute({ children, role }) {
   if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">Loading...</div>
   if (!user) return <Navigate to="/" replace />
   if (role && user.role !== role) return <Navigate to="/" replace />
-  // If mustChangePassword, gate them to the change-password page
-  if (user.mustChangePassword) return <Navigate to="/change-password" replace />
   return children
 }
 
@@ -25,24 +22,10 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={
-        user
-          ? user.mustChangePassword
-            ? <Navigate to="/change-password" replace />
-            : <Navigate to={
-                user.role === 'SCHOOL_ADMIN' ? '/school' :
-                user.role === 'TEACHER' ? '/teacher' : '/student'
-              } replace />
-          : <LoginPage />
-      } />
-      <Route path="/change-password" element={
-        user
-          ? user.mustChangePassword
-            ? <ForceChangePassword />
-            : <Navigate to={
-                user.role === 'SCHOOL_ADMIN' ? '/school' :
-                user.role === 'TEACHER' ? '/teacher' : '/student'
-              } replace />
-          : <Navigate to="/" replace />
+        user ? <Navigate to={
+          user.role === 'SCHOOL_ADMIN' ? '/school' :
+          user.role === 'TEACHER' ? '/teacher' : '/student'
+        } replace /> : <LoginPage />
       } />
       <Route path="/school/*" element={
         <ProtectedRoute role="SCHOOL_ADMIN"><SchoolLayout /></ProtectedRoute>

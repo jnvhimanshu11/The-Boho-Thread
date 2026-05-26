@@ -1,11 +1,9 @@
 package com.schoolwala.controller;
 
 import com.schoolwala.dto.AuthDto;
-import com.schoolwala.security.JwtAuthFilter;
 import com.schoolwala.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -22,6 +20,9 @@ public class AuthController {
         try {
             return ResponseEntity.ok(authService.schoolLogin(req));
         } catch (Exception e) {
+            // 400 Bad Request for login failures (wrong credentials, school not found, etc.)
+            // Using 401 here caused the axios interceptor to hijack the response
+            // and redirect to '/' before the error body could be read by the login form.
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -39,32 +40,6 @@ public class AuthController {
     public ResponseEntity<?> studentLogin(@RequestBody AuthDto.UserLoginRequest req) {
         try {
             return ResponseEntity.ok(authService.studentLogin(req));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /** Change password for teacher or student (uses uniqueId from JWT) */
-    @PostMapping("/change-password/user")
-    public ResponseEntity<?> changePasswordUser(@RequestBody AuthDto.ChangePasswordRequest req,
-                                                Authentication auth) {
-        try {
-            String uniqueId = (String) auth.getPrincipal();
-            authService.changePasswordForUser(uniqueId, req);
-            return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /** Change password for school admin (uses schoolCode from JWT) */
-    @PostMapping("/change-password/school")
-    public ResponseEntity<?> changePasswordSchool(@RequestBody AuthDto.ChangePasswordRequest req,
-                                                  Authentication auth) {
-        try {
-            String schoolCode = ((JwtAuthFilter.JwtDetails) auth.getDetails()).schoolCode();
-            authService.changePasswordForSchool(schoolCode, req);
-            return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

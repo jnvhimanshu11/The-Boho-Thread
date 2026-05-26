@@ -48,7 +48,6 @@ public class AuthService {
                 .fullName(school.getSchoolName())
                 .schoolName(school.getSchoolName())
                 .logoBase64(school.getLogoBase64())
-                .mustChangePassword(school.isMustChangePassword())
                 .build();
     }
 
@@ -88,7 +87,6 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .schoolName(school != null ? school.getSchoolName() : "")
                 .logoBase64(school != null ? school.getLogoBase64() : null)
-                .mustChangePassword(user.isMustChangePassword())
                 .build();
     }
 
@@ -128,49 +126,6 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .schoolName(school != null ? school.getSchoolName() : "")
                 .logoBase64(school != null ? school.getLogoBase64() : null)
-                .mustChangePassword(user.isMustChangePassword())
                 .build();
     }
-    // ==================== Change Password ====================
-
-    @Transactional
-    public void changePasswordForUser(String uniqueId, AuthDto.ChangePasswordRequest req) {
-        User user = userRepo.findByUniqueId(uniqueId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        if (!passwordEncoder.matches(req.getCurrentPassword(), user.getPassword())) {
-            throw new RuntimeException("Current password is incorrect");
-        }
-        if (req.getNewPassword() == null || req.getNewPassword().length() < 6) {
-            throw new RuntimeException("New password must be at least 6 characters");
-        }
-        user.setPassword(passwordEncoder.encode(req.getNewPassword()));
-        user.setMustChangePassword(false);
-        userRepo.save(user);
-    }
-
-    @Transactional
-    public void changePasswordForSchool(String schoolCode, AuthDto.ChangePasswordRequest req) {
-        School school = schoolRepo.findBySchoolCode(schoolCode)
-                .orElseThrow(() -> new RuntimeException("School not found"));
-        if (!passwordEncoder.matches(req.getCurrentPassword(), school.getAdminPassword())) {
-            throw new RuntimeException("Current password is incorrect");
-        }
-        if (req.getNewPassword() == null || req.getNewPassword().length() < 6) {
-            throw new RuntimeException("New password must be at least 6 characters");
-        }
-        school.setAdminPassword(passwordEncoder.encode(req.getNewPassword()));
-        school.setMustChangePassword(false);
-        schoolRepo.save(school);
-    }
-
-    @Transactional
-    public void adminResetUserPassword(String uniqueId, String newPassword) {
-        User user = userRepo.findByUniqueId(uniqueId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        if (newPassword == null || newPassword.length() < 6) {
-            throw new RuntimeException("Password must be at least 6 characters");
-        }
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setMustChangePassword(true);
-        userRepo.save(user);
-    }
+}
