@@ -20,7 +20,7 @@ public class AuthService {
     private final JwtUtils jwtUtils;
     private final PasswordEncoder passwordEncoder;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthDto.LoginResponse schoolLogin(AuthDto.SchoolLoginRequest req) {
         School school = schoolRepo.findBySchoolCode(req.getSchoolCode())
                 .orElseThrow(() -> new RuntimeException("School not found with code: " + req.getSchoolCode()));
@@ -48,10 +48,11 @@ public class AuthService {
                 .fullName(school.getSchoolName())
                 .schoolName(school.getSchoolName())
                 .logoBase64(school.getLogoBase64())
+                .mustChangePassword(school.isMustChangePassword())
                 .build();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthDto.LoginResponse teacherLogin(AuthDto.UserLoginRequest req) {
         User user = userRepo.findByUniqueId(req.getUniqueId())
                 .orElseThrow(() -> new RuntimeException("Teacher not found with ID: " + req.getUniqueId()));
@@ -64,7 +65,6 @@ public class AuthService {
             throw new RuntimeException("Account is deactivated");
         }
 
-        // Block login if the school has been deleted
         if (!schoolRepo.existsBySchoolCode(user.getSchoolCode())) {
             throw new RuntimeException("Your school account no longer exists. Please contact the administrator.");
         }
@@ -87,10 +87,11 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .schoolName(school != null ? school.getSchoolName() : "")
                 .logoBase64(school != null ? school.getLogoBase64() : null)
+                .mustChangePassword(user.isMustChangePassword())
                 .build();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthDto.LoginResponse studentLogin(AuthDto.UserLoginRequest req) {
         User user = userRepo.findByUniqueId(req.getUniqueId())
                 .orElseThrow(() -> new RuntimeException("Student not found with ID: " + req.getUniqueId()));
@@ -103,7 +104,6 @@ public class AuthService {
             throw new RuntimeException("Account is deactivated");
         }
 
-        // Block login if the school has been deleted
         if (!schoolRepo.existsBySchoolCode(user.getSchoolCode())) {
             throw new RuntimeException("Your school account no longer exists. Please contact the administrator.");
         }
@@ -126,6 +126,47 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .schoolName(school != null ? school.getSchoolName() : "")
                 .logoBase64(school != null ? school.getLogoBase64() : null)
+                .mustChangePassword(user.isMustChangePassword())
                 .build();
+    }
+
+    /**
+     * Called after first-time login: verifies current password, sets new one,
+     * and clears the mustChangePassword flag.
+     */
+    @Transactional
+    public void changePassword(AuthDto.ChangePasswordRequest req) {
+        if ("SCHOOL_ADMIN".equals(req.getRole())) {
+            School school = schoolRepo.findBySchoolCode(req.getSchoolCode())
+                    .orElseThrow(() -> new RuntimeException("School not found"));
+            if (!passwordEncoder.matches(req.getCurrentPassword(), school.getAdminPassword())) {
+                throw new RuntimeException("Current password is incorrect");
+            }
+            school.setAdminPassword(passwordEncoder.encode(req.getNewPassword()));
+            school.setMustChangePassword(false);
+            schoolRepo.save(school);
+        } else {
+            User user = userRepo.findByUniqueId(req.getUniqueId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            if (!passwordEncoder.matches(req.getCurrentPassword(), user.getPassword())) {
+                throw new RuntimeException("Current password is incorrect");
+            }
+            user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+            user.setMustChangePassword(false);
+            userRepo.save(user);
+        }
+    }
+
+    /**
+     * Called by School Admin to reset a user's password (teachers/students).
+     * Sets mustChangePassword = true so user is forced to change on next login.
+     */
+    @Transactional
+    public void resetUserPassword(String uniqueId, String newPassword) {
+        User user = userRepo.findByUniqueId(uniqueId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(true);
+        userRepo.save(user);
     }
 }

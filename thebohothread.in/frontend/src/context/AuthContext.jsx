@@ -3,12 +3,12 @@ import { createContext, useContext, useState, useEffect } from 'react'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
+  const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const stored = sessionStorage.getItem('sw_user')
-    const token = sessionStorage.getItem('sw_token')
+    const token  = sessionStorage.getItem('sw_token')
     if (stored && token) {
       setUser(JSON.parse(stored))
     }
@@ -33,8 +33,15 @@ export function AuthProvider({ children }) {
     setUser(updated)
   }
 
+  /** Called after a successful forced password change */
+  const clearMustChangePassword = () => {
+    const updated = { ...user, mustChangePassword: false }
+    sessionStorage.setItem('sw_user', JSON.stringify(updated))
+    setUser(updated)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, updateLogo }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, updateLogo, clearMustChangePassword }}>
       {children}
     </AuthContext.Provider>
   )

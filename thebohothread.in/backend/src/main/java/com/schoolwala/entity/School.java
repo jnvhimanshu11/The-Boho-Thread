@@ -37,6 +37,10 @@ public class School {
     @Column(nullable = false)
     private String adminPassword;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean mustChangePassword = true; // Force password change on first login
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

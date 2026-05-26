@@ -17,8 +17,8 @@ let isRedirecting = false
 api.interceptors.response.use(
   (res) => res,
   (error) => {
-    const isLoginEndpoint = error.config?.url?.includes('/auth/')
-    if (error.response?.status === 401 && !isRedirecting && !isLoginEndpoint) {
+    const isAuthEndpoint = error.config?.url?.includes('/auth/')
+    if (error.response?.status === 401 && !isRedirecting && !isAuthEndpoint) {
       isRedirecting = true
       sessionStorage.removeItem('sw_token')
       sessionStorage.removeItem('sw_user')
@@ -31,49 +31,51 @@ api.interceptors.response.use(
 
 // ==================== Auth ====================
 export const authAPI = {
-  schoolLogin: (data) => api.post('/auth/school/login', data),
-  teacherLogin: (data) => api.post('/auth/teacher/login', data),
-  studentLogin: (data) => api.post('/auth/student/login', data),
+  schoolLogin:    (data) => api.post('/auth/school/login', data),
+  teacherLogin:   (data) => api.post('/auth/teacher/login', data),
+  studentLogin:   (data) => api.post('/auth/student/login', data),
+  changePassword: (data) => api.post('/auth/change-password', data),
+  resetPassword:  (uniqueId, newPassword) => api.post(`/auth/reset-password/${uniqueId}`, { newPassword }),
 }
 
 // ==================== School Admin ====================
 export const schoolAPI = {
-  getDashboard: () => api.get('/school/admin/dashboard'),
-  getTeachers: () => api.get('/school/admin/teachers'),
-  createTeacher: (data) => api.post('/school/admin/teachers', data),
-  getStudents: () => api.get('/school/admin/students'),
-  createStudent: (data) => api.post('/school/admin/students', data),
-  toggleUser: (id) => api.patch(`/school/admin/users/${id}/toggle`),
-  updateTeacher: (id, data) => api.put(`/school/admin/teachers/${id}`, data),
-  deleteTeacher: (id) => api.delete(`/school/admin/teachers/${id}`),
-  updateLogo: (logoBase64) => api.put('/school/admin/logo', { logoBase64 }),
-  getLogo: () => api.get('/school/admin/logo'),
-  markAttendance: (data) => api.post('/school/admin/attendance', data),
-  getAttendance: (date) => api.get(`/school/admin/attendance?date=${date}`),
-  getStudentAttendance: (id, from, to) => api.get(`/school/admin/attendance/student/${id}?from=${from}&to=${to}`),
-  addFee: (data) => api.post('/school/admin/fees', data),
-  collectFee: (id, data) => api.patch(`/school/admin/fees/${id}/collect`, data),
-  getAllFees: () => api.get('/school/admin/fees'),
-  getStudentFees: (id) => api.get(`/school/admin/fees/student/${id}`),
-  getReport: () => api.get('/school/admin/reports/summary'),
+  getDashboard:         ()              => api.get('/school/admin/dashboard'),
+  getTeachers:          ()              => api.get('/school/admin/teachers'),
+  createTeacher:        (data)          => api.post('/school/admin/teachers', data),
+  getStudents:          ()              => api.get('/school/admin/students'),
+  createStudent:        (data)          => api.post('/school/admin/students', data),
+  toggleUser:           (id)            => api.patch(`/school/admin/users/${id}/toggle`),
+  updateTeacher:        (id, data)      => api.put(`/school/admin/teachers/${id}`, data),
+  deleteTeacher:        (id)            => api.delete(`/school/admin/teachers/${id}`),
+  updateLogo:           (logoBase64)    => api.put('/school/admin/logo', { logoBase64 }),
+  getLogo:              ()              => api.get('/school/admin/logo'),
+  markAttendance:       (data)          => api.post('/school/admin/attendance', data),
+  getAttendance:        (date)          => api.get(`/school/admin/attendance?date=${date}`),
+  getStudentAttendance: (id, from, to)  => api.get(`/school/admin/attendance/student/${id}?from=${from}&to=${to}`),
+  addFee:               (data)          => api.post('/school/admin/fees', data),
+  collectFee:           (id, data)      => api.patch(`/school/admin/fees/${id}/collect`, data),
+  getAllFees:            ()              => api.get('/school/admin/fees'),
+  getStudentFees:       (id)            => api.get(`/school/admin/fees/student/${id}`),
+  getReport:            ()              => api.get('/school/admin/reports/summary'),
 }
 
 // ==================== Teacher ====================
 export const teacherAPI = {
-  getProfile: () => api.get('/teacher/profile'),
-  getLogo: () => api.get('/teacher/logo'),
-  createStudent: (data) => api.post('/teacher/students', data),
-  getStudents: () => api.get('/teacher/students'),
-  markAttendance: (data) => api.post('/teacher/attendance', data),
-  getAttendance: (date) => api.get(`/teacher/attendance?date=${date}`),
+  getProfile:     ()       => api.get('/teacher/profile'),
+  getLogo:        ()       => api.get('/teacher/logo'),
+  createStudent:  (data)   => api.post('/teacher/students', data),
+  getStudents:    ()       => api.get('/teacher/students'),
+  markAttendance: (data)   => api.post('/teacher/attendance', data),
+  getAttendance:  (date)   => api.get(`/teacher/attendance?date=${date}`),
 }
 
 // ==================== Student ====================
 export const studentAPI = {
-  getProfile: () => api.get('/student/profile'),
-  getLogo: () => api.get('/student/logo'),
-  getAttendance: (from, to) => api.get(`/student/attendance?from=${from}&to=${to}`),
-  getFees: () => api.get('/student/fees'),
+  getProfile:    ()           => api.get('/student/profile'),
+  getLogo:       ()           => api.get('/student/logo'),
+  getAttendance: (from, to)   => api.get(`/student/attendance?from=${from}&to=${to}`),
+  getFees:       ()           => api.get('/student/fees'),
 }
 
 export default api
