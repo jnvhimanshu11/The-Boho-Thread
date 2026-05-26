@@ -51,10 +51,6 @@ public class User {
 
     private boolean active = true;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean mustChangePassword = true; // Force password change on first login
-
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

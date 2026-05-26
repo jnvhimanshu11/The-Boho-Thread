@@ -252,7 +252,6 @@ public class SchoolAdminService {
                 .parentName(u.getParentName())
                 .parentPhone(u.getParentPhone())
                 .active(u.isActive())
-                .mustChangePassword(u.isMustChangePassword())
                 .build();
     }
 }

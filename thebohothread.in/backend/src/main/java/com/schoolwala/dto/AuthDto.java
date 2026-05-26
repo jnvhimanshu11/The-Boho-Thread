@@ -36,17 +36,5 @@ public class AuthDto {
         private String fullName;
         private String schoolName;
         private String logoBase64;
-        private boolean mustChangePassword; // signals frontend to show change-password screen
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ChangePasswordRequest {
-        private String uniqueId;   // for users; null for school admin
-        private String schoolCode; // for school admin; null for users
-        private String role;       // SCHOOL_ADMIN | TEACHER | STUDENT
-        private String currentPassword;
-        private String newPassword;
     }
 }

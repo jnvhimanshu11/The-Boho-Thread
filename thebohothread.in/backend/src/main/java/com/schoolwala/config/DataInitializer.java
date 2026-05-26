@@ -27,7 +27,6 @@ public class DataInitializer implements CommandLineRunner {
                     .email("admin@dps.edu.in")
                     .adminUsername("admin")
                     .adminPassword(passwordEncoder.encode("admin123"))
-                    .mustChangePassword(false)
                     .build();
             schoolRepo.save(school);
             log.info("=================================================");
@@ -47,7 +46,6 @@ public class DataInitializer implements CommandLineRunner {
                     .email("admin@mis.edu.in")
                     .adminUsername("miadmin")
                     .adminPassword(passwordEncoder.encode("mis2024"))
-                    .mustChangePassword(false)
                     .build();
             schoolRepo.save(school2);
             log.info("  School 2 Created: SCH002 / miadmin / mis2024");

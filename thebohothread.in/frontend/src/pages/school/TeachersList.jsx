@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { schoolAPI, authAPI } from '../../services/api.js'
+import { schoolAPI } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import {
   Plus, X, Loader2, UserCheck, UserX, BookOpen, Download,
-  ChevronDown, ChevronUp, Camera, Search, KeyRound, Eye, EyeOff, ShieldAlert
+  ChevronDown, ChevronUp, Camera, Search
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
@@ -311,12 +311,6 @@ export default function TeachersList() {
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleting, setDeleting] = useState(false)
 
-  // Reset password state
-  const [resetTarget, setResetTarget] = useState(null)
-  const [resetPwd, setResetPwd] = useState('')
-  const [showResetPwd, setShowResetPwd] = useState(false)
-  const [resetting, setResetting] = useState(false)
-
   const load = useCallback(() =>
     schoolAPI.getTeachers().then(r => setTeachers(r.data)).finally(() => setLoading(false))
   , [])
@@ -487,21 +481,6 @@ export default function TeachersList() {
     } finally { setDeleting(false) }
   }
 
-
-  /* Reset teacher password */
-  const submitReset = async (e) => {
-    e.preventDefault()
-    if (resetPwd.length < 6) { toast.error('Password must be at least 6 characters'); return }
-    setResetting(true)
-    try {
-      await authAPI.resetPassword(resetTarget.uniqueId, resetPwd)
-      toast.success(`Password reset for ${resetTarget.fullName}. They must change it on next login.`)
-      setResetTarget(null)
-      setResetPwd('')
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to reset password')
-    } finally { setResetting(false) }
-  }
 
   /* Export teachers to Excel */
   const exportToExcel = () => {
@@ -715,12 +694,6 @@ export default function TeachersList() {
                       placeholder="Re-enter password"
                       value={form.confirmPassword} onChange={e => set('confirmPassword', e.target.value)} />
                   </Field>
-
-                  {/* Password notice */}
-                  <div className="col-span-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-700">
-                    <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>Teacher will be required to change this password on their first login.</span>
-                  </div>
                 </div>
               </CollapsibleSection>
 
@@ -926,14 +899,7 @@ export default function TeachersList() {
               {teachers.map(t => (
                 <tr key={t.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded-md">{t.uniqueId}</span>
-                      {t.mustChangePassword && (
-                        <span title="Password change pending on next login" className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-md font-medium">
-                          <KeyRound className="w-2.5 h-2.5" /> Pending
-                        </span>
-                      )}
-                    </div>
+                    <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded-md">{t.uniqueId}</span>
                   </td>
                   <td className="px-5 py-3.5">
                     <span className="font-mono text-xs bg-brand-50 text-brand-700 px-2 py-0.5 rounded-md">{t.employeeId || '—'}</span>
@@ -961,12 +927,6 @@ export default function TeachersList() {
                           t.active ? 'bg-rose-50 text-rose-600 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
                         }`}>
                         {t.active ? <><UserX className="w-3 h-3" />Deactivate</> : <><UserCheck className="w-3 h-3" />Activate</>}
-                      </button>
-                      {/* Reset Password */}
-                      <button onClick={() => { setResetTarget({ uniqueId: t.uniqueId, fullName: t.fullName }); setResetPwd(''); setShowResetPwd(false) }}
-                        title="Reset password"
-                        className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors">
-                        <KeyRound className="w-3 h-3" /> Reset Pwd
                       </button>
                       {/* Permanent Delete */}
                       <button onClick={() => { setDeleteTarget(t); setDeleteConfirm('') }}
@@ -1083,58 +1043,6 @@ export default function TeachersList() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════ RESET PASSWORD MODAL ══════════ */}
-      {resetTarget && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center">
-                  <KeyRound className="w-4 h-4 text-indigo-600" />
-                </div>
-                <div>
-                  <h2 className="font-display text-base font-bold text-slate-800">Reset Password</h2>
-                  <p className="text-xs text-slate-500">{resetTarget.fullName}</p>
-                </div>
-              </div>
-              <button onClick={() => setResetTarget(null)} className="p-1.5 rounded-lg hover:bg-slate-100">
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
-            <form onSubmit={submitReset} className="p-6 space-y-4">
-              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-700">
-                <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>The teacher will be forced to change this password on their next login.</span>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">New Password</label>
-                <div className="relative">
-                  <input
-                    type={showResetPwd ? 'text' : 'password'}
-                    className="input pr-10"
-                    placeholder="Min 6 characters"
-                    value={resetPwd}
-                    onChange={e => setResetPwd(e.target.value)}
-                    required
-                  />
-                  <button type="button" onClick={() => setShowResetPwd(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                    {showResetPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setResetTarget(null)} className="btn-secondary flex-1">Cancel</button>
-                <button type="submit" disabled={resetting}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors">
-                  {resetting ? <><Loader2 className="w-4 h-4 animate-spin" />Resetting...</> : 'Reset Password'}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
