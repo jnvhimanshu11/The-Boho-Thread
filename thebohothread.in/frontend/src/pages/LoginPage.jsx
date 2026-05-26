@@ -52,7 +52,11 @@ export default function LoginPage() {
       const data = res.data
       login(data, data.token)
       toast.success(`Welcome, ${data.fullName}!`)
-      navigate(activeType === 'school' ? '/school' : activeType === 'teacher' ? '/teacher' : '/student')
+      if (data.mustChangePassword) {
+        navigate('/change-password')
+      } else {
+        navigate(activeType === 'school' ? '/school' : activeType === 'teacher' ? '/teacher' : '/student')
+      }
     } catch (err) {
       const msg = err.response?.data?.error || 'Login failed. Please check your credentials.'
       setErrorMsg(msg)

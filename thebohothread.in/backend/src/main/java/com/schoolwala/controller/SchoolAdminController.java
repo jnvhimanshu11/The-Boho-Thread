@@ -3,6 +3,7 @@ package com.schoolwala.controller;
 import com.schoolwala.dto.UserDto;
 import com.schoolwala.entity.Attendance;
 import com.schoolwala.security.JwtAuthFilter;
+import com.schoolwala.service.AuthService;
 import com.schoolwala.service.SchoolAdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,7 @@ import java.util.Map;
 public class SchoolAdminController {
 
     private final SchoolAdminService service;
+    private final AuthService authService;
 
     private String getSchoolCode(Authentication auth) {
         return ((JwtAuthFilter.JwtDetails) auth.getDetails()).schoolCode();
@@ -172,5 +174,18 @@ public class SchoolAdminController {
     @GetMapping("/reports/summary")
     public ResponseEntity<?> getReport(Authentication auth) {
         return ResponseEntity.ok(service.getSchoolReport(getSchoolCode(auth)));
+    }
+
+    // ==================== Admin Reset Password ====================
+    @PostMapping("/users/{uniqueId}/reset-password")
+    public ResponseEntity<?> resetUserPassword(@PathVariable String uniqueId,
+                                               @RequestBody Map<String, String> body) {
+        try {
+            String newPassword = body.get("newPassword");
+            authService.adminResetUserPassword(uniqueId, newPassword);
+            return ResponseEntity.ok(Map.of("message", "Password reset successfully. User must change on next login."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }
