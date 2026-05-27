@@ -18,7 +18,7 @@ public class DataInitializer implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
 
-    s
+    
     @Override
     public void run(String... args) {
 
