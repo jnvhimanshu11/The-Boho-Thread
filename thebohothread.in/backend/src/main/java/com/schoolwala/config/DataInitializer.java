@@ -5,6 +5,7 @@ import com.schoolwala.repository.SchoolRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -15,9 +16,31 @@ public class DataInitializer implements CommandLineRunner {
 
     private final SchoolRepository schoolRepo;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void run(String... args) {
+
+        // ── Auto-migrate missing columns ──────────────────────────────
+        try {
+            jdbcTemplate.execute(
+                "ALTER TABLE schools ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE"
+            );
+            log.info("Migration: schools.must_change_password ensured");
+        } catch (Exception e) {
+            log.warn("Migration schools column: {}", e.getMessage());
+        }
+
+        try {
+            jdbcTemplate.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT TRUE"
+            );
+            log.info("Migration: users.must_change_password ensured");
+        } catch (Exception e) {
+            log.warn("Migration users column: {}", e.getMessage());
+        }
+        // ─────────────────────────────────────────────────────────────
+
         if (!schoolRepo.existsBySchoolCode("SCH001")) {
             School school = School.builder()
                     .schoolCode("SCH001")
