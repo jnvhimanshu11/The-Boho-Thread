@@ -5,6 +5,33 @@ import { authAPI } from '../services/api'
 import { KeyRound, Eye, EyeOff, Loader2, ShieldCheck, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+// ✅ Defined OUTSIDE the parent component so React doesn't recreate it on every render
+//    (defining a component inside another component causes remount on every keystroke → focus loss)
+function PasswordField({ label, field, placeholder, show, onToggleShow, value, onChange, colorRing }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{label}</label>
+      <div className="relative">
+        <input
+          type={show ? 'text' : 'password'}
+          className={`input pr-10 ${colorRing}`}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          required
+        />
+        <button
+          type="button"
+          onClick={onToggleShow}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+        >
+          {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function ChangePasswordPage() {
   const { user, clearMustChangePassword } = useAuth()
   const navigate = useNavigate()
@@ -68,28 +95,7 @@ export default function ChangePasswordPage() {
     }
   }
 
-  const PasswordField = ({ label, field, placeholder }) => (
-    <div>
-      <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{label}</label>
-      <div className="relative">
-        <input
-          type={show[field] ? 'text' : 'password'}
-          className={`input pr-10 ${colorCls.ring}`}
-          placeholder={placeholder}
-          value={form[field]}
-          onChange={e => setForm({ ...form, [field]: e.target.value })}
-          required
-        />
-        <button
-          type="button"
-          onClick={() => setShow(s => ({ ...s, [field]: !s[field] }))}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-        >
-          {show[field] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-        </button>
-      </div>
-    </div>
-  )
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
@@ -142,9 +148,24 @@ export default function ChangePasswordPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <PasswordField label="Current Password"  field="current" placeholder="Enter your current password" />
-            <PasswordField label="New Password"      field="new"     placeholder="At least 6 characters" />
-            <PasswordField label="Confirm Password"  field="confirm" placeholder="Re-enter new password" />
+            <PasswordField
+              label="Current Password" field="current" placeholder="Enter your current password"
+              show={show.current} onToggleShow={() => setShow(s => ({ ...s, current: !s.current }))}
+              value={form.currentPassword} onChange={e => setForm(f => ({ ...f, currentPassword: e.target.value }))}
+              colorRing={colorCls.ring}
+            />
+            <PasswordField
+              label="New Password" field="new" placeholder="At least 6 characters"
+              show={show.new} onToggleShow={() => setShow(s => ({ ...s, new: !s.new }))}
+              value={form.newPassword} onChange={e => setForm(f => ({ ...f, newPassword: e.target.value }))}
+              colorRing={colorCls.ring}
+            />
+            <PasswordField
+              label="Confirm Password" field="confirm" placeholder="Re-enter new password"
+              show={show.confirm} onToggleShow={() => setShow(s => ({ ...s, confirm: !s.confirm }))}
+              value={form.confirmPassword} onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
+              colorRing={colorCls.ring}
+            />
 
             {/* Strength hint */}
             {form.newPassword.length > 0 && (
