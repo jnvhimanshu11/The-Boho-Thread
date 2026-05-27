@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { schoolAPI } from '../../services/api.js'
 import { authAPI } from '../../services/api.js'
+import { sendStudentCredentials } from '../../services/emailService.js'
 import { Plus, X, Loader2, UserCheck, UserX, GraduationCap, KeyRound, Eye, EyeOff, ShieldAlert } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -28,6 +29,23 @@ export default function StudentsList() {
       const res = await schoolAPI.createStudent(form)
       toast.success(`Student created! ID: ${res.data.uniqueId}`)
       setShowForm(false); setForm(EMPTY); load()
+
+      // Send login credentials via EmailJS
+      if (form.email) {
+        const emailResult = await sendStudentCredentials({
+          fullName:   form.fullName,
+          email:      form.email,
+          uniqueId:   res.data.uniqueId,
+          password:   form.password,
+          grade:      form.grade,
+        })
+        if (emailResult.success) {
+          toast.success("Login credentials sent to student's email ✉️")
+        } else {
+          toast.error('Account created, but email delivery failed. Share credentials manually.')
+          console.error('[EmailJS] Student email error:', emailResult.error)
+        }
+      }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to create student')
     } finally { setSaving(false) }

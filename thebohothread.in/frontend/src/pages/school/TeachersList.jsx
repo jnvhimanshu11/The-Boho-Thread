@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { schoolAPI, authAPI } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
+import { sendTeacherCredentials } from '../../services/emailService.js'
 import {
   Plus, X, Loader2, UserCheck, UserX, BookOpen, Download,
   ChevronDown, ChevronUp, Camera, Search, KeyRound, Eye, EyeOff, ShieldAlert
@@ -423,6 +424,23 @@ export default function TeachersList() {
       toast.success(`Teacher created! ID: ${res.data.uniqueId}`)
       setShowForm(false)
       load()
+
+      // Send login credentials via EmailJS
+      if (form.email) {
+        const emailResult = await sendTeacherCredentials({
+          fullName:   form.fullName,
+          email:      form.email,
+          uniqueId:   res.data.uniqueId,
+          password:   form.password,
+          schoolName: user?.schoolName,
+        })
+        if (emailResult.success) {
+          toast.success("Login credentials sent to teacher's email ✉️")
+        } else {
+          toast.error('Account created, but email delivery failed. Share credentials manually.')
+          console.error('[EmailJS] Teacher email error:', emailResult.error)
+        }
+      }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to create teacher')
     } finally { setSaving(false) }
