@@ -40,6 +40,15 @@ public class TeacherController {
         return ResponseEntity.ok(Map.of("logoBase64", logo != null ? logo : ""));
     }
 
+    @GetMapping("/school-info")
+    public ResponseEntity<?> getSchoolInfo(Authentication auth) {
+        try {
+            return ResponseEntity.ok(service.getSchoolInfo(getSchoolCode(auth)));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/students")
     public ResponseEntity<?> createStudent(@RequestBody UserDto.CreateStudentRequest req, Authentication auth) {
         try {

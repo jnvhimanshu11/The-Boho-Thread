@@ -4,9 +4,10 @@ import axios from 'axios'
 import {
   ShieldCheck, Plus, X, Loader2, LogOut, School,
   Eye, EyeOff, CheckCircle2, AlertCircle, Trash2, RefreshCw,
-  Upload, MapPin, ChevronDown
+  Upload, MapPin, ChevronDown, Pencil, Mail
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { sendSchoolCredentials } from '../../services/emailService.js'
 
 const SA_KEY = import.meta.env.VITE_SUPER_ADMIN_KEY || '706517@jnV'
 const api = axios.create({
@@ -190,6 +191,14 @@ export default function SuperAdminDashboard() {
   const [showRstPwd,  setShowRstPwd]  = useState(false)
   const [resetting,   setResetting]   = useState(false)
 
+  // Edit school state
+  const [editTarget,  setEditTarget]  = useState(null) // the school being edited
+  const [editForm,    setEditForm]    = useState({})
+  const [editSaving,  setEditSaving]  = useState(false)
+  const [editErrorMsg,setEditErrorMsg]= useState('')
+  const [showEditAddr,setShowEditAddr]= useState(false)
+  const editAddrRef = useRef()
+
   useEffect(() => {
     if (!sessionStorage.getItem('sa_auth')) navigate('/superadmin', { replace: true })
   }, [navigate])
@@ -207,6 +216,13 @@ export default function SuperAdminDashboard() {
   // Close address popup on outside click
   useEffect(() => {
     const handler = (e) => { if (addrRef.current && !addrRef.current.contains(e.target)) setShowAddr(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Close edit address popup on outside click
+  useEffect(() => {
+    const handler = (e) => { if (editAddrRef.current && !editAddrRef.current.contains(e.target)) setShowEditAddr(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
@@ -230,6 +246,58 @@ export default function SuperAdminDashboard() {
     return true
   }
 
+  const openEdit = (s) => {
+    setEditTarget(s)
+    setEditForm({
+      schoolName:       s.schoolName || '',
+      affiliationNo:    s.affiliationNo || '',
+      boardType:        s.boardType || '',
+      schoolType:       s.schoolType || '',
+      establishedYear:  s.establishedYear || '',
+      websiteUrl:       s.websiteUrl || '',
+      state:            s.state || '',
+      city:             s.city || '',
+      locality:         s.locality || '',
+      phone:            s.phone || '',
+      email:            s.email || '',
+      principalName:    s.principalName || '',
+      principalContact: s.principalContact || '',
+      primaryColor:     s.primaryColor || '#4f46e5',
+      logoBase64:       s.logoBase64 || '',
+      bannerBase64:     s.bannerBase64 || '',
+      adminUsername:    s.adminUsername || '',
+    })
+    setEditErrorMsg('')
+  }
+
+  const handleEditAddressChange = (key, value, resetCity) => {
+    setEditForm(f => ({
+      ...f,
+      [key]: value,
+      ...(resetCity !== undefined ? { city: resetCity } : {}),
+    }))
+  }
+
+  const handleUpdate = async (e) => {
+    e.preventDefault()
+    setEditErrorMsg('')
+    if (editForm.phone && editForm.phone.replace(/\D/g,'').length !== 10) {
+      setEditErrorMsg('Office contact must be a 10-digit Indian mobile number'); return
+    }
+    if (editForm.principalContact && editForm.principalContact.replace(/\D/g,'').length !== 10) {
+      setEditErrorMsg('Principal contact must be a 10-digit Indian mobile number'); return
+    }
+    setEditSaving(true)
+    try {
+      await api.put(`/super-admin/schools/${editTarget.schoolCode}`, editForm)
+      toast.success(`"${editForm.schoolName}" updated!`)
+      setEditTarget(null)
+      load()
+    } catch (err) {
+      setEditErrorMsg(err.response?.data?.error || 'Failed to update school')
+    } finally { setEditSaving(false) }
+  }
+
   const handleCreate = async (e) => {
     e.preventDefault()
     setErrorMsg('')
@@ -245,6 +313,23 @@ export default function SuperAdminDashboard() {
       await api.post('/super-admin/schools', form)
       toast.success(`School "${form.schoolName}" created!`)
       setShowForm(false); setForm(EMPTY); load()
+
+      // Send login credentials to admin email if provided
+      if (form.email) {
+        const emailResult = await sendSchoolCredentials({
+          schoolName:    form.schoolName,
+          email:         form.email,
+          schoolCode:    form.schoolCode,
+          adminUsername: form.adminUsername,
+          password:      form.adminPassword,
+        })
+        if (emailResult.success) {
+          toast.success("Login credentials sent to school admin's email ✉️")
+        } else {
+          toast.error('School created, but email delivery failed. Share credentials manually.')
+          console.error('[EmailJS] School email error:', emailResult.error)
+        }
+      }
     } catch (err) {
       setErrorMsg(err.response?.data?.error || 'Failed to create school')
     } finally { setSaving(false) }
@@ -352,6 +437,10 @@ export default function SuperAdminDashboard() {
                     <td className="px-4 py-3 text-slate-600">{s.adminUsername}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        <button onClick={() => openEdit(s)}
+                          className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors">
+                          <Pencil className="w-3 h-3" /> Edit
+                        </button>
                         <button onClick={() => { setResetTarget({ schoolCode: s.schoolCode, schoolName: s.schoolName }); setResetPwd(''); setShowRstPwd(false) }}
                           className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors">
                           <RefreshCw className="w-3 h-3" /> Reset Pwd
@@ -559,6 +648,181 @@ export default function SuperAdminDashboard() {
                 <button type="button" onClick={() => setShowForm(false)} className="btn-secondary flex-1">Cancel</button>
                 <button type="submit" disabled={saving} className="btn-primary flex-1 flex items-center justify-center gap-2">
                   {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : 'Create School'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit School Modal ── */}
+      {editTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center">
+                  <Pencil className="w-4 h-4 text-indigo-600" />
+                </div>
+                <div>
+                  <h2 className="font-display text-lg font-bold text-slate-800">Edit School</h2>
+                  <p className="text-xs text-slate-500 mt-0.5 font-mono">{editTarget.schoolCode}</p>
+                </div>
+              </div>
+              <button onClick={() => setEditTarget(null)}><X className="w-5 h-5 text-slate-400" /></button>
+            </div>
+
+            <form onSubmit={handleUpdate} className="p-6 space-y-6">
+              {editErrorMsg && (
+                <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /><span>{editErrorMsg}</span>
+                </div>
+              )}
+
+              {/* Basic Info */}
+              <div>
+                <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Basic Information</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="flabel">School Name <span className="text-rose-500">*</span></label>
+                    <input className="input" value={editForm.schoolName} required
+                      onChange={e => setEditForm(f => ({ ...f, schoolName: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="flabel">Affiliation No.</label>
+                    <input className="input" value={editForm.affiliationNo}
+                      onChange={e => setEditForm(f => ({ ...f, affiliationNo: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="flabel">Board Type <span className="text-rose-500">*</span></label>
+                    <select className="input" value={editForm.boardType} required
+                      onChange={e => setEditForm(f => ({ ...f, boardType: e.target.value }))}>
+                      <option value="">Select Board</option>
+                      {BOARD_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="flabel">School Type <span className="text-rose-500">*</span></label>
+                    <select className="input" value={editForm.schoolType} required
+                      onChange={e => setEditForm(f => ({ ...f, schoolType: e.target.value }))}>
+                      <option value="">Select Type</option>
+                      {SCHOOL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="flabel">Established Year</label>
+                    <input className="input" type="number" min="1800" max={new Date().getFullYear()}
+                      value={editForm.establishedYear}
+                      onChange={e => setEditForm(f => ({ ...f, establishedYear: e.target.value }))} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="flabel">Website URL</label>
+                    <input className="input" placeholder="https://school.com" value={editForm.websiteUrl}
+                      onChange={e => setEditForm(f => ({ ...f, websiteUrl: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Address */}
+              <div>
+                <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Address</div>
+                <div ref={editAddrRef} className="relative">
+                  <label className="flabel">Location</label>
+                  <div className="input flex items-center justify-between cursor-pointer"
+                    onClick={() => setShowEditAddr(v => !v)}>
+                    <span className={[editForm.locality, editForm.city, editForm.state].filter(Boolean).join(', ') ? 'text-slate-800' : 'text-slate-400'}>
+                      {[editForm.locality, editForm.city, editForm.state].filter(Boolean).join(', ') || 'Click to update location'}
+                    </span>
+                    <div className="flex items-center gap-1 text-slate-400">
+                      <MapPin className="w-4 h-4 text-indigo-400" />
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showEditAddr ? 'rotate-180' : ''}`} />
+                    </div>
+                  </div>
+                  {showEditAddr && (
+                    <AddressPopup
+                      state={editForm.state} city={editForm.city} locality={editForm.locality}
+                      onChange={handleEditAddressChange}
+                      onClose={() => setShowEditAddr(false)}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Admin & Contact */}
+              <div>
+                <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Administrative Details</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="flabel">Admin Username</label>
+                    <input className="input" value={editForm.adminUsername}
+                      onChange={e => setEditForm(f => ({ ...f, adminUsername: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="flabel">Principal Name</label>
+                    <input className="input" value={editForm.principalName}
+                      onChange={e => setEditForm(f => ({ ...f, principalName: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="flabel">Principal Contact</label>
+                    <div className="flex">
+                      <span className="flex items-center px-3 bg-slate-100 border border-r-0 border-slate-200 rounded-l-xl text-sm text-slate-500 font-medium">🇮🇳 +91</span>
+                      <input className="input rounded-l-none" placeholder="10-digit number" maxLength={10}
+                        value={editForm.principalContact}
+                        onChange={e => { if (validatePhone(e.target.value)) setEditForm(f => ({ ...f, principalContact: e.target.value.replace(/\D/g,'') })) }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="flabel">Office Contact Number</label>
+                    <div className="flex">
+                      <span className="flex items-center px-3 bg-slate-100 border border-r-0 border-slate-200 rounded-l-xl text-sm text-slate-500 font-medium">🇮🇳 +91</span>
+                      <input className="input rounded-l-none" placeholder="10-digit number" maxLength={10}
+                        value={editForm.phone}
+                        onChange={e => { if (validatePhone(e.target.value)) setEditForm(f => ({ ...f, phone: e.target.value.replace(/\D/g,'') })) }} />
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="flabel">Support Email</label>
+                    <input className="input" type="email" placeholder="support@school.com" value={editForm.email}
+                      onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Theme Color */}
+              <div>
+                <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Primary Theme Color</div>
+                <div className="flex flex-wrap gap-3 items-center">
+                  {THEME_COLORS.map(c => (
+                    <button key={c.value} type="button" onClick={() => setEditForm(f => ({ ...f, primaryColor: c.value }))}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-xs font-semibold transition-all ${
+                        editForm.primaryColor === c.value ? 'border-slate-700 scale-105' : 'border-transparent bg-slate-100'
+                      }`}>
+                      <div className="w-4 h-4 rounded-full" style={{ background: c.value }} />
+                      {c.label}
+                    </button>
+                  ))}
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={editForm.primaryColor}
+                      onChange={e => setEditForm(f => ({ ...f, primaryColor: e.target.value }))}
+                      className="w-8 h-8 rounded-lg cursor-pointer border border-slate-200" />
+                    <span className="text-xs text-slate-500">Custom</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Media */}
+              <div>
+                <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">School Media</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <ImageUpload label="School Logo" value={editForm.logoBase64} onChange={v => setEditForm(f => ({ ...f, logoBase64: v }))} />
+                  <ImageUpload label="School Banner" value={editForm.bannerBase64} onChange={v => setEditForm(f => ({ ...f, bannerBase64: v }))} />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setEditTarget(null)} className="btn-secondary flex-1">Cancel</button>
+                <button type="submit" disabled={editSaving} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                  {editSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Changes'}
                 </button>
               </div>
             </form>

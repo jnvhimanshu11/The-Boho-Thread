@@ -6,19 +6,30 @@ import { Users, GraduationCap, BookOpen, CreditCard, TrendingUp, IndianRupee } f
 import toast from 'react-hot-toast'
 
 export default function SchoolDashboard() {
-  const [stats, setStats] = useState(null)
+  const [stats, setStats]   = useState(null)
+  const [banner, setBanner] = useState('')
   const { user } = useAuth()
 
   useEffect(() => {
     schoolAPI.getReport()
       .then(r => setStats(r.data))
       .catch(() => toast.error('Failed to load dashboard'))
+    schoolAPI.getSchoolInfo()
+      .then(r => { if (r.data?.bannerBase64) setBanner(r.data.bannerBase64) })
+      .catch(() => {})
   }, [])
 
   const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
 
   return (
     <div>
+      {/* School Banner */}
+      {banner && (
+        <div className="rounded-2xl overflow-hidden mb-6 border border-slate-100 shadow-sm">
+          <img src={banner} alt="School Banner" className="w-full h-40 object-cover" />
+        </div>
+      )}
+
       <div className="mb-8">
         <h1 className="font-display text-2xl font-bold text-slate-800">
           Welcome back, {user?.fullName?.split(' ')[0]} 👋

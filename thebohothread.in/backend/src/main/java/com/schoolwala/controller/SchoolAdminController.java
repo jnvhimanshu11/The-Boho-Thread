@@ -104,6 +104,16 @@ public class SchoolAdminController {
         return ResponseEntity.ok(Map.of("logoBase64", logo != null ? logo : ""));
     }
 
+    // ==================== School Info ====================
+    @GetMapping("/info")
+    public ResponseEntity<?> getSchoolInfo(Authentication auth) {
+        try {
+            return ResponseEntity.ok(service.getSchoolInfo(getSchoolCode(auth)));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // ==================== Attendance ====================
     @PostMapping("/attendance")
     public ResponseEntity<?> markAttendance(@RequestBody Map<String, Object> body, Authentication auth) {

@@ -9,6 +9,7 @@ export default function StudentDashboard() {
   const [attendance, setAttendance] = useState([])
   const [fees, setFees] = useState([])
   const [logo, setLogo] = useState(null)
+  const [banner, setBanner] = useState(null)
 
   const today = new Date()
   const fromDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
@@ -17,7 +18,12 @@ export default function StudentDashboard() {
   useEffect(() => {
     studentAPI.getAttendance(fromDate, toDate).then(r => setAttendance(r.data))
     studentAPI.getFees().then(r => setFees(r.data))
-    studentAPI.getLogo().then(r => { if (r.data.logoBase64) setLogo(r.data.logoBase64) })
+    studentAPI.getSchoolInfo().then(r => {
+      if (r.data?.logoBase64)   setLogo(r.data.logoBase64)
+      if (r.data?.bannerBase64) setBanner(r.data.bannerBase64)
+    }).catch(() => {
+      studentAPI.getLogo().then(r => { if (r.data.logoBase64) setLogo(r.data.logoBase64) })
+    })
   }, [])
 
   const presentDays = attendance.filter(a => a.status === 'PRESENT').length
@@ -28,6 +34,13 @@ export default function StudentDashboard() {
 
   return (
     <div>
+      {/* School Banner */}
+      {banner && (
+        <div className="rounded-2xl overflow-hidden mb-6 border border-slate-100 shadow-sm">
+          <img src={banner} alt="School Banner" className="w-full h-40 object-cover" />
+        </div>
+      )}
+
       {/* Header with logo */}
       <div className="flex items-center justify-between mb-8">
         <div>

@@ -90,6 +90,24 @@ public class TeacherService {
                 .orElse(null);
     }
 
+    public java.util.Map<String, Object> getSchoolInfo(String schoolCode) {
+        com.schoolwala.entity.School s = schoolRepo.findBySchoolCode(schoolCode)
+                .orElseThrow(() -> new RuntimeException("School not found"));
+        java.util.Map<String, Object> info = new java.util.LinkedHashMap<>();
+        info.put("schoolCode",    s.getSchoolCode());
+        info.put("schoolName",    s.getSchoolName());
+        info.put("boardType",     s.getBoardType());
+        info.put("schoolType",    s.getSchoolType());
+        info.put("address",       s.getAddress());
+        info.put("phone",         s.getPhone());
+        info.put("email",         s.getEmail());
+        info.put("principalName", s.getPrincipalName());
+        info.put("primaryColor",  s.getPrimaryColor() != null ? s.getPrimaryColor() : "#4f46e5");
+        info.put("logoBase64",    s.getLogoBase64()   != null ? s.getLogoBase64()   : "");
+        info.put("bannerBase64",  s.getBannerBase64() != null ? s.getBannerBase64() : "");
+        return info;
+    }
+
     private UserDto.UserResponse mapToResponse(User u) {
         return UserDto.UserResponse.builder()
                 .id(u.getId())

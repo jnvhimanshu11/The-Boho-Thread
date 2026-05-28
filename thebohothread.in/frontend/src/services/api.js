@@ -58,12 +58,14 @@ export const schoolAPI = {
   getAllFees:            ()              => api.get('/school/admin/fees'),
   getStudentFees:       (id)            => api.get(`/school/admin/fees/student/${id}`),
   getReport:            ()              => api.get('/school/admin/reports/summary'),
+  getSchoolInfo:        ()              => api.get('/school/admin/info'),
 }
 
 // ==================== Teacher ====================
 export const teacherAPI = {
   getProfile:     ()       => api.get('/teacher/profile'),
   getLogo:        ()       => api.get('/teacher/logo'),
+  getSchoolInfo:  ()       => api.get('/teacher/school-info'),
   createStudent:  (data)   => api.post('/teacher/students', data),
   getStudents:    ()       => api.get('/teacher/students'),
   markAttendance: (data)   => api.post('/teacher/attendance', data),
@@ -74,6 +76,7 @@ export const teacherAPI = {
 export const studentAPI = {
   getProfile:    ()           => api.get('/student/profile'),
   getLogo:       ()           => api.get('/student/logo'),
+  getSchoolInfo: ()           => api.get('/student/school-info'),
   getAttendance: (from, to)   => api.get(`/student/attendance?from=${from}&to=${to}`),
   getFees:       ()           => api.get('/student/fees'),
 }

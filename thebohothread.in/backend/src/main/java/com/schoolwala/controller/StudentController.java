@@ -47,6 +47,25 @@ public class StudentController {
         return ResponseEntity.ok(Map.of("logoBase64", logo != null ? logo : ""));
     }
 
+    @GetMapping("/school-info")
+    public ResponseEntity<?> getSchoolInfo(Authentication auth) {
+        try {
+            School s = schoolRepo.findBySchoolCode(getSchoolCode(auth))
+                    .orElseThrow(() -> new RuntimeException("School not found"));
+            java.util.Map<String, Object> info = new java.util.LinkedHashMap<>();
+            info.put("schoolCode",   s.getSchoolCode());
+            info.put("schoolName",   s.getSchoolName());
+            info.put("boardType",    s.getBoardType());
+            info.put("address",      s.getAddress());
+            info.put("primaryColor", s.getPrimaryColor() != null ? s.getPrimaryColor() : "#4f46e5");
+            info.put("logoBase64",   s.getLogoBase64()   != null ? s.getLogoBase64()   : "");
+            info.put("bannerBase64", s.getBannerBase64() != null ? s.getBannerBase64() : "");
+            return ResponseEntity.ok(info);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/attendance")
     public ResponseEntity<?> getMyAttendance(@RequestParam(required = false) String from,
                                               @RequestParam(required = false) String to,

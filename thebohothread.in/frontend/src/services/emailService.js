@@ -110,3 +110,31 @@ export async function sendStudentCredentials({
     login_url:   window.location.origin + '/login',
   })
 }
+/**
+ * Send login credentials to a newly created school admin.
+ *
+ * @param {object} params
+ * @param {string} params.schoolName   – school display name
+ * @param {string} params.email        – admin email address
+ * @param {string} params.schoolCode   – school code (e.g. SCH001)
+ * @param {string} params.adminUsername – admin username
+ * @param {string} params.password     – initial plain-text password
+ */
+export async function sendSchoolCredentials({
+  schoolName,
+  email,
+  schoolCode,
+  adminUsername,
+  password,
+}) {
+  return sendEmail({
+    to_name:     schoolName,
+    to_email:    email,
+    login_id:    `${schoolCode} / ${adminUsername}`,
+    password:    password,
+    role:        'School Admin',
+    grade:       '',
+    school_name: schoolName,
+    login_url:   window.location.origin + '/login',
+  })
+}

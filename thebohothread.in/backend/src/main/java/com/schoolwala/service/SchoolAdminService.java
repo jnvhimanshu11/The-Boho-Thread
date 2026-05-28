@@ -139,6 +139,32 @@ public class SchoolAdminService {
                 .orElse(null);
     }
 
+    public Map<String, Object> getSchoolInfo(String schoolCode) {
+        School s = schoolRepo.findBySchoolCode(schoolCode)
+                .orElseThrow(() -> new RuntimeException("School not found"));
+        Map<String, Object> info = new java.util.LinkedHashMap<>();
+        info.put("schoolCode",       s.getSchoolCode());
+        info.put("schoolName",       s.getSchoolName());
+        info.put("boardType",        s.getBoardType());
+        info.put("schoolType",       s.getSchoolType());
+        info.put("affiliationNo",    s.getAffiliationNo());
+        info.put("establishedYear",  s.getEstablishedYear());
+        info.put("websiteUrl",       s.getWebsiteUrl());
+        info.put("address",          s.getAddress());
+        info.put("state",            s.getState());
+        info.put("city",             s.getCity());
+        info.put("locality",         s.getLocality());
+        info.put("phone",            s.getPhone());
+        info.put("email",            s.getEmail());
+        info.put("principalName",    s.getPrincipalName());
+        info.put("principalContact", s.getPrincipalContact());
+        info.put("primaryColor",     s.getPrimaryColor() != null ? s.getPrimaryColor() : "#4f46e5");
+        info.put("logoBase64",       s.getLogoBase64()   != null ? s.getLogoBase64()   : "");
+        info.put("bannerBase64",     s.getBannerBase64() != null ? s.getBannerBase64() : "");
+        info.put("adminUsername",    s.getAdminUsername());
+        return info;
+    }
+
     // ==================== Attendance ====================
 
     @Transactional

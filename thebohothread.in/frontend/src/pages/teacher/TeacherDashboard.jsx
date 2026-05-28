@@ -7,15 +7,24 @@ import { GraduationCap, CalendarCheck, BookOpen, User } from 'lucide-react'
 export default function TeacherDashboard() {
   const { user } = useAuth()
   const [students, setStudents] = useState([])
-  const [profile, setProfile] = useState(null)
+  const [profile,  setProfile]  = useState(null)
+  const [banner,   setBanner]   = useState('')
 
   useEffect(() => {
     teacherAPI.getStudents().then(r => setStudents(r.data))
     teacherAPI.getProfile().then(r => setProfile(r.data))
+    teacherAPI.getSchoolInfo().then(r => { if (r.data?.bannerBase64) setBanner(r.data.bannerBase64) }).catch(() => {})
   }, [])
 
   return (
     <div>
+      {/* School Banner */}
+      {banner && (
+        <div className="rounded-2xl overflow-hidden mb-6 border border-slate-100 shadow-sm">
+          <img src={banner} alt="School Banner" className="w-full h-40 object-cover" />
+        </div>
+      )}
+
       <div className="mb-8">
         <h1 className="font-display text-2xl font-bold text-slate-800">
           Welcome, {user?.fullName?.split(' ')[0]} 👋
