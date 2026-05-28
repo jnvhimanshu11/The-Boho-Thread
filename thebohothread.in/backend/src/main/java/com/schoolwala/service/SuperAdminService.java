@@ -18,19 +18,32 @@ public class SuperAdminService {
     private final PasswordEncoder passwordEncoder;
 
     public SuperAdminDto.SchoolResponse createSchool(SuperAdminDto.CreateSchoolRequest req) {
-        if (schoolRepo.existsBySchoolCode(req.getSchoolCode())) {
+        if (schoolRepo.existsBySchoolCode(req.getSchoolCode()))
             throw new RuntimeException("School code already exists: " + req.getSchoolCode());
-        }
-        if (schoolRepo.existsByAdminUsername(req.getAdminUsername())) {
+        if (schoolRepo.existsByAdminUsername(req.getAdminUsername()))
             throw new RuntimeException("Admin username already taken: " + req.getAdminUsername());
-        }
+
+        String address = buildAddress(req.getLocality(), req.getCity(), req.getState());
 
         School school = School.builder()
                 .schoolCode(req.getSchoolCode().toUpperCase())
                 .schoolName(req.getSchoolName())
-                .address(req.getAddress())
+                .affiliationNo(req.getAffiliationNo())
+                .boardType(req.getBoardType())
+                .schoolType(req.getSchoolType())
+                .establishedYear(req.getEstablishedYear())
+                .websiteUrl(req.getWebsiteUrl())
+                .state(req.getState())
+                .city(req.getCity())
+                .locality(req.getLocality())
+                .address(address)
                 .phone(req.getPhone())
                 .email(req.getEmail())
+                .principalName(req.getPrincipalName())
+                .principalContact(req.getPrincipalContact())
+                .primaryColor(req.getPrimaryColor() != null ? req.getPrimaryColor() : "#4f46e5")
+                .logoBase64(req.getLogoBase64())
+                .bannerBase64(req.getBannerBase64())
                 .adminUsername(req.getAdminUsername())
                 .adminPassword(passwordEncoder.encode(req.getAdminPassword()))
                 .build();
@@ -43,69 +56,79 @@ public class SuperAdminService {
     }
 
     public SuperAdminDto.SchoolResponse getSchool(String schoolCode) {
-        School school = schoolRepo.findBySchoolCode(schoolCode)
-                .orElseThrow(() -> new RuntimeException("School not found: " + schoolCode));
-        return toResponse(school);
+        return toResponse(findOrThrow(schoolCode));
     }
 
     public SuperAdminDto.SchoolResponse updateSchool(String schoolCode, SuperAdminDto.UpdateSchoolRequest req) {
-        School school = schoolRepo.findBySchoolCode(schoolCode)
-                .orElseThrow(() -> new RuntimeException("School not found: " + schoolCode));
+        School school = findOrThrow(schoolCode);
 
-        if (req.getSchoolName() != null) school.setSchoolName(req.getSchoolName());
-        if (req.getAddress()    != null) school.setAddress(req.getAddress());
-        if (req.getPhone()      != null) school.setPhone(req.getPhone());
-        if (req.getEmail()      != null) school.setEmail(req.getEmail());
+        if (req.getSchoolName()      != null) school.setSchoolName(req.getSchoolName());
+        if (req.getAffiliationNo()   != null) school.setAffiliationNo(req.getAffiliationNo());
+        if (req.getBoardType()       != null) school.setBoardType(req.getBoardType());
+        if (req.getSchoolType()      != null) school.setSchoolType(req.getSchoolType());
+        if (req.getEstablishedYear() != null) school.setEstablishedYear(req.getEstablishedYear());
+        if (req.getWebsiteUrl()      != null) school.setWebsiteUrl(req.getWebsiteUrl());
+        if (req.getState()           != null) school.setState(req.getState());
+        if (req.getCity()            != null) school.setCity(req.getCity());
+        if (req.getLocality()        != null) school.setLocality(req.getLocality());
+        if (req.getPhone()           != null) school.setPhone(req.getPhone());
+        if (req.getEmail()           != null) school.setEmail(req.getEmail());
+        if (req.getPrincipalName()   != null) school.setPrincipalName(req.getPrincipalName());
+        if (req.getPrincipalContact()!= null) school.setPrincipalContact(req.getPrincipalContact());
+        if (req.getPrimaryColor()    != null) school.setPrimaryColor(req.getPrimaryColor());
+        if (req.getLogoBase64()      != null) school.setLogoBase64(req.getLogoBase64());
+        if (req.getBannerBase64()    != null) school.setBannerBase64(req.getBannerBase64());
 
         if (req.getAdminUsername() != null && !req.getAdminUsername().equals(school.getAdminUsername())) {
-            if (schoolRepo.existsByAdminUsername(req.getAdminUsername())) {
+            if (schoolRepo.existsByAdminUsername(req.getAdminUsername()))
                 throw new RuntimeException("Admin username already taken: " + req.getAdminUsername());
-            }
             school.setAdminUsername(req.getAdminUsername());
         }
-
-        if (req.getAdminPassword() != null && !req.getAdminPassword().isBlank()) {
+        if (req.getAdminPassword() != null && !req.getAdminPassword().isBlank())
             school.setAdminPassword(passwordEncoder.encode(req.getAdminPassword()));
-        }
+
+        // Rebuild address
+        school.setAddress(buildAddress(school.getLocality(), school.getCity(), school.getState()));
 
         return toResponse(schoolRepo.save(school));
     }
 
-    // ==================== Delete Single ====================
     public void deleteSchool(String schoolCode) {
-        School school = schoolRepo.findBySchoolCode(schoolCode)
-                .orElseThrow(() -> new RuntimeException("School not found: " + schoolCode));
-        schoolRepo.delete(school);
+        schoolRepo.delete(findOrThrow(schoolCode));
     }
 
-    // ==================== Delete Bulk ====================
     public SuperAdminDto.BulkDeleteResponse deleteSchoolsBulk(List<String> schoolCodes) {
-        List<String> deleted = new java.util.ArrayList<>();
+        List<String> deleted  = new java.util.ArrayList<>();
         List<String> notFound = new java.util.ArrayList<>();
-
         for (String code : schoolCodes) {
             schoolRepo.findBySchoolCode(code).ifPresentOrElse(
-                school -> {
-                    schoolRepo.delete(school);
-                    deleted.add(code);
-                },
-                () -> notFound.add(code)
+                s -> { schoolRepo.delete(s); deleted.add(code); },
+                ()  -> notFound.add(code)
             );
         }
-
         return SuperAdminDto.BulkDeleteResponse.builder()
-                .deleted(deleted)
-                .notFound(notFound)
-                .deletedCount(deleted.size())
-                .notFoundCount(notFound.size())
+                .deleted(deleted).notFound(notFound)
+                .deletedCount(deleted.size()).notFoundCount(notFound.size())
                 .build();
     }
 
     public void resetPassword(String schoolCode, String newPassword) {
-        School school = schoolRepo.findBySchoolCode(schoolCode)
-                .orElseThrow(() -> new RuntimeException("School not found: " + schoolCode));
+        School school = findOrThrow(schoolCode);
         school.setAdminPassword(passwordEncoder.encode(newPassword));
         schoolRepo.save(school);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────
+
+    private School findOrThrow(String schoolCode) {
+        return schoolRepo.findBySchoolCode(schoolCode)
+                .orElseThrow(() -> new RuntimeException("School not found: " + schoolCode));
+    }
+
+    private String buildAddress(String locality, String city, String state) {
+        return java.util.stream.Stream.of(locality, city, state)
+                .filter(s -> s != null && !s.isBlank())
+                .collect(Collectors.joining(", "));
     }
 
     private SuperAdminDto.SchoolResponse toResponse(School s) {
@@ -113,11 +136,24 @@ public class SuperAdminService {
                 .id(s.getId())
                 .schoolCode(s.getSchoolCode())
                 .schoolName(s.getSchoolName())
+                .affiliationNo(s.getAffiliationNo())
+                .boardType(s.getBoardType())
+                .schoolType(s.getSchoolType())
+                .establishedYear(s.getEstablishedYear())
+                .websiteUrl(s.getWebsiteUrl())
+                .state(s.getState())
+                .city(s.getCity())
+                .locality(s.getLocality())
                 .address(s.getAddress())
                 .phone(s.getPhone())
                 .email(s.getEmail())
+                .principalName(s.getPrincipalName())
+                .principalContact(s.getPrincipalContact())
+                .primaryColor(s.getPrimaryColor() != null ? s.getPrimaryColor() : "#4f46e5")
                 .adminUsername(s.getAdminUsername())
                 .hasLogo(s.getLogoBase64() != null && !s.getLogoBase64().isBlank())
+                .hasBanner(s.getBannerBase64() != null && !s.getBannerBase64().isBlank())
+                .logoBase64(s.getLogoBase64())
                 .createdAt(s.getCreatedAt() != null ? s.getCreatedAt().toString() : null)
                 .updatedAt(s.getUpdatedAt() != null ? s.getUpdatedAt().toString() : null)
                 .build();
