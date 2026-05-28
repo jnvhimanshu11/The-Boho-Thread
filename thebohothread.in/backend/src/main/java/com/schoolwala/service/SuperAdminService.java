@@ -58,14 +58,17 @@ public class SuperAdminService {
         return toResponse(schoolRepo.save(school));
     }
 
+    @Transactional(readOnly = true)
     public List<SuperAdminDto.SchoolResponse> getAllSchools() {
         return schoolRepo.findAll().stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public SuperAdminDto.SchoolResponse getSchool(String schoolCode) {
         return toResponse(findOrThrow(schoolCode));
     }
 
+    @Transactional
     public SuperAdminDto.SchoolResponse updateSchool(String schoolCode, SuperAdminDto.UpdateSchoolRequest req) {
         School school = findOrThrow(schoolCode);
 
@@ -83,8 +86,11 @@ public class SuperAdminService {
         if (req.getPrincipalName()    != null) school.setPrincipalName(req.getPrincipalName());
         if (req.getPrincipalContact() != null) school.setPrincipalContact(req.getPrincipalContact());
         if (req.getPrimaryColor()     != null) school.setPrimaryColor(req.getPrimaryColor());
-        if (req.getLogoBase64()       != null) school.setLogoBase64(req.getLogoBase64());
-        if (req.getBannerBase64()     != null) school.setBannerBase64(req.getBannerBase64());
+        // Only update media if explicitly provided (non-null, non-empty sentinel)
+        if (req.getLogoBase64()   != null && !req.getLogoBase64().equals("__UNCHANGED__"))
+            school.setLogoBase64(req.getLogoBase64().isEmpty() ? null : req.getLogoBase64());
+        if (req.getBannerBase64() != null && !req.getBannerBase64().equals("__UNCHANGED__"))
+            school.setBannerBase64(req.getBannerBase64().isEmpty() ? null : req.getBannerBase64());
 
         if (req.getAdminUsername() != null && !req.getAdminUsername().equals(school.getAdminUsername())) {
             if (schoolRepo.existsByAdminUsername(req.getAdminUsername()))
@@ -96,7 +102,9 @@ public class SuperAdminService {
 
         school.setAddress(buildAddress(school.getLocality(), school.getCity(), school.getState()));
 
-        return toResponse(schoolRepo.save(school));
+        School saved = schoolRepo.save(school);
+        schoolRepo.flush();
+        return toResponse(saved);
     }
 
     // ── Delete single school + ALL related data ───────────────────
@@ -160,7 +168,17 @@ public class SuperAdminService {
                 .collect(Collectors.joining(", "));
     }
 
+    @Transactional(readOnly = true)
     private SuperAdminDto.SchoolResponse toResponse(School s) {
+        // Read LOB fields inside a try-catch — if Hibernate can't access the lob
+        // stream (e.g. connection closed), fall back to null gracefully.
+        String logo   = null;
+        String banner = null;
+        boolean hasLogo   = false;
+        boolean hasBanner = false;
+        try { logo      = s.getLogoBase64();   hasLogo   = logo   != null && !logo.isBlank();   } catch (Exception ignored) {}
+        try { banner    = s.getBannerBase64(); hasBanner = banner != null && !banner.isBlank(); } catch (Exception ignored) {}
+
         return SuperAdminDto.SchoolResponse.builder()
                 .id(s.getId())
                 .schoolCode(s.getSchoolCode())
@@ -180,9 +198,9 @@ public class SuperAdminService {
                 .principalContact(s.getPrincipalContact())
                 .primaryColor(s.getPrimaryColor() != null ? s.getPrimaryColor() : "#4f46e5")
                 .adminUsername(s.getAdminUsername())
-                .hasLogo(s.getLogoBase64() != null && !s.getLogoBase64().isBlank())
-                .hasBanner(s.getBannerBase64() != null && !s.getBannerBase64().isBlank())
-                .logoBase64(s.getLogoBase64())
+                .hasLogo(hasLogo)
+                .hasBanner(hasBanner)
+                .logoBase64(logo)
                 .createdAt(s.getCreatedAt() != null ? s.getCreatedAt().toString() : null)
                 .updatedAt(s.getUpdatedAt() != null ? s.getUpdatedAt().toString() : null)
                 .build();

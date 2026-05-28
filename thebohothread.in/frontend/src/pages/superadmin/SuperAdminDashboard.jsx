@@ -263,8 +263,9 @@ export default function SuperAdminDashboard() {
       principalName:    s.principalName || '',
       principalContact: s.principalContact || '',
       primaryColor:     s.primaryColor || '#4f46e5',
-      logoBase64:       s.logoBase64 || '',
-      bannerBase64:     s.bannerBase64 || '',
+      // Use sentinel so backend skips updating these unless user picks a new image
+      logoBase64:       '__UNCHANGED__',
+      bannerBase64:     '__UNCHANGED__',
       adminUsername:    s.adminUsername || '',
     })
     setEditErrorMsg('')
@@ -837,8 +838,36 @@ export default function SuperAdminDashboard() {
               <div>
                 <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">School Media</div>
                 <div className="grid grid-cols-2 gap-4">
-                  <ImageUpload label="School Logo" value={editForm.logoBase64} onChange={v => setEditForm(f => ({ ...f, logoBase64: v }))} />
-                  <ImageUpload label="School Banner" value={editForm.bannerBase64} onChange={v => setEditForm(f => ({ ...f, bannerBase64: v }))} />
+                  <div>
+                    <label className="flabel">School Logo</label>
+                    {editForm.logoBase64 === '__UNCHANGED__' ? (
+                      <div className="border-2 border-dashed border-slate-200 rounded-xl p-3 flex items-center gap-3">
+                        <div className="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center text-xs text-indigo-400 font-semibold text-center leading-tight px-1">Current logo kept</div>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-600">Logo already set</p>
+                          <button type="button" onClick={() => setEditForm(f => ({ ...f, logoBase64: '' }))}
+                            className="text-xs text-indigo-500 hover:text-indigo-700 mt-0.5">Click to replace</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <ImageUpload label="" value={editForm.logoBase64} onChange={v => setEditForm(f => ({ ...f, logoBase64: v }))} />
+                    )}
+                  </div>
+                  <div>
+                    <label className="flabel">School Banner</label>
+                    {editForm.bannerBase64 === '__UNCHANGED__' ? (
+                      <div className="border-2 border-dashed border-slate-200 rounded-xl p-3 flex items-center gap-3">
+                        <div className="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center text-xs text-indigo-400 font-semibold text-center leading-tight px-1">Current banner kept</div>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-600">Banner already set</p>
+                          <button type="button" onClick={() => setEditForm(f => ({ ...f, bannerBase64: '' }))}
+                            className="text-xs text-indigo-500 hover:text-indigo-700 mt-0.5">Click to replace</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <ImageUpload label="" value={editForm.bannerBase64} onChange={v => setEditForm(f => ({ ...f, bannerBase64: v }))} />
+                    )}
+                  </div>
                 </div>
               </div>
 
