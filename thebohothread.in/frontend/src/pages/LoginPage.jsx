@@ -152,7 +152,7 @@ export default function LoginPage() {
                   onChange={e => setUsername(e.target.value)}
                   required
                 />
-              </div>d
+              </div>
             )}
 
             {/* Password */}
