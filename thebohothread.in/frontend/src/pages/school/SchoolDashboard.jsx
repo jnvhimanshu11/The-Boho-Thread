@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 export default function SchoolDashboard() {
   const [stats, setStats]   = useState(null)
   const [banner, setBanner] = useState('')
+  const [debugInfo, setDebugInfo] = useState(null)
   const { user } = useAuth()
 
   useEffect(() => {
@@ -17,10 +18,32 @@ export default function SchoolDashboard() {
 
     schoolAPI.getSchoolInfo()
       .then(r => {
-        const b = r.data?.bannerBase64
+        const data = r.data
+        const b = data?.bannerBase64
+
+        // Debug info shown on screen
+        setDebugInfo({
+          allKeys: Object.keys(data || {}),
+          bannerExists: !!b,
+          bannerLength: b ? b.length : 0,
+          bannerStart: b ? b.substring(0, 60) : 'EMPTY',
+          hasBannerField: 'bannerBase64' in (data || {}),
+          rawValue: b === undefined ? 'UNDEFINED' : b === null ? 'NULL' : b === '' ? 'EMPTY STRING' : 'HAS DATA'
+        })
+
+        console.log('=== SCHOOL INFO DEBUG ===')
+        console.log('Full response keys:', Object.keys(data || {}))
+        console.log('bannerBase64 value type:', typeof b)
+        console.log('bannerBase64 length:', b ? b.length : 0)
+        console.log('bannerBase64 starts with:', b ? b.substring(0, 80) : 'NOTHING')
+        console.log('Full data:', data)
+
         if (b && b.trim() !== '') setBanner(b)
       })
-      .catch(() => {})
+      .catch(err => {
+        console.error('getSchoolInfo failed:', err)
+        setDebugInfo({ error: err.message })
+      })
   }, [])
 
   const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
@@ -34,7 +57,26 @@ export default function SchoolDashboard() {
         <p className="text-slate-500 text-sm mt-1">{user?.schoolName} · School Dashboard</p>
       </div>
 
-      {/* School Banner — shown below welcome heading */}
+      {/* DEBUG PANEL — remove after fix confirmed */}
+      {debugInfo && (
+        <div className="mb-4 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl text-xs font-mono space-y-1">
+          <p className="font-bold text-yellow-800 text-sm">🔍 BANNER DEBUG INFO</p>
+          {debugInfo.error ? (
+            <p className="text-red-600">API ERROR: {debugInfo.error}</p>
+          ) : (
+            <>
+              <p>API Keys returned: <span className="text-blue-700">{debugInfo.allKeys?.join(', ')}</span></p>
+              <p>bannerBase64 field present: <span className={debugInfo.hasBannerField ? 'text-green-700' : 'text-red-700'}>{String(debugInfo.hasBannerField)}</span></p>
+              <p>bannerBase64 status: <span className={debugInfo.bannerExists ? 'text-green-700 font-bold' : 'text-red-700 font-bold'}>{debugInfo.rawValue}</span></p>
+              <p>bannerBase64 length: <span className="text-blue-700">{debugInfo.bannerLength} chars</span></p>
+              {debugInfo.bannerExists && <p>bannerBase64 starts: <span className="text-green-700">{debugInfo.bannerStart}...</span></p>}
+            </>
+          )}
+          <p className="text-yellow-600 mt-1">Also check browser Console (F12) for full details</p>
+        </div>
+      )}
+
+      {/* School Banner */}
       {banner && (
         <div className="rounded-2xl overflow-hidden mb-6 border border-slate-100 shadow-sm">
           <img src={banner} alt="School Banner" className="w-full h-44 object-cover" />
