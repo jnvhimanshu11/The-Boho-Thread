@@ -28,16 +28,22 @@ export default function StudentsList() {
     try {
       const res = await schoolAPI.createStudent(form)
       toast.success(`Student created! ID: ${res.data.uniqueId}`)
+
+      // ✅ Capture form values BEFORE resetting state
+      const { fullName, email, password, grade } = form
+      const uniqueId = res.data.uniqueId
+
+      // ✅ Now safe to reset form and close modal
       setShowForm(false); setForm(EMPTY); load()
 
       // Send login credentials via EmailJS
-      if (form.email) {
+      if (email) {
         const emailResult = await sendStudentCredentials({
-          fullName:   form.fullName,
-          email:      form.email,
-          uniqueId:   res.data.uniqueId,
-          password:   form.password,
-          grade:      form.grade,
+          fullName,
+          email,
+          uniqueId,
+          password,
+          grade,
         })
         if (emailResult.success) {
           toast.success("Login credentials sent to student's email ✉️")
