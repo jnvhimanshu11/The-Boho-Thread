@@ -134,7 +134,7 @@ export default function LoginPage() {
                       : detectedRole === 'student' ? '🎓 Student'
                       : '🏫 School Admin'}
                   </span>
-                  <span className="text-xs text-slate-400">detected</span>
+                  
                 </div>
               )}
             </div>
