@@ -201,6 +201,7 @@ public class SuperAdminService {
                 .hasLogo(hasLogo)
                 .hasBanner(hasBanner)
                 .logoBase64(logo)
+                .bannerBase64(banner)
                 .createdAt(s.getCreatedAt() != null ? s.getCreatedAt().toString() : null)
                 .updatedAt(s.getUpdatedAt() != null ? s.getUpdatedAt().toString() : null)
                 .build();

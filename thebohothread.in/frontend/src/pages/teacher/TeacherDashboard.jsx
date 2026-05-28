@@ -18,19 +18,19 @@ export default function TeacherDashboard() {
 
   return (
     <div>
-      {/* School Banner */}
-      {banner && (
-        <div className="rounded-2xl overflow-hidden mb-6 border border-slate-100 shadow-sm">
-          <img src={banner} alt="School Banner" className="w-full h-40 object-cover" />
-        </div>
-      )}
-
-      <div className="mb-8">
+      <div className="mb-4">
         <h1 className="font-display text-2xl font-bold text-slate-800">
           Welcome, {user?.fullName?.split(' ')[0]} 👋
         </h1>
         <p className="text-slate-500 text-sm mt-1">Teacher Portal · {user?.schoolName}</p>
       </div>
+
+      {/* School Banner — shown below welcome heading */}
+      {banner && (
+        <div className="rounded-2xl overflow-hidden mb-6 border border-slate-100 shadow-sm">
+          <img src={banner} alt="School Banner" className="w-full h-44 object-cover" />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
         <StatCard title="My Students" value={students.length} icon={GraduationCap} color="indigo" />

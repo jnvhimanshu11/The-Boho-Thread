@@ -34,15 +34,8 @@ export default function StudentDashboard() {
 
   return (
     <div>
-      {/* School Banner */}
-      {banner && (
-        <div className="rounded-2xl overflow-hidden mb-6 border border-slate-100 shadow-sm">
-          <img src={banner} alt="School Banner" className="w-full h-40 object-cover" />
-        </div>
-      )}
-
       {/* Header with logo */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="font-display text-2xl font-bold text-slate-800">
             Hello, {user?.fullName?.split(' ')[0]} 👋
@@ -53,6 +46,13 @@ export default function StudentDashboard() {
           <img src={logo} alt="School Logo" className="w-14 h-14 object-contain rounded-2xl border border-slate-100 shadow-sm" />
         )}
       </div>
+
+      {/* School Banner — shown below welcome heading */}
+      {banner && (
+        <div className="rounded-2xl overflow-hidden mb-6 border border-slate-100 shadow-sm">
+          <img src={banner} alt="School Banner" className="w-full h-44 object-cover" />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         <StatCard title="Present (This Month)" value={presentDays} icon={CalendarCheck} color="emerald" />

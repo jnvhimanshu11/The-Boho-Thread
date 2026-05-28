@@ -84,6 +84,7 @@ public class SuperAdminDto {
         private boolean hasLogo;
         private boolean hasBanner;
         private String logoBase64;
+        private String bannerBase64;
         private String createdAt;
         private String updatedAt;
     }
