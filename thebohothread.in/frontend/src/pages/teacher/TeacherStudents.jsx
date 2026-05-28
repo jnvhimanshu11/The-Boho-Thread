@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { teacherAPI } from '../../services/api.js'
-import { Plus, X, Loader2, GraduationCap } from 'lucide-react'
+import { sendStudentCredentials } from '../../services/emailService.js'
+import { Plus, X, Loader2, GraduationCap, ShieldAlert } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const EMPTY = { fullName: '', email: '', phone: '', grade: '', section: '', parentName: '', parentPhone: '', password: '' }
@@ -20,9 +21,32 @@ export default function TeacherStudents() {
     try {
       const res = await teacherAPI.createStudent(form)
       toast.success(`Student created! ID: ${res.data.uniqueId}`)
+
+      // ✅ Snapshot form values BEFORE resetting state
+      const { fullName, email, password, grade } = form
+      const uniqueId = res.data.uniqueId
+
       setShowForm(false); setForm(EMPTY); load()
-    } catch (err) { toast.error(err.response?.data?.error || 'Failed') }
-    finally { setSaving(false) }
+
+      // Send login credentials via EmailJS
+      if (email) {
+        const emailResult = await sendStudentCredentials({
+          fullName,
+          email,
+          uniqueId,
+          password,
+          grade,
+        })
+        if (emailResult.success) {
+          toast.success("Login credentials sent to student's email ✉️")
+        } else {
+          toast.error('Account created, but email delivery failed. Share credentials manually.')
+          console.error('[EmailJS] Student email error:', emailResult.error)
+        }
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed')
+    } finally { setSaving(false) }
   }
 
   return (
@@ -46,14 +70,14 @@ export default function TeacherStudents() {
             </div>
             <form onSubmit={submit} className="p-6 space-y-4">
               {[
-                { key: 'fullName', label: 'Full Name', placeholder: 'Student name', required: true },
-                { key: 'email', label: 'Email', placeholder: 'student@email.com', type: 'email' },
-                { key: 'phone', label: 'Phone', placeholder: '+91-9876543210' },
-                { key: 'grade', label: 'Grade/Class', placeholder: 'Class 10', required: true },
-                { key: 'section', label: 'Section', placeholder: 'A' },
-                { key: 'parentName', label: 'Parent Name', placeholder: 'Parent name' },
+                { key: 'fullName',    label: 'Full Name',    placeholder: 'Student name',       required: true },
+                { key: 'email',       label: 'Email',        placeholder: 'student@email.com',  type: 'email' },
+                { key: 'phone',       label: 'Phone',        placeholder: '+91-9876543210' },
+                { key: 'grade',       label: 'Grade/Class',  placeholder: 'Class 10',           required: true },
+                { key: 'section',     label: 'Section',      placeholder: 'A' },
+                { key: 'parentName',  label: 'Parent Name',  placeholder: 'Parent name' },
                 { key: 'parentPhone', label: 'Parent Phone', placeholder: '+91-9876543210' },
-                { key: 'password', label: 'Password', placeholder: 'Min 6 characters', type: 'password', required: true },
+                { key: 'password',    label: 'Password',     placeholder: 'Min 6 characters',   type: 'password', required: true },
               ].map(f => (
                 <div key={f.key}>
                   <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{f.label}</label>
@@ -61,10 +85,15 @@ export default function TeacherStudents() {
                     value={form[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} required={f.required} />
                 </div>
               ))}
+              {/* Password notice */}
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-700">
+                <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>Student will be asked to change this password on first login.</span>
+              </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)} className="btn-secondary flex-1">Cancel</button>
                 <button type="submit" disabled={saving} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Create Student
+                  {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : 'Create Student'}
                 </button>
               </div>
             </form>
