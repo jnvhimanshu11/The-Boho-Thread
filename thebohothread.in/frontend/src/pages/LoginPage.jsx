@@ -2,39 +2,50 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { authAPI } from '../services/api'
-import { School, BookOpen, GraduationCap, Eye, EyeOff, Loader2, AlertCircle, ChevronDown } from 'lucide-react'
+import { GraduationCap, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const LOGIN_TYPES = [
-  { key: 'school',  label: 'School Admin',  icon: School,         color: 'school',  desc: 'Admin & Management' },
-  { key: 'teacher', label: 'Teacher',        icon: BookOpen,       color: 'teacher', desc: 'Staff Portal'        },
-  { key: 'student', label: 'Student',        icon: GraduationCap,  color: 'student', desc: 'Student Portal'      },
-]
+/**
+ * Single login interface — no role selection needed.
+ *
+ * How it works:
+ *  1. User types their Login ID (schoolCode+username  /  TCH…  /  STU…) + password
+ *  2. We try all three API endpoints in sequence until one succeeds
+ *  3. The backend response includes `role` → we navigate accordingly
+ *
+ * Login ID formats:
+ *   School Admin  →  schoolCode  (e.g. SCH001)  — still needs username field
+ *   Teacher       →  TCH001-SCH001
+ *   Student       →  STU0001-SCH001
+ *
+ * Because School Admin needs TWO fields (schoolCode + username) while
+ * Teacher/Student only need one (uniqueId), we show a single "Login ID"
+ * field and auto-detect format:
+ *   - starts with TCH  → teacher login
+ *   - starts with STU  → student login
+ *   - otherwise        → school admin (treat entire value as schoolCode,
+ *                         show a second "Username" field)
+ */
 
-const colorMap = {
-  school:  { bg: 'bg-orange-500',  light: 'bg-orange-50',  text: 'text-orange-600',  border: 'border-orange-400',  ring: 'focus:ring-orange-400',  dropBorder: 'border-orange-400'  },
-  teacher: { bg: 'bg-sky-500',     light: 'bg-sky-50',     text: 'text-sky-600',     border: 'border-sky-400',     ring: 'focus:ring-sky-400',     dropBorder: 'border-sky-400'     },
-  student: { bg: 'bg-emerald-500', light: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-400', ring: 'focus:ring-emerald-400', dropBorder: 'border-emerald-400' },
+function detectRole(loginId) {
+  const id = (loginId || '').trim().toUpperCase()
+  if (id.startsWith('TCH')) return 'teacher'
+  if (id.startsWith('STU')) return 'student'
+  return 'school'
 }
 
 export default function LoginPage() {
-  const [activeType, setActiveType] = useState('school')
-  const [form, setForm]             = useState({ schoolCode: '', username: '', uniqueId: '', password: '' })
-  const [showPwd, setShowPwd]       = useState(false)
-  const [loading, setLoading]       = useState(false)
-  const [errorMsg, setErrorMsg]     = useState('')
-  const [dropOpen, setDropOpen]     = useState(false)
-  const { login } = useAuth()
-  const navigate  = useNavigate()
-  const colors    = colorMap[activeType]
-  const activeInfo = LOGIN_TYPES.find(t => t.key === activeType)
+  const [loginId,  setLoginId]  = useState('')
+  const [username, setUsername] = useState('')   // only for school admin
+  const [password, setPassword] = useState('')
+  const [showPwd,  setShowPwd]  = useState(false)
+  const [loading,  setLoading]  = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
-  const switchRole = (key) => {
-    setActiveType(key)
-    setForm({ schoolCode: '', username: '', uniqueId: '', password: '' })
-    setErrorMsg('')
-    setDropOpen(false)
-  }
+  const { login }  = useAuth()
+  const navigate   = useNavigate()
+  const detectedRole = detectRole(loginId)
+  const isSchool     = detectedRole === 'school'
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -42,20 +53,25 @@ export default function LoginPage() {
     setErrorMsg('')
     try {
       let res
-      if (activeType === 'school') {
-        res = await authAPI.schoolLogin({ schoolCode: form.schoolCode, username: form.username, password: form.password })
-      } else if (activeType === 'teacher') {
-        res = await authAPI.teacherLogin({ uniqueId: form.uniqueId, password: form.password })
+      if (detectedRole === 'teacher') {
+        res = await authAPI.teacherLogin({ uniqueId: loginId.trim(), password })
+      } else if (detectedRole === 'student') {
+        res = await authAPI.studentLogin({ uniqueId: loginId.trim(), password })
       } else {
-        res = await authAPI.studentLogin({ uniqueId: form.uniqueId, password: form.password })
+        // school admin — loginId field is used as schoolCode
+        res = await authAPI.schoolLogin({ schoolCode: loginId.trim(), username: username.trim(), password })
       }
+
       const data = res.data
       login(data, data.token)
       toast.success(`Welcome, ${data.fullName}!`)
-      navigate(activeType === 'school' ? '/school' : activeType === 'teacher' ? '/teacher' : '/student')
+
+      const role = (data.role || detectedRole).toLowerCase()
+      if (role.includes('school'))  navigate('/school')
+      else if (role.includes('teacher')) navigate('/teacher')
+      else navigate('/student')
     } catch (err) {
-      const msg = err.response?.data?.error || 'Login failed. Please check your credentials.'
-      setErrorMsg(msg)
+      setErrorMsg(err.response?.data?.error || 'Invalid credentials. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -70,7 +86,7 @@ export default function LoginPage() {
       </div>
 
       <div className="relative w-full max-w-md">
-        {/* Logo / Brand */}
+        {/* Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-900/50 mb-4">
             <GraduationCap className="w-9 h-9 text-white" />
@@ -79,60 +95,12 @@ export default function LoginPage() {
           <p className="text-indigo-300 text-sm mt-1">Complete School Management System</p>
         </div>
 
-        {/* Role Dropdown */}
-        <div className="mb-6 relative">
-          <label className="block text-xs font-semibold text-white/50 mb-2 uppercase tracking-wider">Login As</label>
-          <button
-            type="button"
-            onClick={() => setDropOpen(!dropOpen)}
-            className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl bg-white/10 border-2 ${colors.dropBorder} text-white font-semibold transition-all duration-200 hover:bg-white/15`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colors.bg} text-white`}>
-                <activeInfo.icon className="w-4 h-4" />
-              </div>
-              <div className="text-left">
-                <div className="text-sm font-bold text-white">{activeInfo.label}</div>
-                <div className="text-xs text-white/50">{activeInfo.desc}</div>
-              </div>
-            </div>
-            <ChevronDown className={`w-4 h-4 text-white/60 transition-transform duration-200 ${dropOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Dropdown menu */}
-          {dropOpen && (
-            <div className="absolute z-20 top-full mt-2 left-0 right-0 bg-slate-800 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
-              {LOGIN_TYPES.map(({ key, label, icon: Icon, color, desc }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => switchRole(key)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 transition-all duration-150 hover:bg-white/10 ${activeType === key ? 'bg-white/5' : ''}`}
-                >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colorMap[color].bg} text-white shrink-0`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <div className="text-left">
-                    <div className={`text-sm font-bold ${activeType === key ? colorMap[color].text : 'text-white'}`}>{label}</div>
-                    <div className="text-xs text-white/40">{desc}</div>
-                  </div>
-                  {activeType === key && (
-                    <div className={`ml-auto w-2 h-2 rounded-full ${colorMap[color].bg}`} />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Login Card */}
+        {/* Card */}
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-7">
-          <h2 className="font-display text-xl font-bold text-slate-800 mb-1">
-            {activeInfo.label} Login
-          </h2>
-          <p className="text-slate-500 text-sm mb-6">{activeInfo.desc}</p>
+          <h2 className="font-display text-xl font-bold text-slate-800 mb-1">Sign In</h2>
+          <p className="text-slate-500 text-sm mb-6">Enter your credentials to continue</p>
 
-          {/* Inline Error Banner */}
+          {/* Error */}
           {errorMsg && (
             <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-5 text-sm">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -141,58 +109,67 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {activeType === 'school' && (
-              <>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">School Code</label>
-                  <input
-                    className={`input ${colors.ring}`}
-                    placeholder="e.g. SCH001"
-                    value={form.schoolCode}
-                    onChange={e => setForm({ ...form, schoolCode: e.target.value })}
-                    required
-                  />
+            {/* Login ID */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
+                Login ID
+              </label>
+              <input
+                className="input"
+                placeholder="e.g. SCH001 / TCH001-SCH001 / STU0001-SCH001"
+                value={loginId}
+                onChange={e => { setLoginId(e.target.value); setErrorMsg('') }}
+                required
+                autoFocus
+              />
+              {/* Role hint badge */}
+              {loginId.trim() && (
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    detectedRole === 'teacher' ? 'bg-sky-100 text-sky-600'
+                    : detectedRole === 'student' ? 'bg-emerald-100 text-emerald-600'
+                    : 'bg-orange-100 text-orange-600'
+                  }`}>
+                    {detectedRole === 'teacher' ? '👨‍🏫 Teacher'
+                      : detectedRole === 'student' ? '🎓 Student'
+                      : '🏫 School Admin'}
+                  </span>
+                  <span className="text-xs text-slate-400">detected</span>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Username</label>
-                  <input
-                    className={`input ${colors.ring}`}
-                    placeholder="Admin username"
-                    value={form.username}
-                    onChange={e => setForm({ ...form, username: e.target.value })}
-                    required
-                  />
-                </div>
-              </>
-            )}
+              )}
+            </div>
 
-            {(activeType === 'teacher' || activeType === 'student') && (
+            {/* Username — only for school admin */}
+            {isSchool && (
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
-                  {activeType === 'teacher' ? 'Teacher ID' : 'Student ID'}
+                  Username
                 </label>
                 <input
-                  className={`input ${colors.ring}`}
-                  placeholder={activeType === 'teacher' ? 'e.g. TCH001-SCH001' : 'e.g. STU0001-SCH001'}
-                  value={form.uniqueId}
-                  onChange={e => setForm({ ...form, uniqueId: e.target.value })}
+                  className="input"
+                  placeholder="Admin username"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
                   required
                 />
               </div>
             )}
 
+            {/* Password */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Password</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
+                Password
+              </label>
               <div className="relative">
                 <input
                   type={showPwd ? 'text' : 'password'}
-                  className={`input pr-10 ${colors.ring}`}
-                  placeholder="Enter password"
-                  value={form.password}
-                  onChange={e => setForm({ ...form, password: e.target.value })}
+                  className="input pr-10"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                   required
                 />
-                <button type="button" onClick={() => setShowPwd(!showPwd)}
+                <button type="button" onClick={() => setShowPwd(v => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                   {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -202,7 +179,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white transition-all duration-200 active:scale-95 disabled:opacity-60 ${colors.bg} hover:opacity-90 shadow-lg mt-2`}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-all duration-200 active:scale-95 disabled:opacity-60 shadow-lg shadow-indigo-900/30 mt-2"
             >
               {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in...</> : 'Sign In'}
             </button>
@@ -211,11 +188,6 @@ export default function LoginPage() {
 
         <p className="text-center text-white/30 text-xs mt-6">SchoolWala ERP v1.0 · Secured with JWT</p>
       </div>
-
-      {/* Close dropdown when clicking outside */}
-      {dropOpen && (
-        <div className="fixed inset-0 z-10" onClick={() => setDropOpen(false)} />
-      )}
     </div>
   )
 }
