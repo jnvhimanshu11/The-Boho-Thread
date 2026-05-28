@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const SA_KEY = import.meta.env.VITE_SUPER_ADMIN_KEY || 'schoolwala-super-secret-2024'
+const SA_KEY = import.meta.env.VITE_SUPER_ADMIN_KEY || '706517@jnV'
 const api = axios.create({
   baseURL: 'https://the-boho-thread.onrender.com/api',
   headers: { 'X-Super-Admin-Key': SA_KEY },
