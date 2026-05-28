@@ -6,24 +6,31 @@ import ChangePasswordPage from './pages/ChangePasswordPage.jsx'
 import SchoolLayout from './pages/school/SchoolLayout.jsx'
 import TeacherLayout from './pages/teacher/TeacherLayout.jsx'
 import StudentLayout from './pages/student/StudentLayout.jsx'
+import SuperAdminLogin from './pages/superadmin/SuperAdminLogin.jsx'
+import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard.jsx'
 
 function ProtectedRoute({ children, role }) {
   const { user, loading } = useAuth()
   if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">Loading...</div>
   if (!user) return <Navigate to="/" replace />
   if (role && user.role !== role) return <Navigate to="/" replace />
-  // If user must change password, send them to the change-password page
   if (user.mustChangePassword) return <Navigate to="/change-password" replace />
   return children
 }
 
+/** Guard for super admin pages — uses sessionStorage flag, not JWT */
+function SuperAdminRoute({ children }) {
+  const auth = sessionStorage.getItem('sa_auth')
+  return auth ? children : <Navigate to="/superadmin" replace />
+}
+
 function AppRoutes() {
   const { user, loading } = useAuth()
-
   if (loading) return null
 
   return (
     <Routes>
+      {/* ── Regular login ── */}
       <Route path="/" element={
         !user ? <LoginPage /> :
         user.mustChangePassword ? <Navigate to="/change-password" replace /> :
@@ -33,20 +40,18 @@ function AppRoutes() {
         } replace />
       } />
 
-      {/* Force password change — accessible when logged in regardless of mustChangePassword */}
       <Route path="/change-password" element={
         user ? <ChangePasswordPage /> : <Navigate to="/" replace />
       } />
 
-      <Route path="/school/*" element={
-        <ProtectedRoute role="SCHOOL_ADMIN"><SchoolLayout /></ProtectedRoute>
-      } />
-      <Route path="/teacher/*" element={
-        <ProtectedRoute role="TEACHER"><TeacherLayout /></ProtectedRoute>
-      } />
-      <Route path="/student/*" element={
-        <ProtectedRoute role="STUDENT"><StudentLayout /></ProtectedRoute>
-      } />
+      <Route path="/school/*"   element={<ProtectedRoute role="SCHOOL_ADMIN"><SchoolLayout /></ProtectedRoute>} />
+      <Route path="/teacher/*"  element={<ProtectedRoute role="TEACHER"><TeacherLayout /></ProtectedRoute>} />
+      <Route path="/student/*"  element={<ProtectedRoute role="STUDENT"><StudentLayout /></ProtectedRoute>} />
+
+      {/* ── Super Admin — completely isolated, no AuthContext involvement ── */}
+      <Route path="/superadmin"           element={<SuperAdminLogin />} />
+      <Route path="/superadmin/dashboard" element={<SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute>} />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
