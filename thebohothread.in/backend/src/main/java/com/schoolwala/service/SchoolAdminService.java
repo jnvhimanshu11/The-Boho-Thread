@@ -160,7 +160,12 @@ public class SchoolAdminService {
         info.put("principalContact", s.getPrincipalContact());
         info.put("primaryColor",     s.getPrimaryColor() != null ? s.getPrimaryColor() : "#4f46e5");
         info.put("logoBase64",       s.getLogoBase64()   != null ? s.getLogoBase64()   : "");
-        info.put("bannerBase64",     s.getBannerBase64() != null ? s.getBannerBase64() : "");
+        // bannerBase64 — guard against column not yet migrated in older deployments
+        try {
+            info.put("bannerBase64", s.getBannerBase64() != null ? s.getBannerBase64() : "");
+        } catch (Exception ignored) {
+            info.put("bannerBase64", "");
+        }
         info.put("adminUsername",    s.getAdminUsername());
         return info;
     }

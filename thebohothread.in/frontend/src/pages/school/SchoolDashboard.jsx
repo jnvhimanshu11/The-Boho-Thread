@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react'
 import { schoolAPI } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import StatCard from '../../components/common/StatCard.jsx'
-import { Users, GraduationCap, BookOpen, CreditCard, TrendingUp, IndianRupee } from 'lucide-react'
+import { BookOpen, GraduationCap, CreditCard, TrendingUp, IndianRupee } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function SchoolDashboard() {
   const [stats, setStats]   = useState(null)
   const [banner, setBanner] = useState('')
-  const [debugInfo, setDebugInfo] = useState(null)
   const { user } = useAuth()
 
   useEffect(() => {
@@ -18,32 +17,10 @@ export default function SchoolDashboard() {
 
     schoolAPI.getSchoolInfo()
       .then(r => {
-        const data = r.data
-        const b = data?.bannerBase64
-
-        // Debug info shown on screen
-        setDebugInfo({
-          allKeys: Object.keys(data || {}),
-          bannerExists: !!b,
-          bannerLength: b ? b.length : 0,
-          bannerStart: b ? b.substring(0, 60) : 'EMPTY',
-          hasBannerField: 'bannerBase64' in (data || {}),
-          rawValue: b === undefined ? 'UNDEFINED' : b === null ? 'NULL' : b === '' ? 'EMPTY STRING' : 'HAS DATA'
-        })
-
-        console.log('=== SCHOOL INFO DEBUG ===')
-        console.log('Full response keys:', Object.keys(data || {}))
-        console.log('bannerBase64 value type:', typeof b)
-        console.log('bannerBase64 length:', b ? b.length : 0)
-        console.log('bannerBase64 starts with:', b ? b.substring(0, 80) : 'NOTHING')
-        console.log('Full data:', data)
-
+        const b = r.data?.bannerBase64
         if (b && b.trim() !== '') setBanner(b)
       })
-      .catch(err => {
-        console.error('getSchoolInfo failed:', err)
-        setDebugInfo({ error: err.message })
-      })
+      .catch(err => console.error('getSchoolInfo failed:', err))
   }, [])
 
   const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
@@ -56,25 +33,6 @@ export default function SchoolDashboard() {
         </h1>
         <p className="text-slate-500 text-sm mt-1">{user?.schoolName} · School Dashboard</p>
       </div>
-
-      {/* DEBUG PANEL — remove after fix confirmed */}
-      {debugInfo && (
-        <div className="mb-4 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl text-xs font-mono space-y-1">
-          <p className="font-bold text-yellow-800 text-sm">🔍 BANNER DEBUG INFO</p>
-          {debugInfo.error ? (
-            <p className="text-red-600">API ERROR: {debugInfo.error}</p>
-          ) : (
-            <>
-              <p>API Keys returned: <span className="text-blue-700">{debugInfo.allKeys?.join(', ')}</span></p>
-              <p>bannerBase64 field present: <span className={debugInfo.hasBannerField ? 'text-green-700' : 'text-red-700'}>{String(debugInfo.hasBannerField)}</span></p>
-              <p>bannerBase64 status: <span className={debugInfo.bannerExists ? 'text-green-700 font-bold' : 'text-red-700 font-bold'}>{debugInfo.rawValue}</span></p>
-              <p>bannerBase64 length: <span className="text-blue-700">{debugInfo.bannerLength} chars</span></p>
-              {debugInfo.bannerExists && <p>bannerBase64 starts: <span className="text-green-700">{debugInfo.bannerStart}...</span></p>}
-            </>
-          )}
-          <p className="text-yellow-600 mt-1">Also check browser Console (F12) for full details</p>
-        </div>
-      )}
 
       {/* School Banner */}
       {banner && (
@@ -104,10 +62,10 @@ export default function SchoolDashboard() {
         <p className="text-slate-500 text-sm mb-4">Navigate using the sidebar to manage your school</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Add Teacher', href: '/school/teachers', color: 'bg-sky-50 text-sky-700 hover:bg-sky-100' },
-            { label: 'Add Student', href: '/school/students', color: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' },
-            { label: 'Mark Attendance', href: '/school/attendance', color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' },
-            { label: 'Manage Fees', href: '/school/fees', color: 'bg-orange-50 text-orange-700 hover:bg-orange-100' },
+            { label: 'Add Teacher',      href: '/school/teachers',   color: 'bg-sky-50 text-sky-700 hover:bg-sky-100' },
+            { label: 'Add Student',      href: '/school/students',   color: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' },
+            { label: 'Mark Attendance',  href: '/school/attendance', color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' },
+            { label: 'Manage Fees',      href: '/school/fees',       color: 'bg-orange-50 text-orange-700 hover:bg-orange-100' },
           ].map(a => (
             <a key={a.label} href={a.href}
               className={`flex items-center justify-center py-3 px-4 rounded-xl font-semibold text-sm transition-colors ${a.color}`}>
