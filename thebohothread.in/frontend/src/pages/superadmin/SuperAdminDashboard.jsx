@@ -289,7 +289,24 @@ export default function SuperAdminDashboard() {
     }
     setEditSaving(true)
     try {
-      await api.put(`/super-admin/schools/${editTarget.schoolCode}`, editForm)
+      // Sanitize payload — convert types so Jackson can deserialize correctly
+      const payload = {
+        ...editForm,
+        // Integer field: send null if empty, otherwise parse to number
+        establishedYear: editForm.establishedYear !== '' && editForm.establishedYear != null
+          ? parseInt(editForm.establishedYear, 10)
+          : null,
+        // Blank strings → null so backend null-checks work correctly
+        affiliationNo:    editForm.affiliationNo    || null,
+        websiteUrl:       editForm.websiteUrl        || null,
+        phone:            editForm.phone             || null,
+        email:            editForm.email             || null,
+        principalName:    editForm.principalName     || null,
+        principalContact: editForm.principalContact  || null,
+        adminPassword:    editForm.adminPassword     || null,
+        // Keep base64 as-is (empty string is fine for logo/banner clear)
+      }
+      await api.put(`/super-admin/schools/${editTarget.schoolCode}`, payload)
       toast.success(`"${editForm.schoolName}" updated!`)
       setEditTarget(null)
       load()
@@ -310,7 +327,13 @@ export default function SuperAdminDashboard() {
     }
     setSaving(true)
     try {
-      await api.post('/super-admin/schools', form)
+      const payload = {
+        ...form,
+        establishedYear: form.establishedYear !== '' && form.establishedYear != null
+          ? parseInt(form.establishedYear, 10)
+          : null,
+      }
+      await api.post('/super-admin/schools', payload)
       toast.success(`School "${form.schoolName}" created!`)
       setShowForm(false); setForm(EMPTY); load()
 
