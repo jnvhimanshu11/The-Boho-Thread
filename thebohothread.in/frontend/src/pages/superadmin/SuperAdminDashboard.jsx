@@ -263,9 +263,9 @@ export default function SuperAdminDashboard() {
       principalName:    s.principalName || '',
       principalContact: s.principalContact || '',
       primaryColor:     s.primaryColor || '#4f46e5',
-      // Use sentinel so backend skips updating these unless user picks a new image
-      logoBase64:       '__UNCHANGED__',
-      bannerBase64:     '__UNCHANGED__',
+      // Use sentinel only if image already exists — if not, show upload field immediately
+      logoBase64:       s.hasLogo   ? '__UNCHANGED__' : '',
+      bannerBase64:     s.hasBanner ? '__UNCHANGED__' : '',
       adminUsername:    s.adminUsername || '',
     })
     setEditErrorMsg('')

@@ -14,8 +14,12 @@ export default function SchoolDashboard() {
     schoolAPI.getReport()
       .then(r => setStats(r.data))
       .catch(() => toast.error('Failed to load dashboard'))
+
     schoolAPI.getSchoolInfo()
-      .then(r => { if (r.data?.bannerBase64) setBanner(r.data.bannerBase64) })
+      .then(r => {
+        const b = r.data?.bannerBase64
+        if (b && b.trim() !== '') setBanner(b)
+      })
       .catch(() => {})
   }, [])
 
