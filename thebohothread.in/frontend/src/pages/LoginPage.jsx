@@ -116,7 +116,7 @@ export default function LoginPage() {
               </label>
               <input
                 className="input"
-                placeholder="e.g. SCH001 / TCH001-SCH001 / STU0001-SCH001"
+                placeholder="Enter Your Login ID"
                 value={loginId}
                 onChange={e => { setLoginId(e.target.value); setErrorMsg('') }}
                 required
@@ -147,7 +147,7 @@ export default function LoginPage() {
                 </label>
                 <input
                   className="input"
-                  placeholder="Admin username"
+                  placeholder="Enter Your Username"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
                   required
@@ -164,7 +164,7 @@ export default function LoginPage() {
                 <input
                   type={showPwd ? 'text' : 'password'}
                   className="input pr-10"
-                  placeholder="Enter your password"
+                  placeholder="Enter Your Password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
