@@ -141,7 +141,7 @@ function ImageUpload({ label, value, onChange, accept = 'image/*' }) {
   const handleFile = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) { toast.error('Image must be under 2MB'); return }
+    if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5MB'); return }
     const reader = new FileReader()
     reader.onload = () => onChange(reader.result)
     reader.readAsDataURL(file)
@@ -160,7 +160,7 @@ function ImageUpload({ label, value, onChange, accept = 'image/*' }) {
         )}
         <div>
           <p className="text-xs font-semibold text-slate-600">{value ? 'Change image' : 'Click to upload'}</p>
-          <p className="text-xs text-slate-400">PNG, JPG up to 2MB</p>
+          <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
         </div>
         {value && (
           <button type="button" onClick={e => { e.stopPropagation(); onChange('') }}
