@@ -7,16 +7,22 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const api = axios.create({ baseURL: 'https://the-boho-thread.onrender.com/api' })
+// Backend guards /super-admin/** with X-Super-Admin-Key header
+const SA_KEY = import.meta.env.VITE_SUPER_ADMIN_KEY || 'schoolwala-super-secret-2024'
+
+const api = axios.create({
+  baseURL: 'https://the-boho-thread.onrender.com/api',
+  headers: { 'X-Super-Admin-Key': SA_KEY },
+})
 
 const EMPTY = {
   schoolName:    '',
   schoolCode:    '',
   adminUsername: '',
-  adminEmail:    '',
-  adminPhone:    '',
+  email:    '',
+  phone:    '',
   address:       '',
-  password:      '',
+  adminPassword: '',
 }
 
 export default function SuperAdminDashboard() {
@@ -43,7 +49,7 @@ export default function SuperAdminDashboard() {
   const load = async () => {
     setLoading(true)
     try {
-      const res = await api.get('/superadmin/schools')
+      const res = await api.get('/super-admin/schools')
       setSchools(res.data)
     } catch {
       toast.error('Failed to load schools')
@@ -56,7 +62,7 @@ export default function SuperAdminDashboard() {
     setSaving(true)
     setErrorMsg('')
     try {
-      await api.post('/superadmin/schools', form)
+      await api.post('/super-admin/schools', form)
       toast.success(`School "${form.schoolName}" created! Code: ${form.schoolCode}`)
       setShowForm(false)
       setForm(EMPTY)
@@ -69,7 +75,7 @@ export default function SuperAdminDashboard() {
   const handleDelete = async (schoolCode, name) => {
     if (!window.confirm(`Delete school "${name}"? This cannot be undone.`)) return
     try {
-      await api.delete(`/superadmin/schools/${schoolCode}`)
+      await api.delete(`/super-admin/schools/${schoolCode}`)
       toast.success(`"${name}" deleted`)
       load()
     } catch (err) {
@@ -82,7 +88,7 @@ export default function SuperAdminDashboard() {
     if (resetPwd.length < 6) { toast.error('Min 6 characters'); return }
     setResetting(true)
     try {
-      await api.post(`/superadmin/schools/${resetTarget.schoolCode}/reset-password`, { newPassword: resetPwd })
+      await api.patch(`/super-admin/schools/${resetTarget.schoolCode}/reset-password`, { newPassword: resetPwd })
       toast.success(`Password reset for ${resetTarget.schoolName}`)
       setResetTarget(null)
     } catch (err) {
@@ -238,13 +244,13 @@ export default function SuperAdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Admin Email</label>
-                  <input className="input" type="email" placeholder="admin@school.com" value={form.adminEmail}
-                    onChange={e => field('adminEmail', e.target.value)} />
+                  <input className="input" type="email" placeholder="admin@school.com" value={form.email}
+                    onChange={e => field('email', e.target.value)} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Admin Phone</label>
-                  <input className="input" placeholder="+91-9876543210" value={form.adminPhone}
-                    onChange={e => field('adminPhone', e.target.value)} />
+                  <input className="input" placeholder="+91-9876543210" value={form.phone}
+                    onChange={e => field('phone', e.target.value)} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Address</label>
@@ -255,7 +261,7 @@ export default function SuperAdminDashboard() {
                   <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Initial Password <span className="text-rose-500">*</span></label>
                   <div className="relative">
                     <input type={showPwd ? 'text' : 'password'} className="input pr-10" placeholder="Min 6 characters"
-                      value={form.password} onChange={e => field('password', e.target.value)} required />
+                      value={form.adminPassword} onChange={e => field('adminPassword', e.target.value)} required />
                     <button type="button" onClick={() => setShowPwd(v => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                       {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
