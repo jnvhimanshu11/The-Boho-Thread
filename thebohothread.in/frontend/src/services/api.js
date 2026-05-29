@@ -84,3 +84,9 @@ export const studentAPI = {
 }
 
 export default api
+
+// Keep-alive ping — prevents Render free tier from sleeping
+setInterval(() => {
+  fetch("https://the-boho-thread.onrender.com/api/health", { method: "GET" })
+    .catch(() => {}) // silent fail, just keeping the server warm
+}, 10000)
