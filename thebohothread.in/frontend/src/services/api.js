@@ -5,9 +5,9 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Attach JWT token to every request
+// Attach JWT token to every request — reads from localStorage so it survives hard refresh
 api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('sw_token')
+  const token = localStorage.getItem('sw_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
@@ -20,8 +20,8 @@ api.interceptors.response.use(
     const isAuthEndpoint = error.config?.url?.includes('/auth/')
     if (error.response?.status === 401 && !isRedirecting && !isAuthEndpoint) {
       isRedirecting = true
-      sessionStorage.removeItem('sw_token')
-      sessionStorage.removeItem('sw_user')
+      localStorage.removeItem('sw_token')
+      localStorage.removeItem('sw_user')
       window.location.href = '/'
       setTimeout(() => { isRedirecting = false }, 3000)
     }
@@ -50,6 +50,8 @@ export const schoolAPI = {
   deleteTeacher:        (id)            => api.delete(`/school/admin/teachers/${id}`),
   updateLogo:           (logoBase64)    => api.put('/school/admin/logo', { logoBase64 }),
   getLogo:              ()              => api.get('/school/admin/logo'),
+  updateBanner:         (bannerBase64)  => api.put('/school/admin/banner', { bannerBase64 }),
+  getBanner:            ()              => api.get('/school/admin/banner'),
   markAttendance:       (data)          => api.post('/school/admin/attendance', data),
   getAttendance:        (date)          => api.get(`/school/admin/attendance?date=${date}`),
   getStudentAttendance: (id, from, to)  => api.get(`/school/admin/attendance/student/${id}?from=${from}&to=${to}`),
