@@ -188,6 +188,10 @@ export default function LoginPage() {
 
         <p className="text-center text-white/30 text-xs mt-6">SchoolWala ERP v1.0 · Secured with JWT</p>
       </div>
+      <div>
+
+        <p className="text-center text-white/30 text-xs mt-6">Designed by Himanshu Soni</p>
+      </div>
     </div>
   )
 }
