@@ -94,14 +94,35 @@ public class SchoolAdminController {
     // ==================== Logo ====================
     @PutMapping("/logo")
     public ResponseEntity<?> updateLogo(@RequestBody UserDto.UpdateLogoRequest req, Authentication auth) {
-        service.updateSchoolLogo(getSchoolCode(auth), req.getLogoBase64());
-        return ResponseEntity.ok(Map.of("message", "Logo updated successfully"));
+        try {
+            service.updateSchoolLogo(getSchoolCode(auth), req.getLogoBase64());
+            return ResponseEntity.ok(Map.of("message", "Logo updated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @GetMapping("/logo")
     public ResponseEntity<?> getLogo(Authentication auth) {
         String logo = service.getSchoolLogo(getSchoolCode(auth));
         return ResponseEntity.ok(Map.of("logoBase64", logo != null ? logo : ""));
+    }
+
+    // ==================== Banner ====================
+    @PutMapping("/banner")
+    public ResponseEntity<?> updateBanner(@RequestBody UserDto.UpdateBannerRequest req, Authentication auth) {
+        try {
+            service.updateSchoolBanner(getSchoolCode(auth), req.getBannerBase64());
+            return ResponseEntity.ok(Map.of("message", "Banner updated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/banner")
+    public ResponseEntity<?> getBanner(Authentication auth) {
+        String banner = service.getSchoolBanner(getSchoolCode(auth));
+        return ResponseEntity.ok(Map.of("bannerBase64", banner != null ? banner : ""));
     }
 
     // ==================== School Info ====================
@@ -146,8 +167,8 @@ public class SchoolAdminController {
     public ResponseEntity<?> addFee(@RequestBody Map<String, Object> body, Authentication auth) {
         try {
             String studentId = (String) body.get("studentUniqueId");
-            String feeType = (String) body.get("feeType");
-            Double amount = Double.parseDouble(body.get("totalAmount").toString());
+            String feeType   = (String) body.get("feeType");
+            Double amount    = Double.parseDouble(body.get("totalAmount").toString());
             LocalDate dueDate = LocalDate.parse((String) body.get("dueDate"));
             return ResponseEntity.ok(service.addFee(
                     getSchoolCode(auth), studentId, feeType, amount, dueDate, getUniqueId(auth)));
@@ -159,9 +180,9 @@ public class SchoolAdminController {
     @PatchMapping("/fees/{id}/collect")
     public ResponseEntity<?> collectFee(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         try {
-            Double amount = Double.parseDouble(body.get("amount").toString());
-            String mode = (String) body.getOrDefault("paymentMode", "Cash");
-            String txnId = (String) body.getOrDefault("transactionId", "");
+            Double amount  = Double.parseDouble(body.get("amount").toString());
+            String mode    = (String) body.getOrDefault("paymentMode", "Cash");
+            String txnId   = (String) body.getOrDefault("transactionId", "");
             return ResponseEntity.ok(service.collectFeePayment(id, amount, mode, txnId));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

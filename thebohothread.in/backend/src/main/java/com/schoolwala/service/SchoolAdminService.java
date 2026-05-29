@@ -97,14 +97,14 @@ public class SchoolAdminService {
     public UserDto.UserResponse updateTeacher(String uniqueId, UserDto.UpdateTeacherRequest req) {
         User user = userRepo.findByUniqueId(uniqueId)
                 .orElseThrow(() -> new RuntimeException("Teacher not found"));
-        if (req.getEmployeeId() != null) user.setEmployeeId(req.getEmployeeId());
-        if (req.getFullName() != null)   user.setFullName(req.getFullName());
-        if (req.getEmail() != null)      user.setEmail(req.getEmail());
-        if (req.getPhone() != null)      user.setPhone(req.getPhone());
-        if (req.getAddress() != null)    user.setAddress(req.getAddress());
-        if (req.getDateOfBirth() != null) user.setDateOfBirth(req.getDateOfBirth());
-        if (req.getSubject() != null)    user.setSubject(req.getSubject());
-        if (req.getClassAssigned() != null) user.setClassAssigned(req.getClassAssigned());
+        if (req.getEmployeeId()   != null) user.setEmployeeId(req.getEmployeeId());
+        if (req.getFullName()     != null) user.setFullName(req.getFullName());
+        if (req.getEmail()        != null) user.setEmail(req.getEmail());
+        if (req.getPhone()        != null) user.setPhone(req.getPhone());
+        if (req.getAddress()      != null) user.setAddress(req.getAddress());
+        if (req.getDateOfBirth()  != null) user.setDateOfBirth(req.getDateOfBirth());
+        if (req.getSubject()      != null) user.setSubject(req.getSubject());
+        if (req.getClassAssigned()!= null) user.setClassAssigned(req.getClassAssigned());
         return mapToResponse(userRepo.save(user));
     }
 
@@ -139,6 +139,24 @@ public class SchoolAdminService {
                 .orElse(null);
     }
 
+    // ==================== Banner Management ====================
+
+    @Transactional
+    public void updateSchoolBanner(String schoolCode, String bannerBase64) {
+        School school = schoolRepo.findBySchoolCode(schoolCode)
+                .orElseThrow(() -> new RuntimeException("School not found"));
+        school.setBannerBase64(bannerBase64);
+        schoolRepo.save(school);
+    }
+
+    public String getSchoolBanner(String schoolCode) {
+        return schoolRepo.findBySchoolCode(schoolCode)
+                .map(School::getBannerBase64)
+                .orElse(null);
+    }
+
+    // ==================== School Info ====================
+
     public Map<String, Object> getSchoolInfo(String schoolCode) {
         School s = schoolRepo.findBySchoolCode(schoolCode)
                 .orElseThrow(() -> new RuntimeException("School not found"));
@@ -158,14 +176,9 @@ public class SchoolAdminService {
         info.put("email",            s.getEmail());
         info.put("principalName",    s.getPrincipalName());
         info.put("principalContact", s.getPrincipalContact());
-        info.put("primaryColor",     s.getPrimaryColor() != null ? s.getPrimaryColor() : "#4f46e5");
-        info.put("logoBase64",       s.getLogoBase64()   != null ? s.getLogoBase64()   : "");
-        // bannerBase64 — guard against column not yet migrated in older deployments
-        try {
-            info.put("bannerBase64", s.getBannerBase64() != null ? s.getBannerBase64() : "");
-        } catch (Exception ignored) {
-            info.put("bannerBase64", "");
-        }
+        info.put("primaryColor",     s.getPrimaryColor()  != null ? s.getPrimaryColor()  : "#4f46e5");
+        info.put("logoBase64",       s.getLogoBase64()    != null ? s.getLogoBase64()    : "");
+        info.put("bannerBase64",     s.getBannerBase64()  != null ? s.getBannerBase64()  : "");
         info.put("adminUsername",    s.getAdminUsername());
         return info;
     }
@@ -248,18 +261,18 @@ public class SchoolAdminService {
     // ==================== Reports ====================
 
     public Map<String, Object> getSchoolReport(String schoolCode) {
-        long totalTeachers = userRepo.countBySchoolCodeAndRole(schoolCode, Role.TEACHER);
-        long totalStudents = userRepo.countBySchoolCodeAndRole(schoolCode, Role.STUDENT);
-        Double totalFees = feeRepo.sumTotalBySchool(schoolCode);
+        long totalTeachers  = userRepo.countBySchoolCodeAndRole(schoolCode, Role.TEACHER);
+        long totalStudents  = userRepo.countBySchoolCodeAndRole(schoolCode, Role.STUDENT);
+        Double totalFees     = feeRepo.sumTotalBySchool(schoolCode);
         Double collectedFees = feeRepo.sumPaidBySchool(schoolCode);
-        Double pendingFees = feeRepo.sumPendingBySchool(schoolCode);
+        Double pendingFees   = feeRepo.sumPendingBySchool(schoolCode);
 
         return Map.of(
-                "totalTeachers", totalTeachers,
-                "totalStudents", totalStudents,
-                "totalFees", totalFees != null ? totalFees : 0.0,
-                "collectedFees", collectedFees != null ? collectedFees : 0.0,
-                "pendingFees", pendingFees != null ? pendingFees : 0.0
+                "totalTeachers",  totalTeachers,
+                "totalStudents",  totalStudents,
+                "totalFees",      totalFees      != null ? totalFees      : 0.0,
+                "collectedFees",  collectedFees  != null ? collectedFees  : 0.0,
+                "pendingFees",    pendingFees    != null ? pendingFees    : 0.0
         );
     }
 

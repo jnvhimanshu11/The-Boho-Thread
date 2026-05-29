@@ -77,7 +77,7 @@ public class UserDto {
         private String parentName;
         private String parentPhone;
         private boolean active;
-        private boolean mustChangePassword; // exposed so admin UI can show badge
+        private boolean mustChangePassword;
     }
 
     @Data
@@ -85,6 +85,14 @@ public class UserDto {
     @AllArgsConstructor
     public static class UpdateLogoRequest {
         private String logoBase64; // data:image/png;base64,...
+    }
+
+    // ── NEW: used by PUT /school/admin/banner ─────────────────────
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UpdateBannerRequest {
+        private String bannerBase64; // data:image/jpeg;base64,...
     }
 
     @Data
