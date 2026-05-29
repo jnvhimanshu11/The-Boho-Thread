@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { LogOut, Menu, X, GraduationCap } from 'lucide-react'
 
-export default function Sidebar({ navItems, roleColor, roleLabel }) {
+export default function Sidebar({ navItems, roleLabel }) {
   const [open, setOpen] = useState(false)
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -17,9 +17,11 @@ export default function Sidebar({ navItems, roleColor, roleLabel }) {
       <div className="p-5 border-b border-white/10">
         <div className="flex items-center gap-3 mb-4">
           {user?.logoBase64 ? (
-            <img src={user.logoBase64} alt="School Logo" className="w-10 h-10 rounded-xl object-cover shadow" />
+            <img src={user.logoBase64} alt="School Logo"
+              className="w-10 h-10 rounded-xl object-cover shadow" />
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow"
+              style={{ backgroundColor: 'var(--primary)' }}>
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
           )}
@@ -28,7 +30,9 @@ export default function Sidebar({ navItems, roleColor, roleLabel }) {
             <p className="text-[10px] text-white/50 truncate">{user?.schoolName}</p>
           </div>
         </div>
-        <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${roleColor}`}>
+        {/* Role badge uses primary color */}
+        <div className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold text-white"
+          style={{ backgroundColor: 'color-mix(in srgb, var(--primary) 35%, transparent)' }}>
           {roleLabel}
         </div>
       </div>
@@ -50,7 +54,9 @@ export default function Sidebar({ navItems, roleColor, roleLabel }) {
       {/* User + Logout */}
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+          {/* Avatar uses primary color */}
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+            style={{ backgroundColor: 'var(--primary)' }}>
             {user?.fullName?.[0] || '?'}
           </div>
           <div className="min-w-0 flex-1">
@@ -69,14 +75,16 @@ export default function Sidebar({ navItems, roleColor, roleLabel }) {
 
   return (
     <>
-      {/* Desktop */}
-      <aside className="hidden lg:flex w-60 bg-slate-900 shrink-0 flex-col h-screen sticky top-0">
+      {/* Desktop sidebar — background derived from primary */}
+      <aside className="hidden lg:flex w-60 shrink-0 flex-col h-screen sticky top-0"
+        style={{ backgroundColor: 'var(--sidebar-bg)' }}>
         <SideContent />
       </aside>
 
       {/* Mobile toggle */}
       <button onClick={() => setOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-lg">
+        className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 text-white rounded-xl flex items-center justify-center shadow-lg"
+        style={{ backgroundColor: 'var(--sidebar-bg)' }}>
         <Menu className="w-5 h-5" />
       </button>
 
@@ -84,8 +92,10 @@ export default function Sidebar({ navItems, roleColor, roleLabel }) {
       {open && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
-          <aside className="relative w-64 bg-slate-900 h-full shadow-2xl">
-            <button onClick={() => setOpen(false)} className="absolute top-3 right-3 text-white/60 hover:text-white">
+          <aside className="relative w-64 h-full shadow-2xl"
+            style={{ backgroundColor: 'var(--sidebar-bg)' }}>
+            <button onClick={() => setOpen(false)}
+              className="absolute top-3 right-3 text-white/60 hover:text-white">
               <X className="w-5 h-5" />
             </button>
             <SideContent />

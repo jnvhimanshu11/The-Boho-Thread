@@ -39,7 +39,7 @@ export default function SchoolLayout() {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <Sidebar navItems={NAV} roleColor="bg-orange-500/20 text-orange-300" roleLabel="School Admin" />
+      <Sidebar navItems={NAV} roleLabel="School Admin" />
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
         <Routes>
           <Route index                    element={<SchoolDashboard />} />

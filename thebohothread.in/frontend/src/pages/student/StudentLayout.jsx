@@ -33,7 +33,7 @@ export default function StudentLayout() {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <Sidebar navItems={NAV} roleColor="bg-emerald-500/20 text-emerald-300" roleLabel="Student" />
+      <Sidebar navItems={NAV} roleLabel="Student" />
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
         <Routes>
           <Route index              element={<StudentDashboard />}  />
