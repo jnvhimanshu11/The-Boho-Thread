@@ -32,11 +32,12 @@ export default function SchoolDashboard() {
 
       {/* School Banner — shown only when super admin has set one */}
       {banner && (
-        <div className="mb-6 rounded-2xl overflow-hidden shadow-sm" style={{ aspectRatio: '16/4' }}>
+        <div className="rounded-2xl overflow-hidden mb-6 border border-slate-100 shadow-sm w-full">
           <img
             src={banner}
             alt="School Banner"
-            className="w-full h-full object-cover object-center"
+            className="w-full object-contain"
+            style={{ maxHeight: '220px', height: 'auto', display: 'block' }}
           />
         </div>
       )}
