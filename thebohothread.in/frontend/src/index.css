@@ -4,32 +4,32 @@
 
 /* ============================================================
    SchoolWala — Dynamic Theme System
-   --primary        : the school's chosen color (set at runtime)
-   --primary-dark   : 15% darker  (hover states)
-   --primary-light  : 12% opacity (subtle backgrounds)
-   --primary-xlight : 6%  opacity (very subtle tints)
-   All derived automatically from --primary via color-mix()
    ============================================================ */
 :root {
   --primary:        #4f46e5;
   --primary-dark:   color-mix(in srgb, var(--primary) 85%, black);
   --primary-light:  color-mix(in srgb, var(--primary) 12%, white);
-  --primary-xlight: color-mix(in srgb, var(--primary)  6%, white);
+  --primary-xlight: color-mix(in srgb, var(--primary)  4%, white);
   --sidebar-bg:     color-mix(in srgb, var(--primary) 18%, #0f172a);
 }
 
 @layer base {
   * { font-family: 'DM Sans', sans-serif; }
   h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Syne', sans-serif; }
-  body { @apply bg-slate-50 text-slate-800; }
+
+  /* Main content background gets a very subtle primary tint */
+  body {
+    color: #1e293b;
+    background-color: var(--primary-xlight);
+  }
 }
 
 @layer components {
+  /* Cards stay white so content pops against the tinted background */
   .card {
     @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-6;
   }
 
-  /* Primary button */
   .btn-primary {
     background-color: var(--primary);
     color: white;
@@ -40,12 +40,11 @@
   }
 
   .btn-secondary {
-    @apply bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-5 rounded-xl transition-all duration-200;
+    @apply bg-white hover:bg-slate-100 text-slate-700 font-semibold py-2.5 px-5 rounded-xl transition-all duration-200 border border-slate-200;
   }
 
-  /* Input focus ring */
   .input {
-    @apply w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-transparent transition-all bg-slate-50 placeholder:text-slate-400;
+    @apply w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-transparent transition-all bg-white placeholder:text-slate-400;
   }
   .input:focus {
     box-shadow: 0 0 0 2px var(--primary);
@@ -55,7 +54,6 @@
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
   }
 
-  /* Sidebar nav — active item uses primary, sidebar bg uses --sidebar-bg */
   .sidebar-link {
     @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer;
   }

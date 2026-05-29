@@ -55,7 +55,7 @@ export default function TeacherLayout() {
   }, [logout, navigate])
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen" style={{ backgroundColor: "var(--primary-xlight)" }}>
       <Sidebar navItems={NAV} roleLabel="Teacher" />
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
         <Routes>

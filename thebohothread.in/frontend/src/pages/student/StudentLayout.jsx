@@ -32,7 +32,7 @@ export default function StudentLayout() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen" style={{ backgroundColor: "var(--primary-xlight)" }}>
       <Sidebar navItems={NAV} roleLabel="Student" />
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
         <Routes>
