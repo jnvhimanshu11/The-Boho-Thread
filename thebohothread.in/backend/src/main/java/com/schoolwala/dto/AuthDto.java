@@ -36,7 +36,8 @@ public class AuthDto {
         private String fullName;
         private String schoolName;
         private String logoBase64;
-        private boolean mustChangePassword; // signals frontend to show change-password screen
+        private String bannerBase64;         // ← ADDED: sent at login so frontend never needs a second call
+        private boolean mustChangePassword;
     }
 
     @Data

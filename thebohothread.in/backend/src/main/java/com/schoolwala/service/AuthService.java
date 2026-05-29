@@ -48,6 +48,7 @@ public class AuthService {
                 .fullName(school.getSchoolName())
                 .schoolName(school.getSchoolName())
                 .logoBase64(school.getLogoBase64())
+                .bannerBase64(school.getBannerBase64())   // ← ADDED
                 .mustChangePassword(school.isMustChangePassword())
                 .build();
     }
@@ -87,6 +88,7 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .schoolName(school != null ? school.getSchoolName() : "")
                 .logoBase64(school != null ? school.getLogoBase64() : null)
+                .bannerBase64(school != null ? school.getBannerBase64() : null)  // ← ADDED
                 .mustChangePassword(user.isMustChangePassword())
                 .build();
     }
@@ -126,6 +128,7 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .schoolName(school != null ? school.getSchoolName() : "")
                 .logoBase64(school != null ? school.getLogoBase64() : null)
+                .bannerBase64(school != null ? school.getBannerBase64() : null)  // ← ADDED
                 .mustChangePassword(user.isMustChangePassword())
                 .build();
     }
