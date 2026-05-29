@@ -2,16 +2,22 @@ import { createContext, useContext, useState, useEffect } from 'react'
 
 const AuthContext = createContext(null)
 
+// Applies the school's primary color as a CSS variable on <html>
+function applyThemeColor(color) {
+  if (color) document.documentElement.style.setProperty('--primary', color)
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // localStorage survives hard refresh; sessionStorage does not
     const stored = localStorage.getItem('sw_user')
     const token  = localStorage.getItem('sw_token')
     if (stored && token) {
-      setUser(JSON.parse(stored))
+      const parsed = JSON.parse(stored)
+      setUser(parsed)
+      applyThemeColor(parsed.primaryColor)
     }
     setLoading(false)
   }, [])
@@ -20,11 +26,13 @@ export function AuthProvider({ children }) {
     localStorage.setItem('sw_token', token)
     localStorage.setItem('sw_user', JSON.stringify(userData))
     setUser(userData)
+    applyThemeColor(userData.primaryColor)
   }
 
   const logout = () => {
     localStorage.removeItem('sw_token')
     localStorage.removeItem('sw_user')
+    document.documentElement.style.removeProperty('--primary')
     setUser(null)
   }
 
@@ -40,7 +48,6 @@ export function AuthProvider({ children }) {
     setUser(updated)
   }
 
-  /** Called after a successful forced password change */
   const clearMustChangePassword = () => {
     const updated = { ...user, mustChangePassword: false }
     localStorage.setItem('sw_user', JSON.stringify(updated))

@@ -11,24 +11,29 @@ import { teacherAPI } from '../../services/api.js'
 import toast from 'react-hot-toast'
 
 const NAV = [
-  { path: '/teacher', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/teacher/students', label: 'My Students', icon: GraduationCap },
-  { path: '/teacher/attendance', label: 'Attendance', icon: CalendarCheck },
-  { path: '/teacher/profile', label: 'My Profile', icon: User },
+  { path: '/teacher',            label: 'Dashboard',   icon: LayoutDashboard },
+  { path: '/teacher/students',   label: 'My Students', icon: GraduationCap   },
+  { path: '/teacher/attendance', label: 'Attendance',  icon: CalendarCheck   },
+  { path: '/teacher/profile',    label: 'My Profile',  icon: User            },
 ]
 
-const POLL_INTERVAL_MS = 30_000 // 30 seconds
+const POLL_INTERVAL_MS = 30_000
 
 export default function TeacherLayout() {
-  const { logout, updateLogo } = useAuth()
-  const navigate               = useNavigate()
-  const timerRef               = useRef(null)
+  const { logout, updateLogo, updateBanner } = useAuth()
+  const navigate = useNavigate()
+  const timerRef = useRef(null)
 
   useEffect(() => {
-    // Fetch fresh logo on mount and sync to AuthContext so Sidebar shows latest
-    teacherAPI.getLogo()
-      .then(r => { if (r.data?.logoBase64) updateLogo(r.data.logoBase64) })
-      .catch(() => {}) // silently ignore — logo is non-critical
+    // Fetch latest school info — applies super admin's latest theme color, logo, banner
+    teacherAPI.getSchoolInfo()
+      .then(r => {
+        const d = r.data
+        if (d?.logoBase64)   updateLogo(d.logoBase64)
+        if (d?.bannerBase64) updateBanner(d.bannerBase64)
+        if (d?.primaryColor) document.documentElement.style.setProperty('--primary', d.primaryColor)
+      })
+      .catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -38,20 +43,14 @@ export default function TeacherLayout() {
       } catch (err) {
         if (err.response?.status === 401) {
           clearInterval(timerRef.current)
-          toast.error('Your account has been deactivated by the school admin. Logging out...', {
-            duration: 4000,
-          })
-          setTimeout(() => {
-            logout()
-            navigate('/', { replace: true })
-          }, 3000)
+          toast.error('Your account has been deactivated. Logging out...', { duration: 4000 })
+          setTimeout(() => { logout(); navigate('/', { replace: true }) }, 3000)
         }
       }
     }
 
     timerRef.current = setInterval(checkActiveStatus, POLL_INTERVAL_MS)
     checkActiveStatus()
-
     return () => clearInterval(timerRef.current)
   }, [logout, navigate])
 
@@ -60,11 +59,11 @@ export default function TeacherLayout() {
       <Sidebar navItems={NAV} roleColor="bg-sky-500/20 text-sky-300" roleLabel="Teacher" />
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
         <Routes>
-          <Route index element={<TeacherDashboard />} />
-          <Route path="students" element={<TeacherStudents />} />
-          <Route path="attendance" element={<TeacherAttendance />} />
-          <Route path="profile" element={<TeacherProfile />} />
-          <Route path="*" element={<Navigate to="/teacher" replace />} />
+          <Route index              element={<TeacherDashboard />}  />
+          <Route path="students"    element={<TeacherStudents />}   />
+          <Route path="attendance"  element={<TeacherAttendance />} />
+          <Route path="profile"     element={<TeacherProfile />}    />
+          <Route path="*"           element={<Navigate to="/teacher" replace />} />
         </Routes>
       </main>
     </div>

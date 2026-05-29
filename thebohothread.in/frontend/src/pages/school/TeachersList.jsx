@@ -68,9 +68,9 @@ function validateBankAcc(v) {
 /* ─── Section header component ─── */
 function SectionHeader({ icon: Icon, title }) {
   return (
-    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-brand-100">
-      <Icon className="w-4 h-4 text-brand-600" />
-      <span className="text-xs font-bold text-brand-600 uppercase tracking-widest">{title}</span>
+    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[color-mix(in_srgb,var(--primary)_15%,white)]">
+      <Icon className="w-4 h-4 text-[var(--primary)]" />
+      <span className="text-xs font-bold text-[var(--primary)] uppercase tracking-widest">{title}</span>
     </div>
   )
 }
@@ -132,11 +132,11 @@ function MultiSelectDropdown({ options, selected, onToggle, placeholder }) {
                 return (
                   <label
                     key={o}
-                    className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer text-sm transition-colors ${checked ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50'}`}
+                    className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer text-sm transition-colors ${checked ? 'bg-[color-mix(in_srgb,var(--primary)_10%,white)] text-[var(--primary)]' : 'text-slate-700 hover:bg-slate-50'}`}
                   >
                     <input
                       type="checkbox"
-                      className="accent-brand-600 shrink-0"
+                      className="accent-[var(--primary)] shrink-0"
                       checked={checked}
                       onChange={() => onToggle(o)}
                     />
@@ -152,7 +152,7 @@ function MultiSelectDropdown({ options, selected, onToggle, placeholder }) {
               <button
                 type="button"
                 onClick={() => filtered.forEach(o => { if (!selected.includes(o)) onToggle(o) })}
-                className="text-xs text-brand-600 hover:underline font-medium"
+                className="text-xs text-[var(--primary)] hover:underline font-medium"
               >
                 Select all
               </button>
@@ -174,9 +174,9 @@ function MultiSelectDropdown({ options, selected, onToggle, placeholder }) {
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-2">
           {selected.map(s => (
-            <span key={s} className="inline-flex items-center gap-1 px-2.5 py-1 bg-brand-50 text-brand-700 rounded-full text-xs font-semibold border border-brand-100">
+            <span key={s} className="inline-flex items-center gap-1 px-2.5 py-1 bg-[color-mix(in_srgb,var(--primary)_10%,white)] text-[var(--primary)] rounded-full text-xs font-semibold border border-[color-mix(in_srgb,var(--primary)_15%,white)]">
               {s}
-              <button type="button" onClick={() => onToggle(s)} className="hover:text-brand-900 leading-none ml-0.5">×</button>
+              <button type="button" onClick={() => onToggle(s)} className="hover:text-[var(--primary)] leading-none ml-0.5">×</button>
             </span>
           ))}
         </div>
@@ -227,7 +227,7 @@ function QualDropdown({ value, onChange }) {
           ) : filtered.map(q => (
             <div
               key={q}
-              className="px-4 py-2.5 text-sm cursor-pointer hover:bg-brand-50 hover:text-brand-700"
+              className="px-4 py-2.5 text-sm cursor-pointer hover:bg-[color-mix(in_srgb,var(--primary)_10%,white)] hover:text-[var(--primary)]"
               onMouseDown={() => { onChange(q); setQuery(''); setOpen(false) }}
             >
               {q}
@@ -236,7 +236,7 @@ function QualDropdown({ value, onChange }) {
         </div>
       )}
       {value && (
-        <p className="text-xs text-brand-600 font-semibold mt-1">✓ {value}</p>
+        <p className="text-xs text-[var(--primary)] font-semibold mt-1">✓ {value}</p>
       )}
     </div>
   )
@@ -253,12 +253,12 @@ function CollapsibleSection({ title, icon: Icon, children, defaultOpen = true })
         onClick={() => setOpen(o => !o)}
       >
         <div className="flex items-center gap-2">
-          <Icon className="w-4 h-4 text-brand-600" />
-          <span className="text-xs font-bold text-brand-600 uppercase tracking-widest">{title}</span>
+          <Icon className="w-4 h-4 text-[var(--primary)]" />
+          <span className="text-xs font-bold text-[var(--primary)] uppercase tracking-widest">{title}</span>
         </div>
         {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
       </button>
-      {open && <div className="mt-4 pt-3 border-t border-brand-50">{children}</div>}
+      {open && <div className="mt-4 pt-3 border-t border-[color-mix(in_srgb,var(--primary)_8%,white)]">{children}</div>}
     </div>
   )
 }
@@ -624,11 +624,11 @@ export default function TeachersList() {
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">
                       Employee ID <span className="text-rose-500">*</span>
-                      <span className="ml-2 text-xs bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full normal-case font-semibold tracking-normal">Auto-generated</span>
+                      <span className="ml-2 text-xs bg-[color-mix(in_srgb,var(--primary)_10%,white)] text-[var(--primary)] px-2 py-0.5 rounded-full normal-case font-semibold tracking-normal">Auto-generated</span>
                     </label>
                     <input
                       type="text"
-                      className="input font-mono font-bold text-brand-700 bg-brand-50 cursor-not-allowed"
+                      className="input font-mono font-bold text-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_10%,white)] cursor-not-allowed"
                       value={form.employeeId}
                       readOnly
                     />
@@ -647,11 +647,11 @@ export default function TeachersList() {
                       Profile Photo <span className="text-rose-500">*</span>
                     </label>
                     <div
-                      className={`border-2 border-dashed rounded-xl p-4 flex items-center gap-5 cursor-pointer transition-colors hover:border-brand-400 hover:bg-brand-50 ${errors.photo ? 'border-rose-400 bg-rose-50' : 'border-slate-200 bg-slate-50'}`}
+                      className={`border-2 border-dashed rounded-xl p-4 flex items-center gap-5 cursor-pointer transition-colors hover:border-[var(--primary)] hover:bg-[color-mix(in_srgb,var(--primary)_10%,white)] ${errors.photo ? 'border-rose-400 bg-rose-50' : 'border-slate-200 bg-slate-50'}`}
                       onClick={() => photoInputRef.current.click()}
                     >
                       {form.photo ? (
-                        <img src={form.photo} alt="Preview" className="w-16 h-16 rounded-full object-cover border-2 border-brand-400 shrink-0" />
+                        <img src={form.photo} alt="Preview" className="w-16 h-16 rounded-full object-cover border-2 border-[var(--primary)] shrink-0" />
                       ) : (
                         <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
                           <Camera className="w-6 h-6 text-slate-400" />
@@ -792,8 +792,8 @@ export default function TeachersList() {
                               }}
                               className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
                                 checked
-                                  ? 'bg-brand-600 text-white border-brand-600'
-                                  : 'bg-white text-slate-600 border-slate-200 hover:border-brand-400 hover:text-brand-600'
+                                  ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
+                                  : 'bg-white text-slate-600 border-slate-200 hover:border-[var(--primary)] hover:text-[var(--primary)]'
                               }`}
                             >
                               Section {s}
@@ -814,7 +814,7 @@ export default function TeachersList() {
                       <button
                         type="button"
                         onClick={() => set('isClassTeacher', !form.isClassTeacher)}
-                        className={`relative w-11 h-6 rounded-full transition-colors ${form.isClassTeacher ? 'bg-brand-600' : 'bg-slate-300'}`}
+                        className={`relative w-11 h-6 rounded-full transition-colors ${form.isClassTeacher ? 'bg-[var(--primary)]' : 'bg-slate-300'}`}
                       >
                         <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.isClassTeacher ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
@@ -954,7 +954,7 @@ export default function TeachersList() {
                     </div>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="font-mono text-xs bg-brand-50 text-brand-700 px-2 py-0.5 rounded-md">{t.employeeId || '—'}</span>
+                    <span className="font-mono text-xs bg-[color-mix(in_srgb,var(--primary)_10%,white)] text-[var(--primary)] px-2 py-0.5 rounded-md">{t.employeeId || '—'}</span>
                   </td>
                   <td className="px-5 py-3.5 font-medium text-slate-800">{t.fullName}</td>
                   <td className="px-5 py-3.5 text-slate-600">{t.subject || '—'}</td>

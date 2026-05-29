@@ -36,7 +36,8 @@ public class AuthDto {
         private String fullName;
         private String schoolName;
         private String logoBase64;
-        private String bannerBase64;         // ← ADDED: sent at login so frontend never needs a second call
+        private String bannerBase64;
+        private String primaryColor;             // ← school theme color
         private boolean mustChangePassword;
     }
 

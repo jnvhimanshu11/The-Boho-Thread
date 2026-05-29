@@ -13,23 +13,28 @@ import { useAuth } from '../../context/AuthContext.jsx'
 import { schoolAPI } from '../../services/api.js'
 
 const NAV = [
-  { path: '/school', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/school/teachers', label: 'Teachers', icon: BookOpen },
-  { path: '/school/students', label: 'Students', icon: GraduationCap },
-  { path: '/school/attendance', label: 'Attendance', icon: CalendarCheck },
-  { path: '/school/fees', label: 'Fee Management', icon: CreditCard },
-  { path: '/school/reports', label: 'Reports', icon: BarChart3 },
-  { path: '/school/settings', label: 'Settings', icon: Settings },
+  { path: '/school',            label: 'Dashboard',      icon: LayoutDashboard },
+  { path: '/school/teachers',   label: 'Teachers',       icon: BookOpen        },
+  { path: '/school/students',   label: 'Students',       icon: GraduationCap   },
+  { path: '/school/attendance', label: 'Attendance',     icon: CalendarCheck   },
+  { path: '/school/fees',       label: 'Fee Management', icon: CreditCard      },
+  { path: '/school/reports',    label: 'Reports',        icon: BarChart3       },
+  { path: '/school/settings',   label: 'Settings',       icon: Settings        },
 ]
 
 export default function SchoolLayout() {
-  const { updateLogo } = useAuth()
+  const { updateLogo, updateBanner } = useAuth()
 
   useEffect(() => {
-    // Fetch fresh logo on mount and sync to AuthContext so Sidebar always shows latest
-    schoolAPI.getLogo()
-      .then(r => { if (r.data?.logoBase64) updateLogo(r.data.logoBase64) })
-      .catch(() => {}) // silently ignore — logo is non-critical
+    // Fetch latest school info on every mount — picks up any super admin changes
+    schoolAPI.getSchoolInfo()
+      .then(r => {
+        const d = r.data
+        if (d?.logoBase64)   updateLogo(d.logoBase64)
+        if (d?.bannerBase64) updateBanner(d.bannerBase64)
+        if (d?.primaryColor) document.documentElement.style.setProperty('--primary', d.primaryColor)
+      })
+      .catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -37,14 +42,14 @@ export default function SchoolLayout() {
       <Sidebar navItems={NAV} roleColor="bg-orange-500/20 text-orange-300" roleLabel="School Admin" />
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
         <Routes>
-          <Route index element={<SchoolDashboard />} />
-          <Route path="teachers" element={<TeachersList />} />
-          <Route path="students" element={<StudentsList />} />
-          <Route path="attendance" element={<AttendancePage />} />
-          <Route path="fees" element={<FeesPage />} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="/school" replace />} />
+          <Route index                    element={<SchoolDashboard />} />
+          <Route path="teachers"          element={<TeachersList />}    />
+          <Route path="students"          element={<StudentsList />}    />
+          <Route path="attendance"        element={<AttendancePage />}  />
+          <Route path="fees"              element={<FeesPage />}        />
+          <Route path="reports"           element={<ReportsPage />}     />
+          <Route path="settings"          element={<SettingsPage />}    />
+          <Route path="*"                 element={<Navigate to="/school" replace />} />
         </Routes>
       </main>
     </div>
